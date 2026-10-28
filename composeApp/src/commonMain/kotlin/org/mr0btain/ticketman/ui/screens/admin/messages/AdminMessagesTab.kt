@@ -51,7 +51,6 @@ private val PANEL_WIDTH = 520.dp
  * @param statuses The shop's own statuses, to pick which ones send a message
  * @param onTest Sends a test with the settings as they are on screen
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdminMessagesTab(
     settings: NotificationSettings?,

@@ -16,7 +16,6 @@ import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.images.TmImageView
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
@@ -34,19 +33,19 @@ import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketPanel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.log_in
-import ticketman.composeapp.generated.resources.refresh_cw
 import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketWorkSection
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.WorkDialog
 import org.mr0btain.ticketman.ui.screens.CheckForUpdates
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 
 @Composable
 fun RecordsScreen(
     viewModel: MainViewModel
 ) {
     // Tab for switching between panels
-    val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
+    val selectedTab = viewModel.selectedRecordsTab.collectAsState()
     val loginState = viewModel.session.loginState.collectAsState()
     // Logged out, the banner already says why the lists are empty
     val loggedIn = loginState.value == LoginState.LOGGED_IN
@@ -112,10 +111,10 @@ fun RecordsScreen(
     val updateInterval by viewModel.settings.updateInterval.collectAsState()
     val dialogOpen = showCustomerDialog || showTicketDialog || showInventoryDialog || showConfirmDeleteDialog || showImagePopup || showWorkDialog
     CheckForUpdates(interval = updateInterval, enabled = loggedIn && !dialogOpen) {
-        when (tabIndex.value) {
-            0 -> viewModel.customers.run { pager.refreshCurrentData(); reloadSelected() }
-            1 -> viewModel.tickets.run { pager.refreshCurrentData(); reloadSelected() }
-            2 -> viewModel.inventory.run { pager.refreshCurrentData(); reloadSelected() }
+        when (selectedTab.value) {
+            RecordsTab.CUSTOMER -> viewModel.customers.run { pager.refreshCurrentData(); reloadSelected() }
+            RecordsTab.TICKETS -> viewModel.tickets.run { pager.refreshCurrentData(); reloadSelected() }
+            RecordsTab.INVENTORY -> viewModel.inventory.run { pager.refreshCurrentData(); reloadSelected() }
         }
     }
     val imagePopupList = remember { mutableStateListOf<StoredImage>() }
@@ -265,9 +264,9 @@ fun RecordsScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             TmTabs(
                 modifier = Modifier.weight(1f),
-                tabs = listOf("Customers", "Tickets", "Inventory"),
-                selectedIndex = tabIndex.value,
-                onSelect = { viewModel.changeMainTabIndex(it) }
+                tabs = RecordsTab.entries.map { it.label },
+                selectedIndex = selectedTab.value.ordinal,
+                onSelect = { viewModel.changeRecordsScreenTab(RecordsTab.entries[it]) }
             )
         }
 
@@ -287,8 +286,8 @@ fun RecordsScreen(
             }
         }
 
-        when (tabIndex.value) {
-            0 -> CustomerPanel(
+        when (selectedTab.value) {
+            RecordsTab.CUSTOMER -> CustomerPanel(
                 onAddCustomer = {
                     viewModel.customers.clearSelection()
                     showCustomerDialog = true
@@ -304,7 +303,7 @@ fun RecordsScreen(
                 onTicketClick = { identifier ->
                     viewModel.tickets.select(identifier)
                     // The dialog is for editing, someone who can only look sees it on the tickets tab
-                    if (canEdit) showTicketDialog = true else viewModel.changeMainTabIndex(1)
+                    if (canEdit) showTicketDialog = true else viewModel.changeRecordsScreenTab(RecordsTab.TICKETS)
                 },
                 onImageClick = { id, page -> showNoteImages(customerSeed.notes, id, page) },
                 seed = customerSeed,
@@ -314,7 +313,7 @@ fun RecordsScreen(
                 loadError = customerLoadError.takeIf { loggedIn }
             )
 
-            1 -> TicketPanel(
+            RecordsTab.TICKETS -> TicketPanel(
                 ticketList = ticketPagedItems.value,
                 seed = ticketSeed,
                 pendingId = pendingTicket,
@@ -350,7 +349,7 @@ fun RecordsScreen(
                 }
             )
 
-            2 -> InventoryPanel(
+            RecordsTab.INVENTORY -> InventoryPanel(
                 inventoryList = inventoryPagedItems.value,
                 selectedInventory = inventorySeed,
                 pendingId = pendingInventory,

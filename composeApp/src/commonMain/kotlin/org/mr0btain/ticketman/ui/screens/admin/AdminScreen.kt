@@ -47,6 +47,7 @@ import org.mr0btain.ticketman.ui.screens.CheckForUpdates
 import org.mr0btain.ticketman.components.data.local.UpdateInterval
 import org.mr0btain.ticketman.ui.screens.admin.server.ImportCard
 import org.mr0btain.ticketman.ui.screens.admin.server.ImportDialog
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import ticketman.composeapp.generated.resources.shield
 
 /**
@@ -77,7 +78,7 @@ private fun AdminContent(
 ) {
     val admin = viewModel.admin
 
-    var selectedTab by rememberSaveable { mutableStateOf(AdminTab.OVERVIEW) }
+    val selectedTab = viewModel.selectedAdminTab.collectAsState()
     val scope = rememberCoroutineScope()
 
     val isLoading by admin.isLoading.collectAsState()
@@ -180,17 +181,17 @@ private fun AdminContent(
     // Fresh numbers whenever a tab is opened, only for that tab, and when the device starts working somewhere else
     val workingLocation by viewModel.locations.working.collectAsState()
     LaunchedEffect(selectedTab, workingLocation) {
-        admin.refresh(selectedTab)
-        if (selectedTab == AdminTab.USERS) viewModel.users.pager.refresh()
+        admin.refresh(selectedTab.value)
+        if (selectedTab.value == AdminTab.USERS) viewModel.users.pager.refresh()
     }
 
     // Then changes from other devices, on the interval set in Settings, unless a dialog here is open
     val updateInterval by viewModel.settings.updateInterval.collectAsState()
     val dialogOpen = importSheet != null || showUserDialog || showResetPasswordDialog || showDeleteDialog || showInviteDialog || approving != null || shownInvite != null
     CheckForUpdates(interval = updateInterval, enabled = !dialogOpen && !isLoading) {
-        admin.checkForUpdates(selectedTab)
-        if (selectedTab == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
-        if (selectedTab == AdminTab.INVOICES) viewModel.counter.invoices.checkForUpdates()
+        admin.checkForUpdates(selectedTab.value)
+        if (selectedTab.value == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
+        if (selectedTab.value == AdminTab.INVOICES) viewModel.counter.invoices.checkForUpdates()
     }
 
     UserDialog(
@@ -241,8 +242,8 @@ private fun AdminContent(
             TmTabs(
                 modifier = Modifier.weight(1f),
                 tabs = AdminTab.entries.map { it.label },
-                selectedIndex = selectedTab.ordinal,
-                onSelect = { selectedTab = AdminTab.entries[it] },
+                selectedIndex = selectedTab.value.ordinal,
+                onSelect = { viewModel.changeAdminScreenTab(AdminTab.entries[it])},
                 badges = listOfNotNull(
                     (AdminTab.USERS.ordinal to pending.size).takeIf { pending.isNotEmpty() },
                     (AdminTab.TIME_OFF.ordinal to timeOffWaiting).takeIf { timeOffWaiting > 0 }
@@ -258,8 +259,8 @@ private fun AdminContent(
                     variant = TmButtonVariant.SECONDARY,
                     leadingIcon = Res.drawable.refresh_cw,
                     onClick = {
-                        admin.refresh(selectedTab)
-                        when (selectedTab) {
+                        admin.refresh(selectedTab.value)
+                        when (selectedTab.value) {
                             AdminTab.USERS -> scope.launch { viewModel.users.pager.refresh() }
                             AdminTab.INVOICES -> {
                                 viewModel.counter.invoices.load(reset = true)
@@ -273,7 +274,7 @@ private fun AdminContent(
         }
 
         // ------------------------------------------ Content ------------------------------------------
-        when (selectedTab) {
+        when (selectedTab.value) {
             AdminTab.OVERVIEW -> AdminOverviewTab(
                 stats = stats,
                 dailyReport = dailyReport,
@@ -282,10 +283,10 @@ private fun AdminContent(
                 onPrintReport = { paper, onResult -> admin.printDailyReport(paper, onResult) },
                 onTicketClick = { identifier ->
                     viewModel.tickets.select(identifier)
-                    viewModel.changeMainTabIndex(TICKET_TAB)
+                    viewModel.changeRecordsScreenTab(RecordsTab.TICKETS)
                     onNavigateToMain()
                 },
-                onLowStockClick = { selectedTab = AdminTab.LOW_STOCK }
+                onLowStockClick = { viewModel.changeAdminScreenTab(AdminTab.LOW_STOCK) }
             )
 
             AdminTab.USERS -> AdminUsersTab(
@@ -365,7 +366,7 @@ private fun AdminContent(
                 } else null,
                 onItemClick = { identifier ->
                     viewModel.inventory.select(identifier)
-                    viewModel.changeMainTabIndex(INVENTORY_TAB)
+                    viewModel.changeRecordsScreenTab(RecordsTab.INVENTORY)
                     onNavigateToMain()
                 }
             )

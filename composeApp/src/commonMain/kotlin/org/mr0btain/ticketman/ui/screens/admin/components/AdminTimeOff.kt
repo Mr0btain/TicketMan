@@ -76,7 +76,7 @@ class AdminTimeOff(
                     onChanged()
                 }
 
-                is TmResult.Error -> support.notify((result.error as? org.mr0btain.ticketman.error.Error)?.message ?: "That didn't go through")
+                is TmResult.Error -> support.notify(result.error.message)
             }
             support.auditChanged()
         }

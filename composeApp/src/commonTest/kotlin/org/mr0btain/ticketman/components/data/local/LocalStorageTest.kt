@@ -2,6 +2,8 @@ package org.mr0btain.ticketman.components.data.local
 
 import kotlinx.coroutines.test.runTest
 import org.mr0btain.ticketman.data.station.StationCredentials
+import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -85,7 +87,8 @@ class LocalStorageTest {
     @Test
     fun settingsDefaultWhenMissing() {
         assertEquals(LocalStorage.DEFAULT_REMEMBER_LOGIN, localStorage.rememberLogin)
-        assertEquals(LocalStorage.DEFAULT_TAB, localStorage.defaultTab)
+        assertEquals(LocalStorage.DEFAULT_ADMIN_TAB, localStorage.defaultAdminTab.ordinal)
+        assertEquals(LocalStorage.DEFAULT_RECORDS_TAB, localStorage.defaultRecordsTab.ordinal)
         assertEquals(LocalStorage.DEFAULT_PAGE_SIZE, localStorage.pageSize)
         assertEquals(LocalStorage.DEFAULT_SEARCH_LIMIT, localStorage.searchLimit)
         assertEquals(LocalStorage.DEFAULT_CACHE_SIZE, localStorage.cacheSize)
@@ -95,7 +98,8 @@ class LocalStorageTest {
     @Test
     fun settingsPersistAcrossInstances() {
         localStorage.rememberLogin = false
-        localStorage.defaultTab = 2
+        localStorage.defaultAdminTab = AdminTab.MESSAGES
+        localStorage.defaultRecordsTab = RecordsTab.INVENTORY
         localStorage.pageSize = 50
         localStorage.searchLimit = 10
         localStorage.cacheSize = 75
@@ -104,7 +108,8 @@ class LocalStorageTest {
         val reloaded = LocalStorage(store)
 
         assertFalse(reloaded.rememberLogin)
-        assertEquals(2, reloaded.defaultTab)
+        assertEquals(AdminTab.MESSAGES, reloaded.defaultAdminTab)
+        assertEquals(RecordsTab.INVENTORY, reloaded.defaultRecordsTab)
         assertEquals(50, reloaded.pageSize)
         assertEquals(10, reloaded.searchLimit)
         assertEquals(75, reloaded.cacheSize)

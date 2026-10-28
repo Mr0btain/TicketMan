@@ -11,6 +11,7 @@ private const val TAG = "PrintDocument"
 /**
  * Prints through a hidden frame holding the document as HTML, which brings up the browser's print dialog
  */
+@OptIn(ExperimentalWasmJsInterop::class)
 actual suspend fun printDocument(document: PrintDocument, paper: PaperSize): String? {
     return try {
         // The parameter is called document too, so the page's one is spelled out
@@ -29,7 +30,6 @@ actual suspend fun printDocument(document: PrintDocument, paper: PaperSize): Str
                 frame.remove()
                 null
             }, 60_000)
-            null
         }
 
         frame.srcdoc = HtmlPrintRenderer.render(document, paper)

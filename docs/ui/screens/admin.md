@@ -98,7 +98,7 @@ showing "Restarting the server" in the card meanwhile. Then it reloads the tab, 
 ## Gotchas
 
 - **Links to records go through the main tab index.** Clicking a ticket or a low stock item selects it in its
-  handler, sets `changeMainTabIndex` (1 for tickets, 2 for inventory) and navigates to Records with `navigateTo`, so
+  handler, sets `changeRecordsScreenTab` (1 for tickets, 2 for inventory) and navigates to Records with `navigateTo`, so
   the back stack doesn't grow. An invoice opens its ticket on the counter the same way (`onOpenTicketAtCounter`).
 - **The Invoices tab loads through the counter**, whose `counter.invoices` (`CounterInvoices`) owns the invoice
   list (`load`, `checkForUpdates`, `void`). The tab's list itself is `InvoiceList`, without the dialogs, so it can

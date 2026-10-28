@@ -11,6 +11,8 @@ import org.mr0btain.ticketman.ui.kit.theme.TmFont
 import org.mr0btain.ticketman.ui.kit.theme.TmFonts
 import org.mr0btain.ticketman.ui.kit.theme.TmPalette
 import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
+import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 
 /**
  * The app's saved settings: appearance, the server, and list and search sizes. Each change is saved to
@@ -44,8 +46,11 @@ class SettingsHandler(
     private val _rememberLogin: MutableStateFlow<Boolean> = MutableStateFlow(LocalStorage.DEFAULT_REMEMBER_LOGIN)
     val rememberLogin = _rememberLogin.asStateFlow()
 
-    private val _defaultTab: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_TAB)
-    val defaultTab = _defaultTab.asStateFlow()
+    private val _defaultAdminTab: MutableStateFlow<AdminTab> = MutableStateFlow(AdminTab.entries[LocalStorage.DEFAULT_ADMIN_TAB])
+    val defaultAdminTab = _defaultAdminTab.asStateFlow()
+
+    private val _defaultRecordsTab: MutableStateFlow<RecordsTab> = MutableStateFlow(RecordsTab.entries[LocalStorage.DEFAULT_RECORDS_TAB])
+    val defaultRecordsTab = _defaultRecordsTab.asStateFlow()
 
     private val _pageSize: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_PAGE_SIZE)
     val pageSize = _pageSize.asStateFlow()
@@ -72,7 +77,8 @@ class SettingsHandler(
         _reduceTransparency.value = localStorage.reduceTransparency
         _serverUrl.value = localStorage.serverUrl
         _rememberLogin.value = localStorage.rememberLogin
-        _defaultTab.value = localStorage.defaultTab
+        _defaultRecordsTab.value = localStorage.defaultRecordsTab
+        _defaultAdminTab.value = localStorage.defaultAdminTab
         _pageSize.value = localStorage.pageSize
         _searchLimit.value = localStorage.searchLimit
         _cacheSize.value = localStorage.cacheSize
@@ -133,11 +139,16 @@ class SettingsHandler(
         }
     }
 
-    /** Sets which main tab is shown on start, wraps around past the last tab */
-    fun setDefaultTab(index: Int) {
-        val value = index.mod(MAIN_TAB_COUNT)
-        _defaultTab.value = value
-        localStorage.defaultTab = value
+    /** Sets which records tab is shown on start, wraps around past the last tab */
+    fun setDefaultRecordsTab(recordsTab: RecordsTab) {
+        _defaultRecordsTab.value = recordsTab
+        localStorage.defaultRecordsTab = recordsTab
+    }
+
+    /** Sets which records tab is shown on start, wraps around past the last tab */
+    fun setDefaultAdminTab(adminTab: AdminTab) {
+        _defaultAdminTab.value = adminTab
+        localStorage.defaultAdminTab = adminTab
     }
 
     /** Sets how many records load per page, clamped to [PAGE_SIZE_RANGE], and reloads the lists */
