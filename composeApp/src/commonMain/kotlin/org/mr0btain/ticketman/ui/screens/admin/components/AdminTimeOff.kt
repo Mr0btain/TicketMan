@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.components
 
+import org.mr0btain.ticketman.data.schedule.TimeOffAllowance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -52,13 +53,13 @@ class AdminTimeOff(
 
     fun decline(request: TimeOffRequest, reason: String) = answer("Declined ${request.userName}'s time off") { repo.decline(request.identifier, reason) }
 
-    /** Sets someone's yearly allowance in hours */
-    fun setAllowance(balance: TimeOffBalance, hours: Double) {
+    /** Sets someone's yearly allowance, carry over cap and floating holidays */
+    fun setAllowance(balance: TimeOffBalance, allowance: TimeOffAllowance) {
         support.scope.launch {
-            when (val result = repo.setAllowance(balance.userIdentifier, hours)) {
+            when (val result = repo.setAllowance(balance.userIdentifier, allowance)) {
                 is TmResult.Success -> {
                     _balances.value = _balances.value.map { if (it.userIdentifier == balance.userIdentifier) result.data.copy(userName = it.userName) else it }
-                    support.notify("${balance.userName} gets ${hours.toString().removeSuffix(".0")}h a year")
+                    support.notify("${balance.userName} gets ${allowance.hours.toString().removeSuffix(".0")}h a year")
                 }
 
                 is TmResult.Error -> support.notify(result.error.message)
@@ -76,7 +77,7 @@ class AdminTimeOff(
                     onChanged()
                 }
 
-                is TmResult.Error -> support.notify((result.error as? org.mr0btain.ticketman.error.Error)?.message ?: "That didn't go through")
+                is TmResult.Error -> support.notify(result.error.message)
             }
             support.auditChanged()
         }

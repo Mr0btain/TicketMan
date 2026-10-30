@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.components.data.rememberKept
 import ticketman.composeapp.generated.resources.map_pin
 import org.mr0btain.ticketman.ui.kit.selection.TmMenuItem
 import org.mr0btain.ticketman.ui.kit.selection.TmMenu
@@ -104,7 +105,7 @@ fun TicketCard(
     onMove: (Location) -> Unit = {}
 ) {
     val ticket = detail.ticket
-    var note by remember(ticket.identifier) { mutableStateOf("") }
+    var note by rememberKept("ticket-note", ticket.identifier) { mutableStateOf("") }
     var confirmReplace by remember(ticket.identifier) { mutableStateOf(false) }
     var newEstimate by remember(ticket.identifier) { mutableStateOf(false) }
     var answering by remember(ticket.identifier) { mutableStateOf<Estimate?>(null) }

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.components
 
+import org.mr0btain.ticketman.components.data.FormMemory
 import org.mr0btain.ticketman.error.valueOr
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.CoroutineScope
@@ -44,6 +45,9 @@ class AdminHandler(
     onPaymentsChanged: () -> Unit = {},
     onTimeOffChanged: () -> Unit = {}
 ) {
+    /** Settings typed but not saved yet on each tab, so they're there after a visit to another screen */
+    val forms = FormMemory()
+
     private val admin get() = remoteHandler.adminRepo
 
     private val support = AdminSupport(scope, snackBarHost, reloadAudit = { loadAudit(reset = true) })
@@ -256,6 +260,7 @@ class AdminHandler(
 
     /** Clears out everything, used on log out so the next user doesn't see it */
     fun clear() {
+        forms.clear()
         _stats.value = null
         _dailyReport.value = null
         _lowStock.value = emptyList()

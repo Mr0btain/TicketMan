@@ -62,6 +62,16 @@ class CustomerRecords(
     /** Customer being loaded after a click, the list highlights it until it's in the seed */
     val selection = RecordSelection(scope)
 
+    /** Opens a customer and scrolls the list to them, for one picked from outside the list */
+    fun open(identifier: Uuid) {
+        select(identifier)
+        selection.reveal(identifier)
+    }
+
+    /** Where a customer is in the list, null if they aren't in it or that can't be found out */
+    suspend fun listPosition(identifier: Uuid): Long? =
+        remoteHandler.customerRepo.position(identifier).getOrNull()?.index
+
     /** Opens a customer in the seed, from the cache if it's there. [quiet] says nothing when it can't be loaded */
     fun select(identifier: Uuid, quiet: Boolean = false) {
         if (selection.pending.value == identifier) return

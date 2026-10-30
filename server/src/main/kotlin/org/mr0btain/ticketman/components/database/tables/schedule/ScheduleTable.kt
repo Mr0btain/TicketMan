@@ -27,6 +27,8 @@ object ScheduleTable : UuidTable("schedule_entries") {
 object TimeOffAllowanceTable : org.jetbrains.exposed.v1.core.Table("time_off_allowances") {
     val user = uuid("user_id")
     val hours = double("hours").default(0.0)
+    val carryOverMax = double("carry_over_max").default(0.0)
+    val floating = double("floating").default(0.0)
 
     override val primaryKey = PrimaryKey(user)
 }

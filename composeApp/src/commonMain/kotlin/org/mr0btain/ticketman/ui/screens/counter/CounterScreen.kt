@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import ticketman.composeapp.generated.resources.file_text
+import org.mr0btain.ticketman.components.data.LocalFormMemory
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.server.request.PaymentRequest
@@ -136,7 +138,7 @@ fun CounterScreen(
             return@Box
         }
 
-        CounterLayout(
+        CompositionLocalProvider(LocalFormMemory provides counter.forms) { CounterLayout(
             searchField = { fieldModifier ->
                 TmSearchField(
                     modifier = fieldModifier.focusRequester(searchFocus),
@@ -216,7 +218,15 @@ fun CounterScreen(
                                     defaultPaper = shop.defaultPaper,
                                     onPrint = { template, paper, onResult -> counter.printer.print(detail.ticket.identifier, template, paper, onResult) }
                                 )
-                                detail.invoice?.let { invoice -> SavePdfButton { counter.printer.savePdf(invoice) } }
+                                detail.invoice?.let { invoice ->
+                                    TmButton(
+                                        text = "Invoice",
+                                        onClick = { counter.printer.previewInvoice(invoice) },
+                                        variant = TmButtonVariant.SECONDARY,
+                                        size = TmControlSize.LARGE,
+                                        leadingIcon = Res.drawable.file_text
+                                    )
+                                }
                             }
                         },
                         extraActions = {
@@ -381,8 +391,10 @@ fun CounterScreen(
                     onCancel = { counter.goHome() }
                 )
             }
-        }
+        } }
     }
+
+    InvoicePreviewDialog(counter.printer)
 
     readerCharge?.let { charge ->
         ReaderChargeDialog(charge = charge, onCancel = { counter.cards.cancel() }, onClose = { counter.cards.dismiss() })

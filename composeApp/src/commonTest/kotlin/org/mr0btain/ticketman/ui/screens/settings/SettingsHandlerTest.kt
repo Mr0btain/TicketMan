@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.TestScope
 import org.mr0btain.ticketman.components.data.local.InMemoryKeyValueStore
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 import kotlin.test.*
 
@@ -41,12 +42,10 @@ class SettingsHandlerTest {
         settings.setPageSize(1000)
         settings.setSearchLimit(0)
         settings.setCacheSize(-5)
-        settings.setDefaultTab(SettingsHandler.MAIN_TAB_COUNT)
 
         assertEquals(SettingsHandler.PAGE_SIZE_RANGE.last, settings.pageSize.value)
         assertEquals(SettingsHandler.SEARCH_LIMIT_RANGE.first, settings.searchLimit.value)
         assertEquals(SettingsHandler.CACHE_SIZE_RANGE.first, settings.cacheSize.value)
-        assertEquals(0, settings.defaultTab.value)
     }
 
     @Test

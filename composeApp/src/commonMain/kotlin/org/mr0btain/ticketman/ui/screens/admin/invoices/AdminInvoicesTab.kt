@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.admin.invoices
 
+import ticketman.composeapp.generated.resources.file_text
+import org.mr0btain.ticketman.ui.screens.counter.InvoicePreviewDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -120,13 +122,15 @@ fun AdminInvoicesTab(
         )
     }
 
+    InvoicePreviewDialog(counter.printer)
+
     InvoiceList(
         invoices = invoices,
         endReached = endReached,
         giftCards = giftCards,
         onOpenTicket = onOpenTicket,
         onExport = { exporting = true },
-        onPdf = { counter.printer.savePdf(it) },
+        onPreview = { counter.printer.previewInvoice(it) },
         onRefund = { refunding = it },
         onVoid = { voiding = it },
         onDelete = { deleting = it },
@@ -149,7 +153,7 @@ internal fun InvoiceList(
     giftCards: List<GiftCard>,
     onOpenTicket: (Uuid) -> Unit,
     onExport: () -> Unit,
-    onPdf: (Invoice) -> Unit,
+    onPreview: (Invoice) -> Unit,
     onRefund: (Invoice) -> Unit,
     onVoid: (Invoice) -> Unit,
     onDelete: (Invoice) -> Unit,
@@ -211,7 +215,7 @@ internal fun InvoiceList(
                                         }
                                     }
                                     5 -> TmMoneyText(invoice.balanceCents, color = if (invoice.balanceCents > 0) colors.danger.color else colors.text)
-                                    6 -> TmButton(text = "PDF", onClick = { onPdf(invoice) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                                    6 -> TmButton(text = "View", onClick = { onPreview(invoice) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                                     7 -> Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
                                         if (invoice.status == InvoiceStatus.PAID) {
                                             TmButton(text = "Refund", onClick = { onRefund(invoice) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
@@ -226,7 +230,7 @@ internal fun InvoiceList(
                                 }
                             }
                         } else {
-                            CompactInvoiceRow(invoice, open, onPdf, onRefund, onVoid, onDelete)
+                            CompactInvoiceRow(invoice, open, onPreview, onRefund, onVoid, onDelete)
                         }
                     }
 
@@ -274,7 +278,7 @@ private fun StatusBadge(invoice: Invoice) {
 private fun CompactInvoiceRow(
     invoice: Invoice,
     onOpen: (() -> Unit)?,
-    onPdf: (Invoice) -> Unit,
+    onPreview: (Invoice) -> Unit,
     onRefund: (Invoice) -> Unit,
     onVoid: (Invoice) -> Unit,
     onDelete: (Invoice) -> Unit
@@ -309,7 +313,7 @@ private fun CompactInvoiceRow(
                             menuOpen = false
                             action(invoice)
                         }
-                        TmMenuItem(text = "Save PDF", leadingIcon = Res.drawable.download, onClick = { pick(onPdf) })
+                        TmMenuItem(text = "View, print or save", leadingIcon = Res.drawable.file_text, onClick = { pick(onPreview) })
                         if (invoice.status == InvoiceStatus.PAID) TmMenuItem(text = "Refund", leadingIcon = Res.drawable.rotate_ccw, onClick = { pick(onRefund) })
                         if (invoice.status != InvoiceStatus.VOID) TmMenuItem(text = "Void", leadingIcon = Res.drawable.x_circle, onClick = { pick(onVoid) })
                         if (invoice.ticketRemoved) TmMenuItem(text = "Delete", leadingIcon = Res.drawable.trash_2, onClick = { pick(onDelete) })

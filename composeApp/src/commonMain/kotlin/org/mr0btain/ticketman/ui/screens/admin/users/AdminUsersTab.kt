@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
@@ -78,7 +78,7 @@ fun AdminUsersTab(
     currentUserIdentifier: Uuid?,
     listState: LazyListState,
     onSelect: (Uuid) -> Unit,
-    onSearchQuery: suspend (String) -> List<SearchResult>,
+    onSearchQuery: suspend (String) -> List<TmSearchResult>,
     onAdd: () -> Unit,
     onEdit: () -> Unit,
     onResetPassword: () -> Unit,

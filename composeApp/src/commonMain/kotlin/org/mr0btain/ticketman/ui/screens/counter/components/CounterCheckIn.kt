@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.appointment.Appointment
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.error.TmResult
@@ -66,7 +66,7 @@ class CounterCheckIn(
         remoteHandler.counterRepo.search(text.trim(), CounterHandler.SEARCH_LIMIT).getOrNull()?.customers.orEmpty()
 
     /** Staff for picking a technician */
-    suspend fun searchTechnicians(text: String): List<SearchResult> =
+    suspend fun searchTechnicians(text: String): List<TmSearchResult> =
         remoteHandler.userRepo.search(text.trim(), CounterHandler.SEARCH_LIMIT).getOrDefault(emptyList())
 
     /**

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
+import org.mr0btain.ticketman.components.data.FormMemory
 import org.mr0btain.ticketman.data.location.Location
 import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.valueOr
@@ -57,7 +58,16 @@ class CounterHandler(
     private val _view = MutableStateFlow(CounterView.HOME)
     val view = _view.asStateFlow()
 
-    private val support = CounterSupport(scope, snackBarHost, canEdit, show = { _view.value = it }, ticketsChanged = { refreshQueue() })
+    /** What's typed into the check in, sale or pickup that's open, so it's there after a visit to another screen */
+    val forms = FormMemory()
+
+    // Leaving a form is the end of it, only going to another screen keeps it
+    private fun showView(next: CounterView) {
+        if (next != _view.value) forms.clear()
+        _view.value = next
+    }
+
+    private val support = CounterSupport(scope, snackBarHost, canEdit, show = { showView(it) }, ticketsChanged = { refreshQueue() })
     private val scope get() = support.scope
 
     private val _query = MutableStateFlow("")
@@ -101,7 +111,7 @@ class CounterHandler(
     /** Searches as they type, waiting for a short pause so every key doesn't hit the server */
     fun setQuery(text: String) {
         _query.value = text
-        _view.value = CounterView.HOME
+        showView(CounterView.HOME)
 
         searchJob?.cancel()
 
@@ -140,7 +150,7 @@ class CounterHandler(
 
     /** The device works somewhere else now: back to the counter's home with that location's queue and details */
     fun locationChanged() {
-        _view.value = CounterView.HOME
+        showView(CounterView.HOME)
         _ticket.value = null
         _customer.value = null
         refreshQueue()
@@ -159,11 +169,11 @@ class CounterHandler(
     // ------------------------------------------ Moving around ------------------------------------------
 
     fun goHome() {
-        _view.value = CounterView.HOME
+        showView(CounterView.HOME)
     }
 
     fun openPriceCheck() {
-        _view.value = CounterView.PRICE_CHECK
+        showView(CounterView.PRICE_CHECK)
     }
 
     /** Loads a ticket with its customer, notes, history and invoice and shows it */
@@ -172,7 +182,7 @@ class CounterHandler(
             when (val loaded = remoteHandler.loadTicketDetail(identifier)) {
                 is TmResult.Success -> {
                     _ticket.value = loaded.data
-                    _view.value = CounterView.TICKET
+                    showView(CounterView.TICKET)
                 }
 
                 is TmResult.Error -> support.notify(
@@ -200,7 +210,7 @@ class CounterHandler(
             val devices = repo.getDevices(identifier).getOrDefault(emptyList())
 
             _customer.value = CustomerDetail(customer, tickets, devices, credit, invoices)
-            _view.value = CounterView.CUSTOMER
+            showView(CounterView.CUSTOMER)
         }
     }
 
@@ -323,7 +333,7 @@ class CounterHandler(
             _searching.value = false
             _results.value = CounterSearchResponse()
             _priceResults.value = listOf(item)
-            _view.value = CounterView.PRICE_CHECK
+            showView(CounterView.PRICE_CHECK)
         }
     }
 
@@ -423,7 +433,8 @@ class CounterHandler(
     fun clear() {
         searchJob?.cancel()
         priceJob?.cancel()
-        _view.value = CounterView.HOME
+        showView(CounterView.HOME)
+        forms.clear()
         _query.value = ""
         _results.value = CounterSearchResponse()
         _queue.value = null
@@ -435,6 +446,7 @@ class CounterHandler(
         pickup.clear()
         sale.clear()
         invoices.clear()
+        printer.closeInvoicePreview()
     }
 
     companion object {

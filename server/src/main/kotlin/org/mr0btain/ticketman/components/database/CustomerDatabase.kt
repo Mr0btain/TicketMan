@@ -7,13 +7,10 @@ import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.select
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
-import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.address
-import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.email
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.name
-import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.phone
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.CustomerError
@@ -48,6 +45,14 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
                 .map { it.toCustomer() }
         }
 
+    /** How many customers come before this one in [getPagedItems]. -1 if there's no such customer, null if it failed */
+    fun position(identifier: Uuid): Long? =
+        dbQuery(GET_PAGED_ITEMS_TAG) {
+            val customer = CustomerEntity.findById(identifier) ?: return@dbQuery -1L
+
+            CustomerEntity.count((name less customer.name) or ((name eq customer.name) and (CustomerTable.id greater identifier)))
+        }
+
     override fun count(): Long =
         dbQuery(COUNT_TAG) { CustomerEntity.count() } ?: 0L
 
@@ -69,9 +74,9 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
             true
         }
 
-    override fun search(query: String, limit: Int): List<SearchResult>? =
+    override fun search(query: String, limit: Int): List<TmSearchResult>? =
         searchCustomers(query, limit)?.map { customer ->
-            SearchResult(
+            TmSearchResult(
                 identifier = customer.identifier,
                 text = listOf(customer.name, customer.phone).filter { it.isNotBlank() }.joinToString(" - ")
             )

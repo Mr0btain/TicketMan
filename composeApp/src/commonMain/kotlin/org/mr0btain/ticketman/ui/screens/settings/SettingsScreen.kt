@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
 import org.mr0btain.ticketman.components.utils.formatHours
 import org.mr0btain.ticketman.components.utils.formatTime
 import androidx.compose.ui.Modifier
@@ -36,6 +37,8 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.StationDialog
 import ticketman.composeapp.generated.resources.*
 import org.mr0btain.ticketman.components.data.local.UpdateInterval
+import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 
 /**
@@ -47,13 +50,15 @@ fun SettingsScreen(
     viewModel: MainViewModel,
     onOpenGallery: (() -> Unit)? = null
 ) {
+    val isAdmin = viewModel.session.isAdmin.collectAsState()
     val darkMode = viewModel.settings.darkMode.collectAsState()
     val palette = viewModel.settings.palette.collectAsState()
     val font = viewModel.settings.font.collectAsState()
     val reduceTransparency = viewModel.settings.reduceTransparency.collectAsState()
     val serverUrl = viewModel.settings.serverUrl.collectAsState()
     val rememberLogin = viewModel.settings.rememberLogin.collectAsState()
-    val defaultTab = viewModel.settings.defaultTab.collectAsState()
+    val defaultAdminTab = viewModel.settings.defaultAdminTab.collectAsState()
+    val defaultRecordsTab = viewModel.settings.defaultRecordsTab.collectAsState()
     val pageSize = viewModel.settings.pageSize.collectAsState()
     val searchLimit = viewModel.settings.searchLimit.collectAsState()
     val updateInterval = viewModel.settings.updateInterval.collectAsState()
@@ -86,136 +91,164 @@ fun SettingsScreen(
         onRegister = { name, onResult -> viewModel.session.registerStation(name, onResult) }
     )
 
-    // Names of the main screen tabs, in tab index order
-    val tabNames = listOf("Customers", "Tickets", "Inventory")
+    val settingsGroups = mutableStateListOf<SettingItemGroup>()
 
-    val settingsGroups = listOf(
-        SettingItemGroup(
-            label = "Login",
-            icon = Res.drawable.lock,
-            items = listOf(
-                SettingItem.Switch(
-                    icon = if (rememberLogin.value) painterResource(Res.drawable.lock) else painterResource(Res.drawable.unlock),
-                    label = "Remember login",
-                    description = "Save username and password after logging in",
-                    checked = rememberLogin.value,
-                    onToggle = { viewModel.settings.toggleRememberLogin() }
+    // If were admin, add the tab
+    if (isAdmin.value) {
+        settingsGroups.add(
+            SettingItemGroup(
+                label = "Admin",
+                icon = Res.drawable.archive,
+                items = listOf(
+                    SettingItem.Choice(
+                        icon = painterResource(Res.drawable.home),
+                        label = "Start tab",
+                        description = "Admin tab shown on start",
+                        selected = defaultAdminTab.value.label,
+                        options = AdminTab.entries.map { it.label },
+                        onSelect = { value ->
+                            AdminTab.entries.firstOrNull { it.label == value }?.let { selected ->
+                                viewModel.settings.setDefaultAdminTab(selected)
+                            }
+                        }
+                    )
                 )
             )
-        ),
-        SettingItemGroup(
-            label = "Server",
-            icon = Res.drawable.server,
-            items = listOf(
-                SettingItem.Text(
-                    icon = painterResource(Res.drawable.server),
-                    label = "Server address",
-                    description = "Where the server is, like tickets.myshop.com, or 192.168.1.20 on the shop's network. Uses HTTPS unless it starts with http://, which isn't secure",
-                    value = serverUrl.value,
-                    onChange = { url ->
-                        viewModel.settings.setServerUrl(url)
-                        true
-                    }
-                ),
-                SettingItem.Text(
-                    icon = painterResource(Res.drawable.monitor),
-                    label = "Device name",
-                    description = "Name admins see for this device, used from the next login",
-                    value = deviceName.value,
-                    onChange = { name ->
-                        viewModel.settings.setDeviceName(name)
-                        true
-                    }
+        )
+    }
+
+    // Add the rest of the tabs
+    settingsGroups.addAll(
+        listOf(
+            SettingItemGroup(
+                label = "Login",
+                icon = Res.drawable.lock,
+                items = listOf(
+                    SettingItem.Switch(
+                        icon = if (rememberLogin.value) painterResource(Res.drawable.lock) else painterResource(Res.drawable.unlock),
+                        label = "Remember login",
+                        description = "Save username and password after logging in",
+                        checked = rememberLogin.value,
+                        onToggle = { viewModel.settings.toggleRememberLogin() }
+                    )
                 )
-            )
-        ),
-        SettingItemGroup(
-            label = "Records",
-            icon = Res.drawable.list,
-            items = listOf(
-                SettingItem.Choice(
-                    icon = painterResource(Res.drawable.home),
-                    label = "Start tab",
-                    description = "Records tab shown on start",
-                    selected = tabNames.getOrElse(defaultTab.value) { "" },
-                    options = tabNames,
-                    onSelect = { name ->
-                        tabNames.indexOf(name).takeIf { it >= 0 }?.let { viewModel.settings.setDefaultTab(it) }
-                    }
-                ),
-                SettingItem.Choice(
-                    icon = painterResource(Res.drawable.refresh_cw),
-                    label = "Check for updates every",
-                    description = "How often open lists, records, the counter queue and the admin screen pick up changes from other devices",
-                    selected = updateInterval.value.label,
-                    options = UpdateInterval.entries.map { it.label },
-                    onSelect = { label ->
-                        UpdateInterval.entries.firstOrNull { it.label == label }?.let { viewModel.settings.setUpdateInterval(it) }
-                    }
-                ),
-                numberSetting(
-                    icon = painterResource(Res.drawable.list),
-                    label = "Page size",
-                    description = "Number of items loaded per page",
-                    value = pageSize.value,
-                    range = SettingsHandler.PAGE_SIZE_RANGE,
-                    onChange = viewModel.settings::setPageSize
-                ),
-                numberSetting(
-                    icon = painterResource(Res.drawable.search),
-                    label = "Search result limit",
-                    description = "Max number of search results",
-                    value = searchLimit.value,
-                    range = SettingsHandler.SEARCH_LIMIT_RANGE,
-                    onChange = viewModel.settings::setSearchLimit
-                ),
-                numberSetting(
-                    icon = painterResource(Res.drawable.database),
-                    label = "Cache size",
-                    description = "Opened records kept so going back to them is quick",
-                    value = cacheSize.value,
-                    range = SettingsHandler.CACHE_SIZE_RANGE,
-                    onChange = viewModel.settings::setCacheSize
+            ),
+            SettingItemGroup(
+                label = "Server",
+                icon = Res.drawable.server,
+                items = listOf(
+                    SettingItem.Text(
+                        icon = painterResource(Res.drawable.server),
+                        label = "Server address",
+                        description = "Where the server is, like tickets.myshop.com, or 192.168.1.20 on the shop's network. Uses HTTPS unless it starts with http://, which isn't secure",
+                        value = serverUrl.value,
+                        onChange = { url ->
+                            viewModel.settings.setServerUrl(url)
+                            true
+                        }
+                    ),
+                    SettingItem.Text(
+                        icon = painterResource(Res.drawable.monitor),
+                        label = "Device name",
+                        description = "Name admins see for this device, used from the next login",
+                        value = deviceName.value,
+                        onChange = { name ->
+                            viewModel.settings.setDeviceName(name)
+                            true
+                        }
+                    )
                 )
-            )
-        ),
-        SettingItemGroup(
-            label = "Account and station",
-            icon = Res.drawable.key,
-            items = listOf(
-                SettingItem.Action(
-                    icon = painterResource(Res.drawable.key),
-                    label = "Change PIN",
-                    description = when {
-                        currentUser.value == null -> "Log in to change your PIN"
-                        currentUser.value?.pinLocked == true -> "Your PIN is locked, ask an admin to unlock it"
-                        currentUser.value?.hasPin == true -> "PIN used to sign in at counter stations"
-                        else -> "You don't have a PIN yet, set one to use counter stations"
-                    },
-                    enabled = currentUser.value != null,
-                    onClick = { showChangePin = true }
-                ),
-                SettingItem.Action(
-                    icon = painterResource(Res.drawable.clock),
-                    label = if (clockedIn.value != null) "Clock out" else "Clock in",
-                    description = when {
-                        currentUser.value == null -> "Log in to use the time clock"
-                        else -> (clockedIn.value?.let { "On the clock since ${formatTime(it.clockedInAt)}" } ?: "Off the clock") +
-                            (weekHours.value?.let { ", ${formatHours(it)} this week" } ?: "") +
-                            (weekScheduled.value?.takeIf { it > 0 }?.let { " of ${formatHours(it)} scheduled" } ?: "")
-                    },
-                    enabled = currentUser.value != null,
-                    onClick = { viewModel.timeClock.punch() }
-                ),
-                SettingItem.Action(
-                    icon = painterResource(Res.drawable.monitor),
-                    label = "Counter station",
-                    description = when (station.value?.status) {
-                        null -> "Make this device a station staff can PIN in at"
-                        StationStatus.PENDING -> "Waiting for an admin to approve \"${station.value?.name}\""
-                        StationStatus.APPROVED -> "Approved as \"${station.value?.name}\""
-                    },
-                    onClick = { showStation = true }
+            ),
+            SettingItemGroup(
+                label = "Records",
+                icon = Res.drawable.list,
+                items = listOf(
+                    SettingItem.Choice(
+                        icon = painterResource(Res.drawable.home),
+                        label = "Start tab",
+                        description = "Records tab shown on start",
+                        selected = defaultRecordsTab.value.label,
+                        options = RecordsTab.entries.map { it.label },
+                        onSelect = { value ->
+                            RecordsTab.entries.firstOrNull { it.label == value }?.let { selected ->
+                                viewModel.settings.setDefaultRecordsTab(selected)
+                            }
+                        }
+                    ),
+                    SettingItem.Choice(
+                        icon = painterResource(Res.drawable.refresh_cw),
+                        label = "Check for updates every",
+                        description = "How often open lists, records, the counter queue and the admin screen pick up changes from other devices",
+                        selected = updateInterval.value.label,
+                        options = UpdateInterval.entries.map { it.label },
+                        onSelect = { label ->
+                            UpdateInterval.entries.firstOrNull { it.label == label }?.let { viewModel.settings.setUpdateInterval(it) }
+                        }
+                    ),
+                    numberSetting(
+                        icon = painterResource(Res.drawable.list),
+                        label = "Page size",
+                        description = "Number of items loaded per page",
+                        value = pageSize.value,
+                        range = SettingsHandler.PAGE_SIZE_RANGE,
+                        onChange = viewModel.settings::setPageSize
+                    ),
+                    numberSetting(
+                        icon = painterResource(Res.drawable.search),
+                        label = "Search result limit",
+                        description = "Max number of search results",
+                        value = searchLimit.value,
+                        range = SettingsHandler.SEARCH_LIMIT_RANGE,
+                        onChange = viewModel.settings::setSearchLimit
+                    ),
+                    numberSetting(
+                        icon = painterResource(Res.drawable.database),
+                        label = "Cache size",
+                        description = "Opened records kept so going back to them is quick",
+                        value = cacheSize.value,
+                        range = SettingsHandler.CACHE_SIZE_RANGE,
+                        onChange = viewModel.settings::setCacheSize
+                    )
+                )
+            ),
+            SettingItemGroup(
+                label = "Account and station",
+                icon = Res.drawable.key,
+                items = listOf(
+                    SettingItem.Action(
+                        icon = painterResource(Res.drawable.key),
+                        label = "Change PIN",
+                        description = when {
+                            currentUser.value == null -> "Log in to change your PIN"
+                            currentUser.value?.pinLocked == true -> "Your PIN is locked, ask an admin to unlock it"
+                            currentUser.value?.hasPin == true -> "PIN used to sign in at counter stations"
+                            else -> "You don't have a PIN yet, set one to use counter stations"
+                        },
+                        enabled = currentUser.value != null,
+                        onClick = { showChangePin = true }
+                    ),
+                    SettingItem.Action(
+                        icon = painterResource(Res.drawable.clock),
+                        label = if (clockedIn.value != null) "Clock out" else "Clock in",
+                        description = when {
+                            currentUser.value == null -> "Log in to use the time clock"
+                            else -> (clockedIn.value?.let { "On the clock since ${formatTime(it.clockedInAt)}" } ?: "Off the clock") +
+                                    (weekHours.value?.let { ", ${formatHours(it)} this week" } ?: "") +
+                                    (weekScheduled.value?.takeIf { it > 0 }?.let { " of ${formatHours(it)} scheduled" } ?: "")
+                        },
+                        enabled = currentUser.value != null,
+                        onClick = { viewModel.timeClock.punch() }
+                    ),
+                    SettingItem.Action(
+                        icon = painterResource(Res.drawable.monitor),
+                        label = "Counter station",
+                        description = when (station.value?.status) {
+                            null -> "Make this device a station staff can PIN in at"
+                            StationStatus.PENDING -> "Waiting for an admin to approve \"${station.value?.name}\""
+                            StationStatus.APPROVED -> "Approved as \"${station.value?.name}\""
+                        },
+                        onClick = { showStation = true }
+                    )
                 )
             )
         )

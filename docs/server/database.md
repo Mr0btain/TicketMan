@@ -71,7 +71,7 @@ Conventions every subclass follows:
 - Writes return `Boolean`: `false` when the record isn't there or the write failed.
 - `getPagedItems` pages with `offset` and `itemsPerPage`. Tickets come newest first (by id, which as a v7 UUID sorts
   by creation time); customers, inventory and users come by name.
-- `search` returns `SearchResult`s (an id and display text) for search boxes and pickers.
+- `search` returns `TmSearchResult`s (an id and display text) for search boxes and pickers.
 
 ### Notes on records
 

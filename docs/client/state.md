@@ -64,7 +64,7 @@ Every handler gets `viewModelScope` to launch work in and, where it shows messag
 | `admin` | `AdminHandler` | Admin | Overview, daily report, low stock, audit log. Its parts: `accounts` (`AdminAccounts`: users, requests, invites, PINs), `devices` (`AdminDevices`: stations, sessions, blocked logins) and `server` (`AdminServer`: server info, shop profile, backup and restore, mock data) |
 | `kiosk` | `KioskHandler` | Kiosk | Kiosk on or off, the PIN lock, the idle timer |
 
-`selectedMainTabIndex` is the one bit of UI state kept on the view model itself, so the start tab setting can set it.
+`selectedRecordsTab` is the one bit of UI state kept on the view model itself, so the start tab setting can set it.
 
 ## How handlers are written
 

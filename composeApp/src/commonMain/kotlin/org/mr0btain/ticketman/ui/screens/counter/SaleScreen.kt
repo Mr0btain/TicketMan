@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.components.data.rememberKept
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -55,10 +56,10 @@ fun SaleScreen(
 ) {
     val spacing = TmTheme.spacing
 
-    val drafts = remember { mutableStateListOf<ChargeDraft>() }
-    var discountCents by remember { mutableLongStateOf(0L) }
-    var customer by remember(startingCustomer) { mutableStateOf(startingCustomer) }
-    val pending = remember { mutableStateListOf<PaymentRequest>() }
+    val drafts = rememberKept("sale-lines") { mutableStateListOf<ChargeDraft>() }
+    var discountCents by rememberKept("sale-discount") { mutableLongStateOf(0L) }
+    var customer by rememberKept("sale-customer", startingCustomer) { mutableStateOf(startingCustomer) }
+    val pending = rememberKept("sale-payments") { mutableStateListOf<PaymentRequest>() }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 

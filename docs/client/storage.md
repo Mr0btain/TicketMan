@@ -41,7 +41,7 @@ read KSafe's in-memory cache and write to disk in the background. On the web KSa
 | This device | `deviceId`, `deviceName` | `deviceId` is a random UUID made the first time it's read. `deviceName` defaults to the platform's name |
 | Station | `stationCredentials` | The station id and secret, set when the device registers as a station |
 | Appearance | `darkMode`, `themeId`, `fontId`, `reduceTransparency` | |
-| Lists | `pageSize`, `searchLimit`, `cacheSize`, `defaultTab`, `ticketScope` | |
+| Lists | `pageSize`, `searchLimit`, `cacheSize`, `defaultRecordsTab`, `ticketScope` | |
 | Admin | `lowStockThreshold` | Read and written by `AdminHandler`, not `SettingsHandler` |
 | Login | `rememberLogin` | |
 

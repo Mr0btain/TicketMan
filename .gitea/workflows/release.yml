@@ -19,9 +19,13 @@ on:
         type: boolean
         default: false
       skip_windows:
-        description: Skip the Windows MSI (needs the windows-latest runner online)
+        description: Skip the Windows x64 MSI (needs the windows-latest runner online)
         type: boolean
         default: false
+      skip_windows_arm64:
+        description: Skip the Windows arm64 MSI (needs a windows-arm64 runner online)
+        type: boolean
+        default: true
       skip_tarball:
         description: Skip the Linux tarballs (the desktop app unpacked, beside each DEB)
         type: boolean
@@ -178,6 +182,39 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: msi
+          path: dist/
+
+  # jpackage can't cross build, so the arm64 MSI needs a Windows on ARM runner registered with the windows-arm64:host
+  # label, set up like the x64 one. Until there is one it's skipped by default: on a run by hand untick
+  # skip_windows_arm64, and for tags set the SKIP_WINDOWS_ARM64 variable to false
+  msi-arm64:
+    name: Desktop MSI (Windows arm64)
+    needs: version
+    if: >-
+      (github.event_name == 'workflow_dispatch' && format('{0}', inputs.skip_windows_arm64) != 'true')
+      || (github.event_name != 'workflow_dispatch' && vars.SKIP_WINDOWS_ARM64 == 'false')
+    runs-on: windows-arm64
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          architecture: aarch64
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3: a commit, since act_runner can't resolve the v4 tag
+
+      - name: Package
+        run: ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process :composeApp:packageMsi
+
+      - name: Collect it
+        run: |
+          mkdir -p dist
+          cp composeApp/build/compose/binaries/main/msi/TicketMan-*.msi dist/
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: msi-arm64
           path: dist/
 
   # One jar for every desktop system (-PallPlatforms puts each one's Skia in), run with java -jar on Java 21. It's
@@ -367,13 +404,14 @@ jobs:
 
   release:
     name: Publish
-    needs: [version, packages, deb-arm64, msi, desktop-jar, server-web, server-noweb]
+    needs: [version, packages, deb-arm64, msi, msi-arm64, desktop-jar, server-web, server-noweb]
     # Publishes without whatever was skipped, but not when anything failed or was cancelled
     if: >-
       always() && startsWith(github.ref, 'refs/tags/') && needs.version.result == 'success'
       && (needs.packages.result == 'success' || needs.packages.result == 'skipped')
       && (needs.deb-arm64.result == 'success' || needs.deb-arm64.result == 'skipped')
       && (needs.msi.result == 'success' || needs.msi.result == 'skipped')
+      && (needs.msi-arm64.result == 'success' || needs.msi-arm64.result == 'skipped')
       && (needs.desktop-jar.result == 'success' || needs.desktop-jar.result == 'skipped')
       && (needs.server-web.result == 'success' || needs.server-web.result == 'skipped')
       && (needs.server-noweb.result == 'success' || needs.server-noweb.result == 'skipped')

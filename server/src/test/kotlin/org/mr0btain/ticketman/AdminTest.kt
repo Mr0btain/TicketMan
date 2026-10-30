@@ -14,9 +14,7 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.search.SearchQuery
-import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
@@ -185,7 +183,7 @@ class AdminTest {
         val response = get("/api/user/search?query=tec&limit=10", token(admin))
         assertEquals(HttpStatusCode.OK, response.status)
 
-        val results = json.decodeFromString<List<SearchResult>>(response.bodyAsText())
+        val results = json.decodeFromString<List<TmSearchResult>>(response.bodyAsText())
         assertTrue(results.any { it.identifier == employee.identifier }, "Search didn't find the user: $results")
     }
 

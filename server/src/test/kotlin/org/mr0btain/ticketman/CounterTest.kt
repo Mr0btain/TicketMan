@@ -11,11 +11,9 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.user.AccessLevel
-import org.mr0btain.ticketman.data.search.SearchQuery
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.user.User
@@ -195,7 +193,7 @@ class CounterTest {
         addCustomer(Customer(name = "John Roe", phone = "555-999-0000"))
 
         suspend fun search(query: String) =
-            json.decodeFromString<List<SearchResult>>(client.get("/api/data/customer/search") { bearerAuth(token); parameter("query", query); parameter("limit", 10) }.bodyAsText())
+            json.decodeFromString<List<TmSearchResult>>(client.get("/api/data/customer/search") { bearerAuth(token); parameter("query", query); parameter("limit", 10) }.bodyAsText())
                 .map { it.identifier }
 
         assertEquals(listOf(jane.identifier), search("jane doe"))

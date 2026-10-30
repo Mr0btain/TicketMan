@@ -177,4 +177,39 @@ class TimeOffTest {
         val friday = LocalDate(2026, 10, 30)
         assertEquals(16.0, TimeOffRules.defaultHours(friday, friday.plus(DatePeriod(days = 3))))
     }
+
+    @Test
+    fun unusedHoursCarryOverUpToTheCapAndFloatingHolidaysAddToTheYear() = testApplication {
+        setup()
+        post("/api/timeoff/allowance/${tech.identifier}", json.encodeToString(TimeOffAllowance(80.0, carryOverMaxHours = 24.0, floatingHours = 8.0)), adminToken)
+
+        // Only 16 used last year: 8 of it floating, so 72 of the allowance is unused and the cap keeps 24
+        val lastYear = LocalDate(year - 1, 3, 2)
+        val asked = json.decodeFromString<TimeOffRequest>(post("/api/timeoff/request", json.encodeToString(days(lastYear, 2, 16.0)), techToken).bodyAsText())
+        assertEquals(HttpStatusCode.OK, post("/api/timeoff/approve/${asked.identifier}", "{}", adminToken).status)
+
+        val balance = mine().balance
+        assertEquals(80.0, balance.allowanceHours)
+        assertEquals(24.0, balance.carriedOverHours)
+        assertEquals(8.0, balance.floatingHours)
+        assertEquals(112.0, balance.totalHours)
+        assertEquals(112.0, balance.leftHours)
+
+        // A request can use all of it, and no more
+        assertEquals(HttpStatusCode.Conflict, post("/api/timeoff/request", json.encodeToString(days(first, 15, 113.0)), techToken).status)
+        assertEquals(HttpStatusCode.Created, post("/api/timeoff/request", json.encodeToString(days(first, 15, 112.0)), techToken).status)
+
+        // Setting just the hours, like an older client does, leaves the rest
+        allowance(40.0)
+        assertEquals(8.0, mine().balance.floatingHours)
+        assertEquals(24.0, mine().balance.carryOverMaxHours)
+    }
+
+    @Test
+    fun carryOverAndFloatingHoursAreChecked() = testApplication {
+        setup()
+
+        assertEquals(HttpStatusCode.BadRequest, post("/api/timeoff/allowance/${tech.identifier}", json.encodeToString(TimeOffAllowance(80.0, carryOverMaxHours = -1.0)), adminToken).status)
+        assertEquals(HttpStatusCode.BadRequest, post("/api/timeoff/allowance/${tech.identifier}", json.encodeToString(TimeOffAllowance(80.0, floatingHours = 5000.0)), adminToken).status)
+    }
 }

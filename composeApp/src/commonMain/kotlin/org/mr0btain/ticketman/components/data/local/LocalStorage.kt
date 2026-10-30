@@ -5,6 +5,8 @@ import org.mr0btain.ticketman.components.network.TrustedAuthority
 import org.mr0btain.ticketman.components.network.migrateSavedServerAddress
 import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.getPlatform
+import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import kotlin.uuid.Uuid
 
 class LocalStorage(private val store: KeyValueStore) {
@@ -19,7 +21,8 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _ticketScope: String = ""
     private var _serverUrl: String = ""
     private var _rememberLogin: Boolean = DEFAULT_REMEMBER_LOGIN
-    private var _defaultTab: Int = DEFAULT_TAB
+    private var _defaultAdminTab: Int = DEFAULT_ADMIN_TAB
+    private var _defaultRecordsTab: Int = DEFAULT_RECORDS_TAB
     private var _lowStockThreshold: Int = DEFAULT_LOW_STOCK_THRESHOLD
     private var _pageSize: Int = DEFAULT_PAGE_SIZE
     private var _searchLimit: Int = DEFAULT_SEARCH_LIMIT
@@ -127,12 +130,20 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(REMEMBER_LOGIN_KEY, value.toString())
         }
 
-    /** Main screen tab index to start on */
-    var defaultTab: Int
-        get() = _defaultTab
+    /** Records screen tab to start on */
+    var defaultAdminTab: AdminTab
+        get() = AdminTab.entries[_defaultAdminTab]
         set(value) {
-            _defaultTab = value
-            store.putString(DEFAULT_TAB_KEY, value.toString())
+            _defaultAdminTab = value.ordinal
+            store.putString(DEFAULT_ADMIN_TAB_KEY, value.ordinal.toString())
+        }
+
+    /** Records screen tab to start on */
+    var defaultRecordsTab: RecordsTab
+        get() = RecordsTab.entries[_defaultRecordsTab]
+        set(value) {
+            _defaultRecordsTab = value.ordinal
+            store.putString(DEFAULT_RECORDS_TAB_KEY, value.ordinal.toString())
         }
 
     /** Stock count at or below which the admin screen lists an item as running low */
@@ -238,7 +249,8 @@ class LocalStorage(private val store: KeyValueStore) {
         _serverUrl = migrateSavedServerAddress(savedUrl)
         if (_serverUrl != savedUrl) store.putString(SERVER_URL_KEY, _serverUrl)
         _rememberLogin = getBoolean(REMEMBER_LOGIN_KEY, DEFAULT_REMEMBER_LOGIN)
-        _defaultTab = getInt(DEFAULT_TAB_KEY, DEFAULT_TAB)
+        _defaultAdminTab = getInt(DEFAULT_ADMIN_TAB_KEY, DEFAULT_ADMIN_TAB)
+        _defaultRecordsTab = getInt(DEFAULT_RECORDS_TAB_KEY, DEFAULT_RECORDS_TAB)
         _lowStockThreshold = getInt(LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD)
         _pageSize = getInt(PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE)
         _searchLimit = getInt(SEARCH_LIMIT_KEY, DEFAULT_SEARCH_LIMIT)
@@ -286,7 +298,8 @@ class LocalStorage(private val store: KeyValueStore) {
     companion object {
         const val DEFAULT_REMEMBER_LOGIN = true
         const val DEFAULT_DARK_MODE = true
-        const val DEFAULT_TAB = 0
+        const val DEFAULT_ADMIN_TAB = 0
+        const val DEFAULT_RECORDS_TAB = 0
         const val DEFAULT_LOW_STOCK_THRESHOLD = 5
         const val DEFAULT_PAGE_SIZE = 20
         const val DEFAULT_SEARCH_LIMIT = 20
@@ -304,7 +317,8 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val SERVER_URL_KEY = "server_url"
         private const val TRUSTED_AUTHORITIES_KEY = "trusted_authorities"
         private const val REMEMBER_LOGIN_KEY = "remember_login"
-        private const val DEFAULT_TAB_KEY = "default_tab"
+        private const val DEFAULT_ADMIN_TAB_KEY = "admin_tab"
+        private const val DEFAULT_RECORDS_TAB_KEY = "records_tab"
         private const val LOW_STOCK_THRESHOLD_KEY = "low_stock_threshold"
         private const val PAGE_SIZE_KEY = "page_size"
         private const val SEARCH_LIMIT_KEY = "search_limit"

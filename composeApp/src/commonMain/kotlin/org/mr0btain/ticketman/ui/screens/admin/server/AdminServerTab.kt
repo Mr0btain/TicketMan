@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.server
 
+import org.mr0btain.ticketman.components.data.rememberKept
 import org.mr0btain.ticketman.data.ticket.CustomStatus
 import org.mr0btain.ticketman.data.ticket.StatusChoice
 import org.mr0btain.ticketman.data.ticket.label
@@ -432,9 +433,9 @@ private fun ShopProfileCard(
     // Edits are kept here until saved, and reset when a new profile comes from the server. Statuses have their own
     // card, so saving those doesn't throw away edits made here
     val loaded = (shopProfile ?: ShopProfile()).copy(statuses = emptyList())
-    var profile by remember(loaded) { mutableStateOf(loaded) }
+    var profile by rememberKept("shop", loaded) { mutableStateOf(loaded) }
     // Kept as text while typing so the field can be cleared, saved as a number
-    var repeatDays by remember(loaded) { mutableStateOf(profile.repeatWindowDays.toString()) }
+    var repeatDays by rememberKept("shop-repeat-days", loaded) { mutableStateOf(profile.repeatWindowDays.toString()) }
     // The server checks this too
     val symbolProblem = profile.currencySymbol.trim().let { symbol ->
         if (symbol.isEmpty() || symbol.length > Money.MAX_SYMBOL_LENGTH || symbol.any { it.isDigit() }) "1 to ${Money.MAX_SYMBOL_LENGTH} characters, no digits" else null

@@ -62,6 +62,9 @@ data class TimeOffRequest(
 /**
  * Someone's time off for a year: what they're allowed, what's been approved and what's waiting
  * @param allowanceHours Set by an admin, the same every year. 0 until it's set
+ * @param carriedOverHours Unused allowance brought from the year before, up to [carryOverMaxHours]
+ * @param carryOverMaxHours Most that can be brought into a year, 0 starts over each year
+ * @param floatingHours Floating holidays: extra hours for the year, set by an admin, that never carry over
  * @param takenHours Time off entries starting in the year
  * @param pendingHours Requests in the year still waiting
  */
@@ -73,11 +76,18 @@ data class TimeOffBalance(
     val year: Int,
     val allowanceHours: Double = 0.0,
     val takenHours: Double = 0.0,
-    val pendingHours: Double = 0.0
+    val pendingHours: Double = 0.0,
+    val carriedOverHours: Double = 0.0,
+    val carryOverMaxHours: Double = 0.0,
+    val floatingHours: Double = 0.0
 ) {
+    /** Everything they have for the year */
+    val totalHours: Double
+        get() = allowanceHours + carriedOverHours + floatingHours
+
     /** What can still be asked for */
     val leftHours: Double
-        get() = (allowanceHours - takenHours - pendingHours).coerceAtLeast(0.0)
+        get() = (totalHours - takenHours - pendingHours).coerceAtLeast(0.0)
 }
 
 /** Someone's requests and balance, for their own view */
@@ -91,9 +101,17 @@ data class MyTimeOff(
 @Serializable
 data class TimeOffDecision(val reason: String = "")
 
-/** An admin setting someone's yearly allowance */
+/**
+ * Someone's yearly allowance
+ * @param carryOverMaxHours Most unused hours that can be brought into the next year. Null when setting leaves it as it is
+ * @param floatingHours Floating holidays, extra hours each year. Null when setting leaves it as it is
+ */
 @Serializable
-data class TimeOffAllowance(val hours: Double)
+data class TimeOffAllowance(
+    val hours: Double,
+    val carryOverMaxHours: Double? = null,
+    val floatingHours: Double? = null
+)
 
 object TimeOffRules {
     const val MAX_DAYS = 60
@@ -101,6 +119,27 @@ object TimeOffRules {
 
     /** Hours taken for each whole day off unless said otherwise */
     const val HOURS_PER_DAY = 8.0
+
+    /** How many years back carried over time is worked out from, far enough for any cap to have filled */
+    const val CARRY_OVER_YEARS = 5
+
+    /**
+     * Hours brought into [year]. Each year's time off comes out of what was carried in and floating holidays first,
+     * since those would go or are capped, so what's left of the allowance is what carries, up to the cap. Unused
+     * floating holidays and carried hours don't carry again
+     * @param taken Hours of time off in a year
+     */
+    fun carriedOver(year: Int, allowance: TimeOffAllowance, taken: (Int) -> Double): Double {
+        val cap = allowance.carryOverMaxHours ?: 0.0
+        if (cap <= 0) return 0.0
+
+        var carried = 0.0
+        for (past in (year - CARRY_OVER_YEARS) until year) {
+            val fromAllowance = (taken(past) - carried - (allowance.floatingHours ?: 0.0)).coerceAtLeast(0.0)
+            carried = (allowance.hours - fromAllowance).coerceIn(0.0, cap)
+        }
+        return carried
+    }
 
     /** The start of [year] in [zone], for counting a year's time off */
     fun yearStart(year: Int, zone: TimeZone): Long = LocalDate(year, 1, 1).atStartOfDayIn(zone).toEpochMilliseconds()

@@ -26,7 +26,7 @@ import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.data.appointment.Appointment
 import org.mr0btain.ticketman.data.appointment.AppointmentStatus
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.getOrDefault
 import org.mr0btain.ticketman.error.getOrNull
@@ -259,7 +259,7 @@ class AppointmentsHandler(
         remoteHandler.counterRepo.search(text.trim(), SEARCH_LIMIT).getOrNull()?.customers.orEmpty()
 
     /** Staff to give it to */
-    suspend fun searchTechnicians(text: String): List<SearchResult> =
+    suspend fun searchTechnicians(text: String): List<TmSearchResult> =
         remoteHandler.userRepo.search(text.trim(), SEARCH_LIMIT).getOrDefault(emptyList())
 
     /**

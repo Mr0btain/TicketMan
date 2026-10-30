@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.components.network.defaultServerAddress
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
+import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
 import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerRecords
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryRecords
@@ -27,6 +28,7 @@ import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketRecords
 import org.mr0btain.ticketman.ui.screens.records.components.user.UserRecords
 import org.mr0btain.ticketman.ui.screens.kiosk.components.KioskHandler
 import org.mr0btain.ticketman.ui.screens.login.components.SessionHandler
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 
 /**
@@ -67,7 +69,7 @@ class MainViewModel(
         viewModelScope.launch {
             settings.load()
             tickets.load()
-            _selectedMainTabIndex.value = localStorage.defaultTab
+            _selectedRecordsTab.value = localStorage.defaultRecordsTab
 
             // Set url in all our handlers and log in with any stored credentials. With nothing saved, the web
             // client tries the server it was loaded from (a desktop debug build, a development server on this
@@ -96,6 +98,10 @@ class MainViewModel(
     val imageClient = ImageClient(remoteHandler.imageRepo, remoteHandler.httpClient)
 
     /** ----------------------------------------------RECORDS------------------------------------------------------------------- */
+
+    // Selected Records tab index for the records screen
+    private val _selectedRecordsTab: MutableStateFlow<RecordsTab> = MutableStateFlow(RecordsTab.CUSTOMER)
+    val selectedRecordsTab = _selectedRecordsTab.asStateFlow()
 
     // Caches are built with the view model, so cache size changes apply on next start
     private val cacheSize = localStorage.cacheSize
@@ -131,6 +137,11 @@ class MainViewModel(
         inventory.pager.setPageSize(size)
         users.pager.setPageSize(size)
         refreshPagers()
+    }
+
+    /** Switches the records screen */
+    fun changeRecordsScreenTab(selectedRecordsTab: RecordsTab) {
+        _selectedRecordsTab.value = selectedRecordsTab
     }
 
     /** ----------------------------------------------SESSION------------------------------------------------------------------- */
@@ -221,6 +232,10 @@ class MainViewModel(
 
     /** ----------------------------------------------ADMIN------------------------------------------------------------------- */
 
+    // Selected Admin tab for the admin screen
+    private val _selectedAdminTab: MutableStateFlow<AdminTab> = MutableStateFlow(AdminTab.OVERVIEW)
+    val selectedAdminTab = _selectedAdminTab.asStateFlow()
+
     val admin: AdminHandler = AdminHandler(
         remoteHandler = remoteHandler,
         scope = viewModelScope,
@@ -240,6 +255,10 @@ class MainViewModel(
         onTimeOffChanged = { appointments.refresh() }
     )
 
+    fun changeAdminScreenTab(selectedAdminTab: AdminTab) {
+        _selectedAdminTab.value = selectedAdminTab
+    }
+
     /** ----------------------------------------------KIOSK------------------------------------------------------------------- */
 
     val kiosk: KioskHandler = KioskHandler(
@@ -250,15 +269,4 @@ class MainViewModel(
         onSignedOut = { session.signedOut() },
         isAdmin = { session.isAdminNow() }
     )
-
-    /** ----------------------------------------------UI------------------------------------------------------------------- */
-
-    // Selected main tab index
-    private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
-    val selectedMainTabIndex = _selectedMainTabIndex.asStateFlow()
-
-    /** Switches the records screen to Customers (0), Tickets (1) or Inventory (2) */
-    fun changeMainTabIndex(update: Int) {
-        _selectedMainTabIndex.value = update
-    }
 }

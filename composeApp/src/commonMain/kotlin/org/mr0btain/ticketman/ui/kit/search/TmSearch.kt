@@ -18,12 +18,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
@@ -92,11 +91,11 @@ fun TmSearchField(
  * @param onPick Called with the match that was clicked, the field then shows its text
  * @param emptyText Shown in the list when a search finds nothing, null hides the list instead
  */
-@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+@OptIn(FlowPreview::class)
 @Composable
 fun TmSearchBar(
-    onQuery: suspend (String) -> List<SearchResult>,
-    onPick: (SearchResult) -> Unit,
+    onQuery: suspend (String) -> List<TmSearchResult>,
+    onPick: (TmSearchResult) -> Unit,
     modifier: Modifier = Modifier,
     initialQuery: String = "",
     placeholder: String = "Search",
@@ -107,7 +106,7 @@ fun TmSearchBar(
     debounce: Duration = TM_SEARCH_DEBOUNCE
 ) {
     var query by remember { mutableStateOf(initialQuery) }
-    var results by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
+    var results by remember { mutableStateOf<List<TmSearchResult>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     // Picking a match fills in its text, which shouldn't search again

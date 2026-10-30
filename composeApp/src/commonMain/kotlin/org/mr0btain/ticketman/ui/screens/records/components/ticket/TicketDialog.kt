@@ -9,7 +9,7 @@ import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.data.shared.EntityReference
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.ui.kit.selection.TmStatusPicker
@@ -44,8 +44,8 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerDialog
 fun TicketDialog(
     seed: TicketSeed,
     isVisible: Boolean,
-    onCustomerSearchQuery: suspend (String) -> List<SearchResult>,
-    onUserSearchQuery: suspend (String) -> List<SearchResult>,
+    onCustomerSearchQuery: suspend (String) -> List<TmSearchResult>,
+    onUserSearchQuery: suspend (String) -> List<TmSearchResult>,
     onAddCustomer: (Customer, (Customer?, String?) -> Unit) -> Unit,
     onContinue: () -> Unit,
     onDismiss: () -> Unit

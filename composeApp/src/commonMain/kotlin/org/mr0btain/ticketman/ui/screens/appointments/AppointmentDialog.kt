@@ -16,7 +16,7 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.mr0btain.ticketman.components.utils.formatTime
 import org.mr0btain.ticketman.data.appointment.Appointment
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -76,14 +76,14 @@ fun AppointmentDialog(
     appointment: Appointment,
     isNew: Boolean,
     onSearchCustomers: suspend (String) -> List<Customer>,
-    onSearchTechnicians: suspend (String) -> List<SearchResult>,
+    onSearchTechnicians: suspend (String) -> List<TmSearchResult>,
     onSave: (Appointment, (String?) -> Unit) -> Unit,
     onDismissRequest: () -> Unit
 ) {
     var day by remember { mutableStateOf(AppointmentTimes.day(appointment.startsAt).toString()) }
     var time by remember { mutableStateOf(formatTime(appointment.startsAt)) }
     var minutes by remember { mutableStateOf(appointment.minutes) }
-    var customer by remember { mutableStateOf(appointment.customerIdentifier?.let { SearchResult(it, appointment.customerName) }) }
+    var customer by remember { mutableStateOf(appointment.customerIdentifier?.let { TmSearchResult(it, appointment.customerName) }) }
     var name by remember { mutableStateOf(if (appointment.customerIdentifier == null) appointment.customerName else "") }
     var phone by remember { mutableStateOf(appointment.phone) }
     var email by remember { mutableStateOf(appointment.email) }
@@ -91,7 +91,7 @@ fun AppointmentDialog(
     var model by remember { mutableStateOf(appointment.device.model) }
     var problem by remember { mutableStateOf(appointment.problem) }
     var notes by remember { mutableStateOf(appointment.notes) }
-    var technician by remember { mutableStateOf(appointment.technicianIdentifier?.let { SearchResult(it, appointment.technicianName) }) }
+    var technician by remember { mutableStateOf(appointment.technicianIdentifier?.let { TmSearchResult(it, appointment.technicianName) }) }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -157,8 +157,8 @@ fun AppointmentDialog(
             label = "Customer",
             picked = customer,
             placeholder = "Find a customer by name or phone",
-            onSearch = { text -> onSearchCustomers(text).map { SearchResult(it.identifier, listOf(it.name, it.phone).filter { part -> part.isNotBlank() }.joinToString(", ")) } },
-            onPick = { picked -> customer = picked?.let { SearchResult(it.identifier, it.text.substringBefore(", ")) } },
+            onSearch = { text -> onSearchCustomers(text).map { TmSearchResult(it.identifier, listOf(it.name, it.phone).filter { part -> part.isNotBlank() }.joinToString(", ")) } },
+            onPick = { picked -> customer = picked?.let { TmSearchResult(it.identifier, it.text.substringBefore(", ")) } },
             icon = Res.drawable.user
         )
 
@@ -196,10 +196,10 @@ fun AppointmentDialog(
 @Composable
 private fun PersonPicker(
     label: String,
-    picked: SearchResult?,
+    picked: TmSearchResult?,
     placeholder: String,
-    onSearch: suspend (String) -> List<SearchResult>,
-    onPick: (SearchResult?) -> Unit,
+    onSearch: suspend (String) -> List<TmSearchResult>,
+    onPick: (TmSearchResult?) -> Unit,
     icon: DrawableResource
 ) {
     if (picked != null) {
@@ -213,7 +213,7 @@ private fun PersonPicker(
     }
 
     var query by remember { mutableStateOf("") }
-    var matches by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
+    var matches by remember { mutableStateOf<List<TmSearchResult>>(emptyList()) }
 
     LaunchedEffect(query) {
         if (query.isBlank()) {

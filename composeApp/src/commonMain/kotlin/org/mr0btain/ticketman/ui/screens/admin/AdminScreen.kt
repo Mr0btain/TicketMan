@@ -1,11 +1,12 @@
 package org.mr0btain.ticketman.ui.screens.admin
 
+import org.mr0btain.ticketman.components.data.LocalFormMemory
 import org.mr0btain.ticketman.ui.screens.admin.timeoff.AdminTimeOffTab
 import org.mr0btain.ticketman.ui.screens.admin.locations.AdminLocationsTab
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -47,6 +48,7 @@ import org.mr0btain.ticketman.ui.screens.CheckForUpdates
 import org.mr0btain.ticketman.components.data.local.UpdateInterval
 import org.mr0btain.ticketman.ui.screens.admin.server.ImportCard
 import org.mr0btain.ticketman.ui.screens.admin.server.ImportDialog
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import ticketman.composeapp.generated.resources.shield
 
 /**
@@ -77,7 +79,8 @@ private fun AdminContent(
 ) {
     val admin = viewModel.admin
 
-    var selectedTab by rememberSaveable { mutableStateOf(AdminTab.OVERVIEW) }
+    val selectedTab = viewModel.selectedAdminTab.collectAsState()
+    val tabStates = rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
 
     val isLoading by admin.isLoading.collectAsState()
@@ -179,18 +182,18 @@ private fun AdminContent(
 
     // Fresh numbers whenever a tab is opened, only for that tab, and when the device starts working somewhere else
     val workingLocation by viewModel.locations.working.collectAsState()
-    LaunchedEffect(selectedTab, workingLocation) {
-        admin.refresh(selectedTab)
-        if (selectedTab == AdminTab.USERS) viewModel.users.pager.refresh()
+    LaunchedEffect(selectedTab.value, workingLocation) {
+        admin.refresh(selectedTab.value)
+        if (selectedTab.value == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
     }
 
     // Then changes from other devices, on the interval set in Settings, unless a dialog here is open
     val updateInterval by viewModel.settings.updateInterval.collectAsState()
     val dialogOpen = importSheet != null || showUserDialog || showResetPasswordDialog || showDeleteDialog || showInviteDialog || approving != null || shownInvite != null
     CheckForUpdates(interval = updateInterval, enabled = !dialogOpen && !isLoading) {
-        admin.checkForUpdates(selectedTab)
-        if (selectedTab == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
-        if (selectedTab == AdminTab.INVOICES) viewModel.counter.invoices.checkForUpdates()
+        admin.checkForUpdates(selectedTab.value)
+        if (selectedTab.value == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
+        if (selectedTab.value == AdminTab.INVOICES) viewModel.counter.invoices.checkForUpdates()
     }
 
     UserDialog(
@@ -241,8 +244,8 @@ private fun AdminContent(
             TmTabs(
                 modifier = Modifier.weight(1f),
                 tabs = AdminTab.entries.map { it.label },
-                selectedIndex = selectedTab.ordinal,
-                onSelect = { selectedTab = AdminTab.entries[it] },
+                selectedIndex = selectedTab.value.ordinal,
+                onSelect = { viewModel.changeAdminScreenTab(AdminTab.entries[it])},
                 badges = listOfNotNull(
                     (AdminTab.USERS.ordinal to pending.size).takeIf { pending.isNotEmpty() },
                     (AdminTab.TIME_OFF.ordinal to timeOffWaiting).takeIf { timeOffWaiting > 0 }
@@ -258,8 +261,8 @@ private fun AdminContent(
                     variant = TmButtonVariant.SECONDARY,
                     leadingIcon = Res.drawable.refresh_cw,
                     onClick = {
-                        admin.refresh(selectedTab)
-                        when (selectedTab) {
+                        admin.refresh(selectedTab.value)
+                        when (selectedTab.value) {
                             AdminTab.USERS -> scope.launch { viewModel.users.pager.refresh() }
                             AdminTab.INVOICES -> {
                                 viewModel.counter.invoices.load(reset = true)
@@ -273,7 +276,8 @@ private fun AdminContent(
         }
 
         // ------------------------------------------ Content ------------------------------------------
-        when (selectedTab) {
+        // Each tab keeps its own scroll position and what's typed into it
+        tabStates.SaveableStateProvider(selectedTab.value.name) { CompositionLocalProvider(LocalFormMemory provides admin.forms) { when (selectedTab.value) {
             AdminTab.OVERVIEW -> AdminOverviewTab(
                 stats = stats,
                 dailyReport = dailyReport,
@@ -281,11 +285,11 @@ private fun AdminContent(
                 onMoveReport = { admin.moveDailyReport(it) },
                 onPrintReport = { paper, onResult -> admin.printDailyReport(paper, onResult) },
                 onTicketClick = { identifier ->
-                    viewModel.tickets.select(identifier)
-                    viewModel.changeMainTabIndex(TICKET_TAB)
+                    viewModel.tickets.open(identifier)
+                    viewModel.changeRecordsScreenTab(RecordsTab.TICKETS)
                     onNavigateToMain()
                 },
-                onLowStockClick = { selectedTab = AdminTab.LOW_STOCK }
+                onLowStockClick = { viewModel.changeAdminScreenTab(AdminTab.LOW_STOCK) }
             )
 
             AdminTab.USERS -> AdminUsersTab(
@@ -364,8 +368,8 @@ private fun AdminContent(
                     { onResult -> viewModel.purchasing.draftForLowStock(lowStock, lowStockThreshold, onResult) }
                 } else null,
                 onItemClick = { identifier ->
-                    viewModel.inventory.select(identifier)
-                    viewModel.changeMainTabIndex(INVENTORY_TAB)
+                    viewModel.inventory.open(identifier)
+                    viewModel.changeRecordsScreenTab(RecordsTab.INVENTORY)
                     onNavigateToMain()
                 }
             )
@@ -454,7 +458,7 @@ private fun AdminContent(
                 endReached = auditEndReached,
                 onLoadMore = { admin.loadMoreAudit() }
             )
-        }
+        } } }
     }
 }
 
@@ -473,7 +477,3 @@ private fun NotAdminMessage(viewModel: MainViewModel) {
         )
     }
 }
-
-// Main screen tab indexes
-private const val TICKET_TAB = 1
-private const val INVENTORY_TAB = 2

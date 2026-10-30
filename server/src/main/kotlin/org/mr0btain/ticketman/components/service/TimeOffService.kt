@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.service
 
+import org.mr0btain.ticketman.data.schedule.TimeOffAllowance
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -28,8 +29,8 @@ import kotlin.uuid.Uuid
 
 /**
  * Time off requests against each person's yearly allowance: staff ask, admins approve (which puts the time off on
- * the schedule) or decline. A year's allowance starts over on 1 January with nothing carried over; a request counts
- * in the year its first day is in
+ * the schedule) or decline. A year's allowance starts over on 1 January, plus floating holidays and any unused hours
+ * carried over up to each person's cap ([TimeOffRules.carriedOver]); a request counts in the year its first day is in
  */
 @OptIn(ExperimentalUuidApi::class)
 class TimeOffService(
@@ -45,15 +46,29 @@ class TimeOffService(
 
     fun balance(user: User, year: Int): TimeOffBalance {
         val (from, to) = yearRange(year)
-        return TimeOffBalance(
+        val allowance = timeOff.allowance(user.identifier)
+        return balanceOf(
+            user = user,
+            year = year,
+            allowance = allowance,
+            taken = timeOff.takenHours(from, to, listOf(user.identifier))[user.identifier] ?: 0.0,
+            pending = timeOff.pendingHours(from, to, listOf(user.identifier))[user.identifier] ?: 0.0,
+            pastTaken = { past -> yearRange(past).let { (start, end) -> timeOff.takenHours(start, end, listOf(user.identifier))[user.identifier] ?: 0.0 } }
+        )
+    }
+
+    private fun balanceOf(user: User, year: Int, allowance: TimeOffAllowance?, taken: Double, pending: Double, pastTaken: (Int) -> Double) =
+        TimeOffBalance(
             userIdentifier = user.identifier,
             userName = user.name.ifBlank { user.username },
             year = year,
-            allowanceHours = timeOff.allowance(user.identifier),
-            takenHours = timeOff.takenHours(from, to, listOf(user.identifier))[user.identifier] ?: 0.0,
-            pendingHours = timeOff.pendingHours(from, to, listOf(user.identifier))[user.identifier] ?: 0.0
+            allowanceHours = allowance?.hours ?: 0.0,
+            takenHours = taken,
+            pendingHours = pending,
+            carriedOverHours = allowance?.let { TimeOffRules.carriedOver(year, it, pastTaken) } ?: 0.0,
+            carryOverMaxHours = allowance?.carryOverMaxHours ?: 0.0,
+            floatingHours = allowance?.floatingHours ?: 0.0
         )
-    }
 
     /** Every active user's balance for [year], by name */
     fun balances(year: Int): List<TimeOffBalance> {
@@ -61,16 +76,18 @@ class TimeOffService(
         val allowances = timeOff.allowances()
         val taken = timeOff.takenHours(from, to)
         val pending = timeOff.pendingHours(from, to)
+        // Read once for everyone, and only if someone carries time over
+        val past by lazy { ((year - TimeOffRules.CARRY_OVER_YEARS) until year).associateWith { yearRange(it).let { (start, end) -> timeOff.takenHours(start, end) } } }
         return users.getPagedItems(org.mr0btain.ticketman.data.shared.PagedRequest(0, MAX_USERS)).orEmpty()
             .filter { it.status == UserStatus.ACTIVE }
             .map { user ->
-                TimeOffBalance(
-                    userIdentifier = user.identifier,
-                    userName = user.name.ifBlank { user.username },
+                balanceOf(
+                    user = user,
                     year = year,
-                    allowanceHours = allowances[user.identifier] ?: 0.0,
-                    takenHours = taken[user.identifier] ?: 0.0,
-                    pendingHours = pending[user.identifier] ?: 0.0
+                    allowance = allowances[user.identifier],
+                    taken = taken[user.identifier] ?: 0.0,
+                    pending = pending[user.identifier] ?: 0.0,
+                    pastTaken = { pastYear -> past[pastYear]?.get(user.identifier) ?: 0.0 }
                 )
             }
             .sortedBy { it.userName.lowercase() }
@@ -81,7 +98,7 @@ class TimeOffService(
         MyTimeOff(balance(user, year), timeOff.list(user = user.identifier, limit = MY_LIMIT).orEmpty())
 
     /**
-     * Asks for time off for [user]: whole days, taking its hours from what's left of the year's allowance
+     * Asks for time off for [user]: whole days, taking its hours from what's left of the year's time off
      */
     fun request(user: User, received: TimeOffRequest): AccountResult<TimeOffRequest> {
         if (user.status != UserStatus.ACTIVE) return AccountResult.Invalid("Only active staff ask for time off")
@@ -99,7 +116,7 @@ class TimeOffService(
         if (timeOff.get(request.identifier) != null) return AccountResult.Conflict("That request already exists")
 
         val balance = balance(user, request.year(zone()))
-        if (balance.allowanceHours <= 0) return AccountResult.Conflict("You have no time off allowance for ${balance.year} yet, ask an admin to set one")
+        if (balance.totalHours <= 0) return AccountResult.Conflict("You have no time off allowance for ${balance.year} yet, ask an admin to set one")
         if (request.hours > balance.leftHours) {
             return AccountResult.Conflict("Only ${ScheduleRules.hoursText(balance.leftHours)} left for ${balance.year}" +
                 if (balance.pendingHours > 0) ", with ${ScheduleRules.hoursText(balance.pendingHours)} waiting" else "")
@@ -163,14 +180,23 @@ class TimeOffService(
         return AccountResult.Done(timeOff.get(identifier)!!)
     }
 
-    /** Sets someone's yearly allowance in hours */
-    fun setAllowance(userIdentifier: Uuid, hours: Double, actor: Uuid?): AccountResult<TimeOffBalance> {
+    /** Sets someone's yearly allowance, and their carry over cap and floating holidays when given */
+    fun setAllowance(userIdentifier: Uuid, allowance: TimeOffAllowance, actor: Uuid?): AccountResult<TimeOffBalance> {
         val user = users.getById(userIdentifier) ?: return AccountResult.NotFound
-        if (hours < 0 || hours > TimeOffRules.MAX_ALLOWANCE_HOURS || hours.isNaN()) return AccountResult.Invalid("An allowance is 0 to ${TimeOffRules.MAX_ALLOWANCE_HOURS.toInt()} hours a year")
-        if (!timeOff.setAllowance(userIdentifier, hours)) return AccountResult.Invalid("Couldn't save the allowance")
-        auditLog.log(actor, AuditAction.UPDATE, "time off", userIdentifier.toString(), "${user.name.ifBlank { user.username }}'s allowance is ${ScheduleRules.hoursText(hours)} a year")
+        if (!allowance.hours.isValidHours()) return AccountResult.Invalid("An allowance is 0 to ${TimeOffRules.MAX_ALLOWANCE_HOURS.toInt()} hours a year")
+        if (allowance.carryOverMaxHours?.isValidHours() == false) return AccountResult.Invalid("Carry over is 0 to ${TimeOffRules.MAX_ALLOWANCE_HOURS.toInt()} hours")
+        if (allowance.floatingHours?.isValidHours() == false) return AccountResult.Invalid("Floating holidays are 0 to ${TimeOffRules.MAX_ALLOWANCE_HOURS.toInt()} hours a year")
+        if (!timeOff.setAllowance(userIdentifier, allowance)) return AccountResult.Invalid("Couldn't save the allowance")
+
+        val details = listOfNotNull(
+            allowance.carryOverMaxHours?.let { "carrying over up to ${ScheduleRules.hoursText(it)}" },
+            allowance.floatingHours?.let { "${ScheduleRules.hoursText(it)} floating" }
+        ).joinToString("") { ", $it" }
+        auditLog.log(actor, AuditAction.UPDATE, "time off", userIdentifier.toString(), "${user.name.ifBlank { user.username }}'s allowance is ${ScheduleRules.hoursText(allowance.hours)} a year$details")
         return AccountResult.Done(balance(user, thisYear()))
     }
+
+    private fun Double.isValidHours() = !isNaN() && this >= 0 && this <= TimeOffRules.MAX_ALLOWANCE_HOURS
 
     private class AlreadyAnswered : Exception()
 

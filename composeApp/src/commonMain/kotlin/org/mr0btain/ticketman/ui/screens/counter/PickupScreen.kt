@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.components.data.rememberKept
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
@@ -66,9 +67,9 @@ fun PickupScreen(
     val spacing = TmTheme.spacing
 
     // Rebuilt when the server sends back new lines, but not when only the payments changed so edits aren't lost
-    val drafts = remember(invoice.identifier, invoice.charges) { mutableStateListOf<ChargeDraft>().apply { addAll(invoice.charges.map { ChargeDraft(it) }) } }
-    var discountCents by remember(invoice.identifier, invoice.discountCents) { mutableLongStateOf(invoice.discountCents) }
-    val pending = remember(ticket.identifier) { mutableStateListOf<PaymentRequest>() }
+    val drafts = rememberKept("pickup-lines", invoice.identifier, invoice.charges) { mutableStateListOf<ChargeDraft>().apply { addAll(invoice.charges.map { ChargeDraft(it) }) } }
+    var discountCents by rememberKept("pickup-discount", invoice.identifier, invoice.discountCents) { mutableLongStateOf(invoice.discountCents) }
+    val pending = rememberKept("pickup-payments", ticket.identifier) { mutableStateListOf<PaymentRequest>() }
     var busy by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 

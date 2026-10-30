@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.components.print.PrintTemplates
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
 import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import androidx.compose.material3.SnackbarHostState
@@ -91,6 +93,47 @@ class CounterHandlerTest {
         requests.clear()
 
         return CounterHandler(remote, this, SnackbarHostState(), canEdit = { canEdit })
+    }
+
+    @Test
+    fun formsAreKeptUntilTheViewChanges() = runTest {
+        val counter = handler(canEdit = true)
+        counter.sale.start()
+        val typed = counter.forms.keep("sale-lines", emptyList()) { mutableListOf("Screen") }
+
+        // Going to another screen doesn't touch the handler, starting it again is the same sale
+        counter.sale.start()
+        assertSame(typed, counter.forms.keep<MutableList<String>>("sale-lines", emptyList()) { fail("It should still be there") })
+
+        // Leaving the sale is the end of it
+        counter.goHome()
+        assertNotSame(typed, counter.forms.keep("sale-lines", emptyList()) { mutableListOf<String>() })
+    }
+
+    @Test
+    fun loggingOutForgetsWhatWasTyped() = runTest {
+        val counter = handler(canEdit = true)
+        counter.checkIn.start()
+        counter.forms.keep("check-in", emptyList()) { "passcode 1234" }
+
+        counter.clear()
+
+        assertEquals("fresh", counter.forms.keep("check-in", emptyList()) { "fresh" })
+    }
+
+    @Test
+    fun anInvoiceOpensAsItPrintsWithItsTicket() = runTest {
+        val counter = handler(canEdit = true)
+
+        counter.printer.previewInvoice(invoice)
+        settle { counter.printer.invoicePreview.value != null }
+
+        val preview = assertNotNull(counter.printer.invoicePreview.value)
+        assertEquals(invoice.identifier, preview.invoice.identifier)
+        assertEquals(PrintTemplates.invoice(ShopProfile(), ticket, null, invoice).blocks, preview.document.blocks)
+
+        counter.printer.closeInvoicePreview()
+        assertNull(counter.printer.invoicePreview.value)
     }
 
     @Test

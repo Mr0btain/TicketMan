@@ -1,5 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
+import org.mr0btain.ticketman.data.location.at
+import org.mr0btain.ticketman.components.print.PrintDocument
+import org.mr0btain.ticketman.components.network.orNullIfNotFound
+import org.mr0btain.ticketman.components.network.ServerError
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.print.PrintTemplate
@@ -13,6 +19,9 @@ import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.valueOr
 import kotlin.uuid.Uuid
+
+/** An invoice open to look over, with [document] being what printing it would print */
+data class InvoicePreview(val invoice: Invoice, val document: PrintDocument)
 
 /**
  * Prints the counter's slips
@@ -75,6 +84,48 @@ class CounterPrinter(
             val shop = remoteHandler.adminRepo.getShopProfile() ?: shop()
             onResult(printDocument(PrintTemplates.itemLabel(shop, item), paper))
         }
+    }
+
+    private val _invoicePreview = MutableStateFlow<InvoicePreview?>(null)
+
+    /** The invoice open to look over before printing or saving it */
+    val invoicePreview = _invoicePreview.asStateFlow()
+
+    /**
+     * Opens an invoice as it prints, loaded the way the server loads its PDF so the two match: its ticket and customer,
+     * and the address of the location it was made at. Says so when something it needs can't be read
+     */
+    fun previewInvoice(invoice: Invoice) {
+        support.scope.launch {
+            val tickets = remoteHandler.ticketRepo
+            val failed: (ServerError) -> Unit = { error -> support.notify("Couldn't open ${invoice.label}: ${error.message}") }
+
+            val ticket = invoice.ticketIdentifier?.let { tickets.get(it).orNullIfNotFound().valueOr { error -> failed(error); return@launch } }
+            val customerIdentifier = invoice.customerIdentifier
+                ?: ticket?.let { tickets.getCustomer(it.identifier).orNullIfNotFound().valueOr { error -> failed(error); return@launch } }?.identifier
+            val customer = customerIdentifier?.let { remoteHandler.customerRepo.get(it).orNullIfNotFound().valueOr { error -> failed(error); return@launch } }
+
+            val location = remoteHandler.locationRepo.all().getOrNull()?.let { locations ->
+                locations.firstOrNull { it.identifier == invoice.locationIdentifier } ?: locations.firstOrNull { it.main }
+            }
+            val shop = (remoteHandler.adminRepo.getShopProfile() ?: shop()).at(location)
+
+            _invoicePreview.value = InvoicePreview(invoice, PrintTemplates.invoice(shop, ticket, customer, invoice))
+        }
+    }
+
+    fun closeInvoicePreview() {
+        _invoicePreview.value = null
+    }
+
+    /**
+     * Prints the open invoice
+     * @param onResult Gets null when it went to the printer or they cancelled, otherwise what went wrong
+     */
+    fun printInvoicePreview(paper: PaperSize, onResult: (String?) -> Unit) {
+        val preview = _invoicePreview.value ?: return
+
+        support.scope.launch { onResult(printDocument(preview.document, paper)) }
     }
 
     /** Saves the invoice as a PDF the server makes, to email or file. Says how it went */

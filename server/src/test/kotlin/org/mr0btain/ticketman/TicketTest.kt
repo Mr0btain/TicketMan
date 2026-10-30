@@ -12,9 +12,7 @@ import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.data.user.AccessLevel
-import org.mr0btain.ticketman.data.search.SearchQuery
-import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
@@ -64,7 +62,7 @@ class TicketTest {
         return json.decodeFromString(response.bodyAsText())
     }
 
-    private suspend fun ApplicationTestBuilder.search(token: String, query: String): List<SearchResult> =
+    private suspend fun ApplicationTestBuilder.search(token: String, query: String): List<TmSearchResult> =
         json.decodeFromString(
             client.get("/api/data/ticket/search") {
                 bearerAuth(token)
