@@ -25,7 +25,7 @@ on:
       skip_windows_arm64:
         description: Skip the Windows arm64 MSI (needs a windows-arm64 runner online)
         type: boolean
-        default: false
+        default: true
       skip_tarball:
         description: Skip the Linux tarballs (the desktop app unpacked, beside each DEB)
         type: boolean
