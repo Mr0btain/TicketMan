@@ -35,6 +35,14 @@ A page of items, by name.
 - **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
 - **`200`** a list of `Inventory`.
 
+### `GET /api/data/inventory/position/{identifier}`
+
+**Auth:** restricted
+
+Where an item is in `/fetch`, so a list can jump to one that's further down than it has loaded.
+
+- **`200`** `RecordPosition`: `index`, how many items come before it. **`404`** no such item.
+
 ### `GET /api/data/inventory/search`
 
 **Auth:** restricted

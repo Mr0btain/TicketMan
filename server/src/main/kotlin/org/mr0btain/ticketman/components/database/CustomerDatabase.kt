@@ -45,6 +45,14 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
                 .map { it.toCustomer() }
         }
 
+    /** How many customers come before this one in [getPagedItems]. -1 if there's no such customer, null if it failed */
+    fun position(identifier: Uuid): Long? =
+        dbQuery(GET_PAGED_ITEMS_TAG) {
+            val customer = CustomerEntity.findById(identifier) ?: return@dbQuery -1L
+
+            CustomerEntity.count((name less customer.name) or ((name eq customer.name) and (CustomerTable.id greater identifier)))
+        }
+
     override fun count(): Long =
         dbQuery(COUNT_TAG) { CustomerEntity.count() } ?: 0L
 

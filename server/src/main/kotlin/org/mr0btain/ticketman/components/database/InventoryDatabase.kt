@@ -67,6 +67,18 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                 .let { withStock(it, request.location) }
         }
 
+    /** How many items come before this one in [getPagedItems]. -1 if there's no such item, null if it failed */
+    fun position(identifier: Uuid): Long? =
+        dbQuery(GET_PAGED_ITEMS_TAG) {
+            val item = InventoryEntity.findById(identifier) ?: return@dbQuery -1L
+            val name = stringParam(item.name).lowerCase()
+
+            InventoryEntity.count(
+                (InventoryTable.name.lowerCase() less name) or
+                    ((InventoryTable.name.lowerCase() eq name) and (InventoryTable.id greater identifier))
+            )
+        }
+
     /**
      * The items with their counts filled in from [InventoryStockTable]: at [location], or added up, and each
      * location's in `stockAt`. Inside a transaction

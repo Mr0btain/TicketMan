@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database.debug
 
+import org.mr0btain.ticketman.data.schedule.TimeOffAllowance
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
@@ -221,7 +222,7 @@ private fun seedSchedule(database: LocalDatabase, staff: List<User>, main: Locat
 
     // Allowances, and requests waiting, approved (off the schedule like an admin would) and declined
     val timeOff = TimeOffService(database.timeOffDatabase, database.scheduleDatabase, database.userDatabase, database.auditLogDatabase)
-    staff.forEach { user -> timeOff.setAllowance(user.identifier, if (user.accessLevel == AccessLevel.ADMIN) 120.0 else 80.0, admin?.identifier) }
+    staff.forEach { user -> timeOff.setAllowance(user.identifier, TimeOffAllowance(if (user.accessLevel == AccessLevel.ADMIN) 120.0 else 80.0), admin?.identifier) }
 
     fun ask(user: User?, first: LocalDate, last: LocalDate, note: String): Uuid? {
         user ?: return null

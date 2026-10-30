@@ -61,6 +61,16 @@ class InventoryRecords(
     /** Item being loaded after a click, the list highlights it until it's in the seed */
     val selection = RecordSelection(scope)
 
+    /** Opens an item and scrolls the list to it, for one picked from outside the list */
+    fun open(identifier: Uuid) {
+        select(identifier)
+        selection.reveal(identifier)
+    }
+
+    /** Where an item is in the list, null if it isn't in it or that can't be found out */
+    suspend fun listPosition(identifier: Uuid): Long? =
+        remoteHandler.inventoryRepo.position(identifier).getOrNull()?.index
+
     /** Opens an item in the seed, from the cache if it's there. [quiet] says nothing when it can't be loaded */
     fun select(identifier: Uuid, quiet: Boolean = false) {
         if (selection.pending.value == identifier) return

@@ -24,6 +24,14 @@ A page of customers, by name.
 - **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
 - **`200`** a list of `Customer`.
 
+### `GET /api/data/customer/position/{identifier}`
+
+**Auth:** restricted
+
+Where a customer is in `/fetch`, so a list can jump to one that's further down than it has loaded.
+
+- **`200`** `RecordPosition`: `index`, how many customers come before it. **`404`** no such customer.
+
 ### `GET /api/data/customer/search`
 
 **Auth:** restricted

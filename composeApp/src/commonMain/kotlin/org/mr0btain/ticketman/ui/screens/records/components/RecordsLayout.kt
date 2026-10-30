@@ -9,11 +9,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextOverflow
 import org.jetbrains.compose.resources.DrawableResource
+import org.mr0btain.ticketman.components.data.RecordSelection
+import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmLazyColumn
@@ -26,6 +31,7 @@ import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit_2
+import kotlin.uuid.Uuid
 
 /** Narrower than this, the list and details stack instead of sitting side by side */
 private val SIDE_BY_SIDE_WIDTH = 760.dp
@@ -58,6 +64,33 @@ fun RecordsLayout(
                 }
             }
         }
+    }
+}
+
+/**
+ * Scrolls a records list to whatever [selection] asks to reveal, loading the pages around it if needed. One that isn't
+ * in the list, or is already showing, stays where it is. Waits for the list to be on screen, so it works for a record
+ * picked on another tab or screen
+ * @param identifierOf The record's identifier, to find it among those loaded
+ * @param position How many records come before it in the whole list, null when it isn't in the list
+ */
+@Composable
+fun <T> RevealInList(
+    selection: RecordSelection,
+    pager: OffsetPager<T>,
+    state: LazyListState,
+    identifierOf: (T) -> Uuid,
+    position: suspend (Uuid) -> Long?
+) {
+    val revealing by selection.revealing.collectAsState()
+
+    LaunchedEffect(revealing) {
+        val identifier = revealing ?: return@LaunchedEffect
+
+        val index = pager.reveal(matches = { identifierOf(it) == identifier }, position = { position(identifier) })
+        if (index != null && state.layoutInfo.visibleItemsInfo.none { it.index == index }) state.scrollToItem(index)
+
+        selection.revealed()
     }
 }
 

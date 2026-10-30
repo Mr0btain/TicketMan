@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.server.ApiQuery
+import org.mr0btain.ticketman.server.response.RecordPosition
 import kotlin.uuid.Uuid
 
 fun RoutingCall.getIdentifierFromToken(): Uuid? {
@@ -59,6 +60,18 @@ fun RoutingCall.pagedRequest(): PagedRequest? {
 
     if (offset < 0 || limit < 0) return null
     return PagedRequest(offset, limit.coerceAtMost(MAX_PAGE_SIZE))
+}
+
+/**
+ * Answers where a record is in a list, from a database's `position`
+ * @param position How many come before it. Negative when it isn't in the list (`404`), null when reading failed (`500`)
+ */
+suspend fun RoutingCall.respondPosition(position: Long?) {
+    when {
+        position == null -> respond(HttpStatusCode.InternalServerError)
+        position < 0 -> respond(HttpStatusCode.NotFound)
+        else -> respond(HttpStatusCode.OK, RecordPosition(position))
+    }
 }
 
 /**

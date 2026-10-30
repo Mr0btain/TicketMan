@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.payments
 
+import org.mr0btain.ticketman.components.data.rememberKept
 import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import org.mr0btain.ticketman.data.location.Location
 import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
@@ -97,7 +98,7 @@ private fun SettingsPanels(
     onSave: (PaymentSettings) -> Unit,
     onFindReaders: () -> Unit
 ) {
-    var draft by remember(loaded) { mutableStateOf(loaded) }
+    var draft by rememberKept("payments", loaded) { mutableStateOf(loaded) }
     val problem = draft.problem()
     val spacing = TmTheme.spacing
 

@@ -21,6 +21,7 @@ fun CustomerPanel(
     canEdit: Boolean = true,
     onCustomerSelectionChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<TmSearchResult>,
+    onSearchPick: (Uuid) -> Unit = onCustomerSelectionChange,
     onDeleteCustomer: () -> Unit,
     onTicketClick: (Uuid) -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
@@ -31,7 +32,7 @@ fun CustomerPanel(
         toolbar = {
             TmPanelTopBar(
                 label = "Customer",
-                onSearchClick = onCustomerSelectionChange,
+                onSearchClick = onSearchPick,
                 onSearchQuery = onSearchQuery,
                 onAddClick = onAddCustomer,
                 onDeleteClick = onDeleteCustomer,

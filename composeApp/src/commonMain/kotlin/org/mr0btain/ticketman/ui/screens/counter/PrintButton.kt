@@ -1,5 +1,17 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.ui.screens.counter.components.CounterPrinter
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.kit.data.TmPrintPreview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.*
 import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.data.shop.PaperSize
@@ -98,3 +110,62 @@ fun SavePdfButton(size: TmControlSize = TmControlSize.LARGE, onClick: () -> Unit
         leadingIcon = Res.drawable.download
     )
 }
+
+/**
+ * The counter's invoice, when one is open to preview: as it will print, on the paper picked, with printing it and saving
+ * it as a PDF. Paper starts on letter, what the PDF is laid out for
+ */
+@Composable
+fun InvoicePreviewDialog(printer: CounterPrinter) {
+    val preview by printer.invoicePreview.collectAsState()
+    val open = preview ?: return
+
+    var paper by remember(open) { mutableStateOf(PaperSize.LETTER) }
+    var printing by remember(open) { mutableStateOf(false) }
+    var error by remember(open) { mutableStateOf<String?>(null) }
+
+    TmDialog(
+        title = open.invoice.label,
+        description = "As it will print",
+        maxWidth = 720.dp,
+        onDismissRequest = { printer.closeInvoicePreview() },
+        actions = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm, Alignment.End)) {
+                TmButton(text = "Close", onClick = { printer.closeInvoicePreview() }, variant = TmButtonVariant.GHOST)
+                SavePdfButton(size = TmControlSize.MEDIUM) { printer.savePdf(open.invoice) }
+                TmButton(
+                    text = "Print",
+                    loading = printing,
+                    leadingIcon = Res.drawable.printer,
+                    onClick = {
+                        printing = true
+                        error = null
+                        printer.printInvoicePreview(paper) { problem ->
+                            printing = false
+                            error = problem
+                        }
+                    }
+                )
+            }
+        }
+    ) {
+        TmSegmented(
+            label = "Paper",
+            options = INVOICE_PAPERS,
+            selected = paper,
+            onSelect = { paper = it },
+            optionLabel = { it.label }
+        )
+
+        error?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }
+
+        TmPrintPreview(
+            document = open.document,
+            paper = paper,
+            modifier = Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())
+        )
+    }
+}
+
+// A label is too small for an invoice
+private val INVOICE_PAPERS = listOf(PaperSize.LETTER, PaperSize.RECEIPT_80MM)

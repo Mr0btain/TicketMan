@@ -72,6 +72,9 @@ object RecordPaths {
 
     /** `?query=&limit=` */
     const val SEARCH = "/search"
+
+    /** Where a record is in `/fetch`, so a list can jump to it */
+    const val POSITION = "/position/{identifier}"
 }
 
 /** The note paths every record type mounts through the server's shared noteRoute */
@@ -108,6 +111,9 @@ object CustomerPaths {
 object TicketPaths {
     /** The caller's tickets, `?offset=&limit=` */
     const val FETCH_MINE = "/fetch/mine"
+
+    /** Where a ticket is in `/fetch/mine` */
+    const val POSITION_MINE = "/position/mine/{identifier}"
     const val BY_NUMBER = "/number/{number}"
     const val HISTORY = "/get/history/{identifier}"
     const val SIGNATURE = "/signature/{identifier}"

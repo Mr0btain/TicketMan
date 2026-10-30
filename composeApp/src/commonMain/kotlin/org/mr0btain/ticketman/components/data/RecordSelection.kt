@@ -21,7 +21,22 @@ class RecordSelection(private val scope: CoroutineScope) {
     /** Record being loaded right now, so the list can highlight it before its details arrive. Null when idle */
     val pending: StateFlow<Uuid?> = _pending.asStateFlow()
 
+    private val _revealing = MutableStateFlow<Uuid?>(null)
+
+    /** Record the list should scroll to, see [reveal]. Null when there's nothing to find */
+    val revealing: StateFlow<Uuid?> = _revealing.asStateFlow()
+
     private var job: Job? = null
+
+    /** Asks the list to scroll to [identifier], once it's on screen, like one picked from search or another screen */
+    fun reveal(identifier: Uuid) {
+        _revealing.value = identifier
+    }
+
+    /** The list scrolled to it, or found it isn't in the list */
+    fun revealed() {
+        _revealing.value = null
+    }
 
     /**
      * Starts loading [identifier], dropping any load still running

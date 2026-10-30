@@ -29,6 +29,7 @@ fun TicketPanel(
     canEdit: Boolean = true,
     onSelectedTicketChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<TmSearchResult>,
+    onSearchPick: (Uuid) -> Unit = onSelectedTicketChange,
     onDeleteTicket: () -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
     ticketListState: LazyListState,
@@ -39,7 +40,7 @@ fun TicketPanel(
         toolbar = {
             TmPanelTopBar(
                 label = "Ticket",
-                onSearchClick = onSelectedTicketChange,
+                onSearchClick = onSearchPick,
                 onSearchQuery = onSearchQuery,
                 onAddClick = onAddNewTicket,
                 onDeleteClick = onDeleteTicket,

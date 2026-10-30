@@ -18,6 +18,7 @@ fun InventoryPanel(
     pendingId: Uuid? = null,
     onSelectedInventoryChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<TmSearchResult>,
+    onSearchPick: (Uuid) -> Unit = onSelectedInventoryChange,
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
     onMoveStock: (() -> Unit)? = null,
@@ -33,7 +34,7 @@ fun InventoryPanel(
         toolbar = {
             TmPanelTopBar(
                 label = "Item",
-                onSearchClick = onSelectedInventoryChange,
+                onSearchClick = onSearchPick,
                 onSearchQuery = onSearchQuery,
                 onAddClick = onAddInventory,
                 onDeleteClick = onDeleteInventory,

@@ -67,8 +67,8 @@ class TimeOffRemoteRepository(
         data(GET_TAG) { client.get { url("$baseUrl${TimeOffPaths.BALANCES}"); year?.let { parameter("year", it) } } }
 
     /** Admin only */
-    suspend fun setAllowance(user: Uuid, hours: Double): TmResult<TimeOffBalance, ServerError> =
-        data(CHANGE_TAG) { client.post { body(TimeOffPaths.ALLOWANCE.fill(user), TimeOffAllowance(hours)) } }
+    suspend fun setAllowance(user: Uuid, allowance: TimeOffAllowance): TmResult<TimeOffBalance, ServerError> =
+        data(CHANGE_TAG) { client.post { body(TimeOffPaths.ALLOWANCE.fill(user), allowance) } }
 
     private inline fun <reified T> HttpRequestBuilder.body(path: String, value: T) {
         url("$baseUrl$path")

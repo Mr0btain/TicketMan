@@ -59,6 +59,12 @@ fun Route.customerRoute(
             }
         }
 
+        get(RecordPaths.POSITION) {
+            val identifier = call.uuidParameter("identifier") ?: return@get call.respond(HttpStatusCode.NotFound)
+
+            call.respondPosition(database.position(identifier))
+        }
+
         get(RecordPaths.GET) {
             val identifier = call.uuidParameter("identifier")
             val result = identifier?.let { database.getById(it) }

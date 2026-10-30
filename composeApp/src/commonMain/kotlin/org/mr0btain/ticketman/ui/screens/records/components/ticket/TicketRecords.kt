@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.records.components.ticket
 
+import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.getOrDefault
 import org.mr0btain.ticketman.error.valueOr
 import org.mr0btain.ticketman.components.network.orNullIfNotFound
@@ -84,6 +85,22 @@ class TicketRecords(
         localStorage.ticketScope = listScope.name
         scope.launch { pager.refresh() }
     }
+
+    /** Opens a ticket and scrolls the list to it, for one picked from outside the list */
+    fun open(identifier: Uuid) {
+        select(identifier)
+        selection.reveal(identifier)
+    }
+
+    /**
+     * Where a ticket is in the list being shown, null if it isn't in it, like one at another location or someone
+     * else's on My tickets, or that can't be found out
+     */
+    suspend fun listPosition(identifier: Uuid): Long? =
+        when (_scope.value) {
+            TicketScope.MINE -> remoteHandler.ticketRepo.positionMine(identifier)
+            else -> remoteHandler.ticketRepo.position(identifier)
+        }.getOrNull()?.index
 
     /** Opens a ticket in the seed, from the cache if it's there. [quiet] says nothing when it can't be loaded */
     fun select(identifier: Uuid, quiet: Boolean = false) {

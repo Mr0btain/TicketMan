@@ -111,11 +111,13 @@ fun TimeOffDialog(
         mine?.balance?.let { balance ->
             Column {
                 TmKeyValueRow(label = "Allowance for ${balance.year}", value = ScheduleRules.hoursText(balance.allowanceHours), numeric = true)
+                if (balance.carriedOverHours > 0) TmKeyValueRow(label = "Carried over", value = ScheduleRules.hoursText(balance.carriedOverHours), numeric = true)
+                if (balance.floatingHours > 0) TmKeyValueRow(label = "Floating holidays", value = ScheduleRules.hoursText(balance.floatingHours), numeric = true)
                 TmKeyValueRow(label = "Taken", value = ScheduleRules.hoursText(balance.takenHours), numeric = true)
                 TmKeyValueRow(label = "Waiting", value = ScheduleRules.hoursText(balance.pendingHours), numeric = true)
                 TmKeyValueRow(label = "Left") { Text(text = ScheduleRules.hoursText(balance.leftHours), style = TmTheme.typography.numericLarge, color = colors.text) }
             }
-            if (balance.allowanceHours <= 0) TmNotice(text = "You have no time off allowance yet. Ask an admin to set one.", kind = TmNoticeKind.INFO)
+            if (balance.totalHours <= 0) TmNotice(text = "You have no time off allowance yet. Ask an admin to set one.", kind = TmNoticeKind.INFO)
         } ?: TmNotice(text = "Couldn't load your time off. Check the connection and try again.", kind = TmNoticeKind.WARNING)
 
         TmDivider()

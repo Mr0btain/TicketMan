@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.server
 
+import org.mr0btain.ticketman.components.data.rememberKept
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,7 +51,7 @@ fun TicketStatusesCard(
     onSave: (List<CustomStatus>) -> Unit
 ) {
     val loaded = saved ?: emptyList()
-    var statuses by remember(loaded) { mutableStateOf(loaded.filterNot { it.retired }) }
+    var statuses by rememberKept("statuses", loaded) { mutableStateOf(loaded.filterNot { it.retired }) }
     val retired = loaded.filter { it.retired && statuses.byId(it.identifier) == null }
     val problem = CustomStatusRules.problem(CustomStatusRules.keepingRemoved(loaded, statuses))
 

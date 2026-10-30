@@ -4,13 +4,11 @@ What's planned to add or fix.
 
 ## TODOs
 
-- **Records Search** When searching for a name or such in the records tab, we should scroll to the item, not just
-  set the selected item.
-- **Calendar** The calendar on mobile phones when in month view seems a bit smashed. Needs addressed.
-- **Admin Screen** When we select a ticket or something that redirects us to another screen, we should add a
-  back button or some navigation to return to where we were on the admin screen.
-- **Screen States** Some screens done save state when switching to another. We should make admin, records, and counter
-  all keep their state when switching between them.
+- **View Models** The main view model is getting pretty full, maybe we can split it up to each screen having their own
+  view model. States now survive switching screens either way (`navigateTo` saves each screen's state), so this is only
+  about tidiness. Most of it is wiring between handlers that call each other (admin into counter and records, calendar
+  into counter, logout into everything), and the kiosk uses the counter outside the nav host, so those would still need
+  something above the screens to connect them.
 
 ## iOS app
 
@@ -50,8 +48,3 @@ The code is written; testing it needs a Mac. See
 - **Fix what it finds** and note what only shows up on macOS in [Platforms](client/platforms.md).
 - **Later, with a paid Apple Developer account:** sign and notarize the DMG (Compose's
   `macOS { signing { } notarization { } }`) so it opens without the quarantine step.
-
-## Open questions to decide later
-
-- Phase 10: should a time off allowance carry unused time over? Built as starting over each calendar year 
-   with no carry over.

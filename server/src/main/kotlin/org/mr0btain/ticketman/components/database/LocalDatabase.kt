@@ -186,6 +186,7 @@ class LocalDatabase (
      * Only these are checked since H2 can't list columns for the "user" table (it's a reserved word).
      */
     private val migratedTables = arrayOf(
+        TimeOffAllowanceTable,
         TicketTable,
         TokenTable,
         InventoryTable,

@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.NotePaths
 import org.mr0btain.ticketman.server.RecordPaths
 import org.mr0btain.ticketman.server.fill
+import org.mr0btain.ticketman.server.response.RecordPosition
 import kotlin.uuid.Uuid
 
 /**
@@ -58,6 +59,7 @@ abstract class RemoteRepository<T: MainItem>(
     protected val REMOVE_NOTE_TAG = "$tag:RemoveNote"
 
     protected val GET_TAG = "$tag:Get"
+    private val POSITION_TAG = "$tag:Position"
     protected val GET_NOTES_TAG = "$tag:GetNotes"
 
     /**
@@ -130,6 +132,16 @@ abstract class RemoteRepository<T: MainItem>(
         }
 
         return handleDataHttpResponse(tag, response, types.list)
+    }
+
+    /** Where a record is in [fetch]. `NOT_FOUND` when it isn't in that list */
+    suspend fun position(identifier: Uuid): TmResult<RecordPosition, ServerError> = fetchPosition(RecordPaths.POSITION.fill(identifier))
+
+    /** Where a record is in a paged list, from [path] under [route] */
+    protected suspend fun fetchPosition(path: String): TmResult<RecordPosition, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
+
+        return handleDataHttpResponse(POSITION_TAG, networkRequest(POSITION_TAG) { client.get { url("$serverUrl$path") } })
     }
 
     /** One record. A `NOT_FOUND` error means it isn't there, any other that it couldn't be loaded */

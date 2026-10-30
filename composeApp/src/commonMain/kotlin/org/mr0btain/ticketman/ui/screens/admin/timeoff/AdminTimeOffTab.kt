@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.timeoff
 
+import org.mr0btain.ticketman.data.schedule.TimeOffAllowance
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,7 +44,7 @@ fun AdminTimeOffTab(
     balances: List<TimeOffBalance>,
     onApprove: (TimeOffRequest) -> Unit,
     onDecline: (TimeOffRequest, String) -> Unit,
-    onAllowance: (TimeOffBalance, Double) -> Unit
+    onAllowance: (TimeOffBalance, TimeOffAllowance) -> Unit
 ) {
     val colors = TmTheme.colors
     val spacing = TmTheme.spacing
@@ -89,7 +90,7 @@ fun AdminTimeOffTab(
             TmPanel(
                 modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
                 title = "Allowances",
-                subtitle = "Hours of time off each person has a year, starting over on 1 January",
+                subtitle = "Hours each person has a year, starting over on 1 January. Carry over is the most unused hours they keep into the next year, floating holidays are extra hours that don't carry",
                 icon = Res.drawable.users
             ) {
                 if (balances.isEmpty()) TmEmptyState(title = "No staff yet")
@@ -117,39 +118,67 @@ fun AdminTimeOffTab(
 }
 
 @Composable
-private fun AllowanceRow(balance: TimeOffBalance, onAllowance: (TimeOffBalance, Double) -> Unit) {
+private fun AllowanceRow(balance: TimeOffBalance, onAllowance: (TimeOffBalance, TimeOffAllowance) -> Unit) {
     val spacing = TmTheme.spacing
-    var hours by remember(balance) { mutableStateOf(balance.allowanceHours.toString().removeSuffix(".0")) }
-    val typed = hours.trim().toDoubleOrNull()?.takeIf { it >= 0 }
+    var hours by remember(balance) { mutableStateOf(balance.allowanceHours.hoursInput()) }
+    var carryOver by remember(balance) { mutableStateOf(balance.carryOverMaxHours.hoursInput()) }
+    var floating by remember(balance) { mutableStateOf(balance.floatingHours.hoursInput()) }
+    val typed = hours.typedHours()
+    val typedCarryOver = carryOver.typedHours()
+    val typedFloating = floating.typedHours()
+    val changed = typed != balance.allowanceHours || typedCarryOver != balance.carryOverMaxHours || typedFloating != balance.floatingHours
 
-    Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = balance.userName, style = TmTheme.typography.label, color = TmTheme.colors.text)
-            Text(
-                text = "${ScheduleRules.hoursText(balance.takenHours)} taken, ${ScheduleRules.hoursText(balance.pendingHours)} waiting, " +
-                    "${ScheduleRules.hoursText(balance.leftHours)} left in ${balance.year}",
-                style = TmTheme.typography.caption,
-                color = TmTheme.colors.textMuted
+    Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+        Text(text = balance.userName, style = TmTheme.typography.label, color = TmTheme.colors.text)
+        Text(
+            text = listOfNotNull(
+                balance.carriedOverHours.takeIf { it > 0 }?.let { "${ScheduleRules.hoursText(it)} carried over" },
+                balance.floatingHours.takeIf { it > 0 }?.let { "${ScheduleRules.hoursText(it)} floating" },
+                "${ScheduleRules.hoursText(balance.takenHours)} taken",
+                "${ScheduleRules.hoursText(balance.pendingHours)} waiting",
+                "${ScheduleRules.hoursText(balance.leftHours)} left in ${balance.year}"
+            ).joinToString(", "),
+            style = TmTheme.typography.caption,
+            color = TmTheme.colors.textMuted
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(spacing.xs),
+            itemVerticalAlignment = Alignment.Bottom
+        ) {
+            HoursField("Hours a year", hours) { hours = it }
+            HoursField("Carry over", carryOver) { carryOver = it }
+            HoursField("Floating", floating) { floating = it }
+            TmButton(
+                text = "Save",
+                variant = TmButtonVariant.SECONDARY,
+                size = TmControlSize.SMALL,
+                enabled = typed != null && typedCarryOver != null && typedFloating != null && changed,
+                onClick = {
+                    if (typed != null && typedCarryOver != null && typedFloating != null) onAllowance(balance, TimeOffAllowance(typed, typedCarryOver, typedFloating))
+                }
             )
         }
-        TmTextField(
-            modifier = Modifier.width(96.dp),
-            value = hours,
-            onValueChange = { hours = it.filter { c -> c.isDigit() || c == '.' }.take(6) },
-            size = TmControlSize.SMALL,
-            textStyle = TmTheme.typography.numeric,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            error = if (typed == null) "" else null
-        )
-        TmButton(
-            text = "Save",
-            variant = TmButtonVariant.SECONDARY,
-            size = TmControlSize.SMALL,
-            enabled = typed != null && typed != balance.allowanceHours,
-            onClick = { typed?.let { onAllowance(balance, it) } }
-        )
     }
 }
+
+@Composable
+private fun HoursField(label: String, value: String, onChange: (String) -> Unit) {
+    TmTextField(
+        modifier = Modifier.width(112.dp),
+        value = value,
+        onValueChange = { onChange(it.filter { c -> c.isDigit() || c == '.' }.take(6)) },
+        label = label,
+        size = TmControlSize.SMALL,
+        textStyle = TmTheme.typography.numeric,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        error = if (value.typedHours() == null) "" else null
+    )
+}
+
+private fun Double.hoursInput() = toString().removeSuffix(".0")
+
+private fun String.typedHours() = trim().toDoubleOrNull()?.takeIf { it >= 0 }
 
 private fun TmColors.timeOffTone(status: TimeOffStatus): TmTone = when (status) {
     TimeOffStatus.PENDING -> warning

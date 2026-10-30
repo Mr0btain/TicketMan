@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.navigation
 
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
 import ticketman.composeapp.generated.resources.map
 import ticketman.composeapp.generated.resources.map_pin
@@ -280,5 +281,11 @@ private fun NavigationItem.toNavItem() = TmNavItem(key = destination.route, labe
 
 /** Goes to [route] without stacking copies of a screen that's already open */
 fun NavHostController.navigateTo(route: String) {
-    navigate(route) { launchSingleTop = true }
+    navigate(route) {
+        // The rail's screens sit side by side instead of piling up, each saved when left and restored when it's back,
+        // which is what keeps list and scroll positions
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
 }

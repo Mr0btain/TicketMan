@@ -61,6 +61,12 @@ fun Route.inventoryRoute(
             }
         }
 
+        get(RecordPaths.POSITION) {
+            val identifier = call.uuidParameter("identifier") ?: return@get call.respond(HttpStatusCode.NotFound)
+
+            call.respondPosition(database.position(identifier))
+        }
+
         get(RecordPaths.SEARCH) {
             val request = call.searchQuery() ?: return@get call.respondBadQuery()
 

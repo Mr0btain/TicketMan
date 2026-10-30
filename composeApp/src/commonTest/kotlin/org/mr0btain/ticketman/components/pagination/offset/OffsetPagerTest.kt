@@ -2,6 +2,8 @@ package org.mr0btain.ticketman.components.pagination.offset
 
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.error.TmResult
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
@@ -127,5 +129,64 @@ class OffsetPagerTest {
         pager.clear()
 
         assertTrue(pager.items.value.isEmpty())
+    }
+
+    @Test
+    fun revealLoadsThePagesAroundAnItemFurtherDown() = runTest {
+        total = 40
+        pager.refresh()
+        fetched.clear()
+
+        val index = pager.reveal(matches = { it == 21 }, position = { 21 })
+
+        // Item 21 is on page 10, the load starts a page before it so there's something to scroll up over
+        assertEquals(listOf(9, 10, 11), fetched)
+        assertEquals((18..23).toList(), pager.items.value)
+        assertEquals(3, index)
+
+        // And scrolling both ways carries on from there
+        pager.loadPrevious()
+        assertEquals(16, pager.items.value.first())
+        pager.loadNext()
+        assertEquals(25, pager.items.value.last())
+    }
+
+    @Test
+    fun revealDoesntAskAboutWhatsAlreadyLoaded() = runTest {
+        total = 40
+        pager.refresh()
+        fetched.clear()
+
+        val index = pager.reveal(matches = { it == 3 }, position = { fail("Shouldn't need to ask") })
+
+        assertEquals(3, index)
+        assertTrue(fetched.isEmpty())
+    }
+
+    @Test
+    fun revealLeavesTheListAloneWhenTheItemIsntInIt() = runTest {
+        total = 40
+        pager.refresh()
+        val before = pager.items.value
+
+        assertNull(pager.reveal(matches = { it == 99 }, position = { null }))
+        assertEquals(before, pager.items.value)
+    }
+
+    @Test
+    fun refreshingCurrentDataKeepsEveryLoadedPageAndNeverShowsFewer() = runTest {
+        total = 40
+        pager.refresh()
+        repeat(3) { pager.loadNext() }
+        assertEquals(12, pager.items.value.size)
+
+        val sizes = mutableListOf<Int>()
+        val watching = launch(UnconfinedTestDispatcher(testScheduler)) { pager.items.collect { sizes += it.size } }
+
+        pager.refreshCurrentData()
+        watching.cancel()
+
+        assertEquals(12, pager.items.value.size)
+        assertTrue(sizes.all { it == 12 }, "Sizes shown while reloading: $sizes")
     }
 }

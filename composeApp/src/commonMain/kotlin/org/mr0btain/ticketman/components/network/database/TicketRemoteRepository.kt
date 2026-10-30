@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.network.database
 
+import org.mr0btain.ticketman.server.response.RecordPosition
+
 import org.mr0btain.ticketman.server.request.MoveTicketRequest
 import io.ktor.client.*
 import org.mr0btain.ticketman.server.request.PasscodeBody
@@ -56,6 +58,9 @@ class TicketRemoteRepository(
     /** A page of the tickets assigned to whoever is logged in, newest first */
     suspend fun fetchMine(offset: Long, limit: Int): TmResult<List<Ticket>, ServerError> =
         fetchPage(FETCH_MINE_TAG, TicketPaths.FETCH_MINE, offset, limit)
+
+    /** Where a ticket is in [fetchMine]. `NOT_FOUND` when it isn't assigned to whoever is logged in */
+    suspend fun positionMine(identifier: Uuid): TmResult<RecordPosition, ServerError> = fetchPosition(TicketPaths.POSITION_MINE.fill(identifier))
 
     suspend fun getByNumber(number: TicketNumber): Ticket? {
         if (serverUrl.isBlank()) return null

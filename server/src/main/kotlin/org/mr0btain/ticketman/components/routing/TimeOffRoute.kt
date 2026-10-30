@@ -65,7 +65,7 @@ fun Route.timeOffRoute(
 
         post(TimeOffPaths.ALLOWANCE) {
             val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
-            call.respondAccount(service.setAllowance(identifier, call.receive<TimeOffAllowance>().hours, call.getIdentifierFromToken()), HttpStatusCode.OK)
+            call.respondAccount(service.setAllowance(identifier, call.receive<TimeOffAllowance>(), call.getIdentifierFromToken()), HttpStatusCode.OK)
         }
     }
 }

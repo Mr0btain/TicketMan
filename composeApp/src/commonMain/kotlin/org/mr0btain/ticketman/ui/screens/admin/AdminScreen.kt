@@ -1,11 +1,12 @@
 package org.mr0btain.ticketman.ui.screens.admin
 
+import org.mr0btain.ticketman.components.data.LocalFormMemory
 import org.mr0btain.ticketman.ui.screens.admin.timeoff.AdminTimeOffTab
 import org.mr0btain.ticketman.ui.screens.admin.locations.AdminLocationsTab
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -79,6 +80,7 @@ private fun AdminContent(
     val admin = viewModel.admin
 
     val selectedTab = viewModel.selectedAdminTab.collectAsState()
+    val tabStates = rememberSaveableStateHolder()
     val scope = rememberCoroutineScope()
 
     val isLoading by admin.isLoading.collectAsState()
@@ -180,9 +182,9 @@ private fun AdminContent(
 
     // Fresh numbers whenever a tab is opened, only for that tab, and when the device starts working somewhere else
     val workingLocation by viewModel.locations.working.collectAsState()
-    LaunchedEffect(selectedTab, workingLocation) {
+    LaunchedEffect(selectedTab.value, workingLocation) {
         admin.refresh(selectedTab.value)
-        if (selectedTab.value == AdminTab.USERS) viewModel.users.pager.refresh()
+        if (selectedTab.value == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
     }
 
     // Then changes from other devices, on the interval set in Settings, unless a dialog here is open
@@ -274,7 +276,8 @@ private fun AdminContent(
         }
 
         // ------------------------------------------ Content ------------------------------------------
-        when (selectedTab.value) {
+        // Each tab keeps its own scroll position and what's typed into it
+        tabStates.SaveableStateProvider(selectedTab.value.name) { CompositionLocalProvider(LocalFormMemory provides admin.forms) { when (selectedTab.value) {
             AdminTab.OVERVIEW -> AdminOverviewTab(
                 stats = stats,
                 dailyReport = dailyReport,
@@ -282,7 +285,7 @@ private fun AdminContent(
                 onMoveReport = { admin.moveDailyReport(it) },
                 onPrintReport = { paper, onResult -> admin.printDailyReport(paper, onResult) },
                 onTicketClick = { identifier ->
-                    viewModel.tickets.select(identifier)
+                    viewModel.tickets.open(identifier)
                     viewModel.changeRecordsScreenTab(RecordsTab.TICKETS)
                     onNavigateToMain()
                 },
@@ -365,7 +368,7 @@ private fun AdminContent(
                     { onResult -> viewModel.purchasing.draftForLowStock(lowStock, lowStockThreshold, onResult) }
                 } else null,
                 onItemClick = { identifier ->
-                    viewModel.inventory.select(identifier)
+                    viewModel.inventory.open(identifier)
                     viewModel.changeRecordsScreenTab(RecordsTab.INVENTORY)
                     onNavigateToMain()
                 }
@@ -455,7 +458,7 @@ private fun AdminContent(
                 endReached = auditEndReached,
                 onLoadMore = { admin.loadMoreAudit() }
             )
-        }
+        } } }
     }
 }
 
@@ -474,7 +477,3 @@ private fun NotAdminMessage(viewModel: MainViewModel) {
         )
     }
 }
-
-// Main screen tab indexes
-private const val TICKET_TAB = 1
-private const val INVENTORY_TAB = 2

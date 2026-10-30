@@ -88,6 +88,7 @@ kotlin {
             implementation(libs.foundation)
             implementation(libs.material3)
             implementation(libs.ui)
+            implementation(libs.ui.backhandler)
             implementation(libs.components.resources)
             implementation(libs.ui.tooling.preview)
             implementation(libs.androidx.lifecycle.viewmodel)

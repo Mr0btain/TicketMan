@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.messages
 
+import org.mr0btain.ticketman.components.data.rememberKept
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -89,7 +90,7 @@ private fun SettingsPanels(
     onSave: (NotificationSettings) -> Unit,
     onTest: (NotificationSettings, NotificationChannel, String) -> Unit
 ) {
-    var draft by remember(loaded) { mutableStateOf(loaded) }
+    var draft by rememberKept("messages", loaded) { mutableStateOf(loaded) }
     val problem = draft.problem()
     val spacing = TmTheme.spacing
 

@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman.ui.kit.gallery
 
+import org.mr0btain.ticketman.ui.kit.data.TmPrintPreview
+import org.mr0btain.ticketman.data.shop.PaperSize
+import org.mr0btain.ticketman.components.print.PrintDocument
+import org.mr0btain.ticketman.components.print.PrintBlock
+import org.mr0btain.ticketman.components.print.AmountRow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
@@ -650,6 +655,19 @@ private fun DataSection() {
             TmStatTile(modifier = Modifier.weight(1f), label = "Taken today", value = "$1,284", icon = Res.drawable.dollar_sign, caption = "11 payments")
             TmStatTile(modifier = Modifier.weight(1f), label = "Low stock", value = "3", icon = Res.drawable.package_icon, caption = "Needs ordering", attention = true)
         }
+
+        TmPrintPreview(
+            document = PrintDocument(
+                title = "Sample",
+                blocks = listOf(
+                    PrintBlock.Heading("Bench Repair"),
+                    PrintBlock.Field("Invoice", "INV-26-00000042"),
+                    PrintBlock.Divider,
+                    PrintBlock.Amounts(listOf(AmountRow("Screen", "$89.00"), AmountRow("Total", "$89.00", bold = true)))
+                )
+            ),
+            paper = PaperSize.RECEIPT_80MM
+        )
 
         Column {
             TmCountBar(label = "In progress", count = 9, total = 18, color = TmTheme.colors.warning.color)

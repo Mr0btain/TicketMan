@@ -46,6 +46,21 @@ A page of the tickets assigned to the caller, who comes from the token, so nobod
 Like `/fetch`, only the ones at the location the request works at.
 
 
+### `GET /api/data/ticket/position/{identifier}`
+
+**Auth:** restricted
+
+Where a ticket is in `/fetch`, so a list can jump to one that's further down than it has loaded.
+
+- **`200`** `RecordPosition`: `index`, how many tickets come before it. **`404`** it isn't in that list: no such
+  ticket, or it's at another location.
+
+### `GET /api/data/ticket/position/mine/{identifier}`
+
+**Auth:** restricted
+
+The same for `/fetch/mine`. **`404`** also when it isn't assigned to the caller.
+
 ### `GET /api/data/ticket/search`
 
 **Auth:** restricted

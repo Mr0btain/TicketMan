@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
+import org.mr0btain.ticketman.data.schedule.TimeOffAllowance
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -33,21 +34,28 @@ class TimeOffDatabase {
     private val TAG = "TimeOffDatabase"
     private val GET_TAG = "$TAG:Get"
     private val WRITE_TAG = "$TAG:Write"
+    private val NO_ALLOWANCE = TimeOffAllowance(0.0, 0.0, 0.0)
 
-    /** Each person's yearly allowance in hours, those with one set */
-    fun allowances(): Map<Uuid, Double> =
-        dbQuery(GET_TAG) { TimeOffAllowanceTable.selectAll().associate { it[TimeOffAllowanceTable.user] to it[TimeOffAllowanceTable.hours] } }.orEmpty()
+    /** Each person's yearly allowance, those with one set */
+    fun allowances(): Map<Uuid, TimeOffAllowance> =
+        dbQuery(GET_TAG) { TimeOffAllowanceTable.selectAll().associate { it[TimeOffAllowanceTable.user] to it.toAllowance() } }.orEmpty()
 
-    fun allowance(user: Uuid): Double =
+    fun allowance(user: Uuid): TimeOffAllowance =
         dbQuery(GET_TAG) {
-            TimeOffAllowanceTable.select(TimeOffAllowanceTable.hours).where { TimeOffAllowanceTable.user eq user }.firstOrNull()?.get(TimeOffAllowanceTable.hours)
-        } ?: 0.0
+            TimeOffAllowanceTable.selectAll().where { TimeOffAllowanceTable.user eq user }.firstOrNull()?.toAllowance()
+        } ?: NO_ALLOWANCE
 
-    fun setAllowance(user: Uuid, hours: Double): Boolean =
+    private fun ResultRow.toAllowance() =
+        TimeOffAllowance(this[TimeOffAllowanceTable.hours], this[TimeOffAllowanceTable.carryOverMax], this[TimeOffAllowanceTable.floating])
+
+    /** Sets someone's allowance. A null carry over or floating holidays leaves what's saved */
+    fun setAllowance(user: Uuid, allowance: TimeOffAllowance): Boolean =
         dbWrite(WRITE_TAG) {
             TimeOffAllowanceTable.upsert { row ->
                 row[TimeOffAllowanceTable.user] = user
-                row[TimeOffAllowanceTable.hours] = hours
+                row[hours] = allowance.hours
+                allowance.carryOverMaxHours?.let { row[carryOverMax] = it }
+                allowance.floatingHours?.let { row[floating] = it }
             }
             true
         }

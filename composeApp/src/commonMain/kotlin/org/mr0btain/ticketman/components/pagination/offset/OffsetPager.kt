@@ -70,6 +70,9 @@ class OffsetPager<Value>(
     private var firstPage: Int = 0
     private var lastPage: Int = 0
 
+    // Set while a reload is under way, see refreshCurrentData
+    private var holdItems = false
+
     // Whether we have reached the end or start
     private var reachedStart = false
     private var reachedEnd = false
@@ -116,6 +119,9 @@ class OffsetPager<Value>(
         if (isRefreshing) return
         isRefreshing = true
 
+        // As many pages as were showing, so whoever scrolled down isn't sent back up
+        val pages = if (deque.isEmpty()) config.initialLoadSize else maxOf(config.initialLoadSize, lastPage - firstPage + 1)
+
         // Clear queue and cache
         deque.clear()
         cache.clear()
@@ -125,19 +131,57 @@ class OffsetPager<Value>(
         val start = firstPage
         lastPage = start
 
-        loadInitialPages(start)
+        // The list only changes once it's all back, a shorter list would move whoever scrolled past its end
+        holdItems = true
+        loadInitialPages(start, pages)
+        holdItems = false
+        if (deque.isNotEmpty()) publish()
 
         isRefreshing = false
 
         AppLogger.m(REFRESH_TAG, SimpleResult.SUCCESS)
     }
 
+    /**
+     * Where an item is in the list, loading the pages around it if they aren't loaded. Those replace what's loaded,
+     * so anything between is left out until scrolling reaches it.
+     * @param matches Finds the item among those loaded, which saves asking when it's already there
+     * @param position How many items come before it in the whole list, null when it isn't in the list
+     * @return Its index in [items], null when it isn't in the list or couldn't be loaded
+     */
+    suspend fun reveal(matches: (Value) -> Boolean, position: suspend () -> Long?): Int? {
+        _items.value.indexOfFirst(matches).takeIf { it >= 0 }?.let { return it }
+
+        val target = position() ?: return null
+
+        // Starting a page early leaves something to scroll up over, which is what loads the pages before it
+        jumpTo((target / config.pageSize).toInt().minus(1).coerceAtLeast(0))
+
+        return _items.value.indexOfFirst(matches).takeIf { it >= 0 }
+    }
+
+    // Replaces what's loaded with the pages from start
+    private suspend fun jumpTo(start: Int) {
+        if (isRefreshing) return
+        isRefreshing = true
+
+        deque.clear()
+        firstPage = start
+        lastPage = start
+        reachedStart = start == 0
+        reachedEnd = false
+
+        loadInitialPages(start)
+
+        isRefreshing = false
+    }
+
     // The first few pages from start. Stops at the first that fails, so a refused or failed first page isn't
     // followed by asking for the ones after it (which would leave a gap if they did load)
-    private suspend fun loadInitialPages(start: Int) {
+    private suspend fun loadInitialPages(start: Int, pages: Int = config.initialLoadSize) {
         if (!load(page = start, append = true, prepend = false)) return
 
-        repeat(config.initialLoadSize - 1) {
+        repeat(pages - 1) {
             if (reachedEnd || !load(page = lastPage + 1, append = true, prepend = false)) return
         }
     }
@@ -164,9 +208,9 @@ class OffsetPager<Value>(
         )
     }
 
-    // Pushes the loaded pages out to the UI
+    // Pushes the loaded pages out to the UI, unless they're still coming
     private fun publish() {
-        _items.value = deque.flatten()
+        if (!holdItems) _items.value = deque.flatten()
     }
 
     /** Checks and trims Deque if needed */

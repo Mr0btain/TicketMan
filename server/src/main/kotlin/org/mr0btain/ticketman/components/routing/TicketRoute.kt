@@ -103,6 +103,19 @@ fun Route.ticketRoute(
             }
         }
 
+        get(RecordPaths.POSITION) {
+            val identifier = call.uuidParameter("identifier") ?: return@get call.respond(HttpStatusCode.NotFound)
+
+            call.respondPosition(database.position(identifier, call.locationScope().identifier))
+        }
+
+        get(TicketPaths.POSITION_MINE) {
+            val identifier = call.uuidParameter("identifier") ?: return@get call.respond(HttpStatusCode.NotFound)
+            val caller = call.getIdentifierFromToken() ?: return@get call.respond(HttpStatusCode.Unauthorized)
+
+            call.respondPosition(database.positionForUser(identifier, caller, call.locationScope().identifier))
+        }
+
         get(RecordPaths.SEARCH) {
             val request = call.searchQuery() ?: return@get call.respondBadQuery()
 

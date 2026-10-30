@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.ui.kit.data.TmPrintPreview
+import org.mr0btain.ticketman.components.print.PrintTemplates
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -461,6 +463,14 @@ class ScreenRenderTest {
                 extraActions = { TmButton(text = "Pick up  (F5)", onClick = {}, size = TmControlSize.LARGE) }
             )
         }
+    }
+
+    /** An invoice as it will print, on both papers */
+    @Test
+    fun invoicePreview() {
+        val document = PrintTemplates.invoice(ShopProfile(name = "Bench Repair", phone = "555 0100"), detail.ticket, detail.customer, invoice)
+        bothModes("invoice-preview", width = 900, height = 1000) { TmPrintPreview(document = document, paper = PaperSize.LETTER) }
+        bothModes("invoice-preview-receipt", width = NARROW_WIDTH, height = 900) { TmPrintPreview(document = document, paper = PaperSize.RECEIPT_80MM) }
     }
 
     @Test
@@ -1301,7 +1311,7 @@ class ScreenRenderTest {
             giftCards = listOf(GiftCard(kotlin.uuid.Uuid.random(), "GC-7KQ2-M9XD-4HTP-WR8B", 1_500, 2_500, now)),
             onOpenTicket = {},
             onExport = {},
-            onPdf = {},
+            onPreview = {},
             onRefund = {},
             onVoid = {},
             onDelete = {},

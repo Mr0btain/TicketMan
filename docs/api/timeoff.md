@@ -5,9 +5,12 @@ Staff ask for time off against a yearly allowance in hours that admins set; admi
 [staff schedule](schedule.md), or decline. `TimeOffService` runs it, with days in the shop's time zone.
 
 **Allowances and balances.** Each person's allowance is hours a year (`time_off_allowances`, none until set). It
-starts over on 1 January with nothing carried over. A `TimeOffBalance { allowanceHours, takenHours, pendingHours }`
+starts over on 1 January. Each person can also have floating holidays (`floatingHours`, extra hours every year that
+never carry over) and a carry over cap (`carryOverMaxHours`, 0 by default): a year's time off comes out of carried and
+floating hours first, and what's left of the allowance comes into the next year as `carriedOverHours`, up to the cap.
+It's worked out from the schedule when asked for, over the last 5 years, using today's allowance. A `TimeOffBalance { allowanceHours, takenHours, pendingHours }`
 for a year counts the time off entries on the schedule starting in it (their `timeOffHours`, so time off an admin
-writes straight onto the schedule counts too) and the requests still waiting; `leftHours` is the allowance less both.
+writes straight onto the schedule counts too) and the requests still waiting; `leftHours` is `totalHours` (allowance, carried over and floating) less both.
 A request counts in the year its first day is in.
 
 **Requests.** A `TimeOffRequest { startsAt, endsAt, hours, note }` is whole days, saved midnight to midnight like a
@@ -73,5 +76,5 @@ hours as `timeOffHours` and its id as `requestIdentifier`, at the person's home 
 
 **Auth:** admin
 
-- **Body:** `TimeOffAllowance { hours }`, 0 to 2000.
+- **Body:** `TimeOffAllowance { hours, carryOverMaxHours?, floatingHours? }`, each 0 to 2000. One left out keeps what's saved.
 - **`200`** their balance for this year. Audit logged. **`400`** out of range. **`404`** no such user.

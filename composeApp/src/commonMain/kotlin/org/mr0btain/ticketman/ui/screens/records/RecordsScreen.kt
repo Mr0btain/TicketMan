@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.records
 
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.foundation.layout.*
 import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.data.shop.PaperSize
@@ -39,6 +40,7 @@ import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketWorkSec
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.WorkDialog
 import org.mr0btain.ticketman.ui.screens.CheckForUpdates
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
+import org.mr0btain.ticketman.ui.screens.records.components.RevealInList
 
 @Composable
 fun RecordsScreen(
@@ -46,6 +48,7 @@ fun RecordsScreen(
 ) {
     // Tab for switching between panels
     val selectedTab = viewModel.selectedRecordsTab.collectAsState()
+    val tabStates = rememberSaveableStateHolder()
     val loginState = viewModel.session.loginState.collectAsState()
     // Logged out, the banner already says why the lists are empty
     val loggedIn = loginState.value == LoginState.LOGGED_IN
@@ -61,6 +64,7 @@ fun RecordsScreen(
 
     // Handler for the customer pager
     OffsetPagerLoader(viewModel.customers.pager, customerLazyListState)
+    RevealInList(viewModel.customers.selection, viewModel.customers.pager, customerLazyListState, { it.identifier }, viewModel.customers::listPosition)
 
     // For customer dialog
     var showCustomerDialog by remember { mutableStateOf(false) }
@@ -76,6 +80,7 @@ fun RecordsScreen(
 
     // Handler for ticket pager
     OffsetPagerLoader(viewModel.tickets.pager, ticketLazyListState)
+    RevealInList(viewModel.tickets.selection, viewModel.tickets.pager, ticketLazyListState, { it.identifier }, viewModel.tickets::listPosition)
 
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
@@ -95,6 +100,7 @@ fun RecordsScreen(
 
     // Handler for inventory pager
     OffsetPagerLoader(viewModel.inventory.pager, inventoryLazyListState)
+    RevealInList(viewModel.inventory.selection, viewModel.inventory.pager, inventoryLazyListState, { it.identifier }, viewModel.inventory::listPosition)
 
     // For inventory dialog
     var showInventoryDialog by remember { mutableStateOf(false) }
@@ -286,7 +292,8 @@ fun RecordsScreen(
             }
         }
 
-        when (selectedTab.value) {
+        // Each tab's details keep their own scroll position
+        tabStates.SaveableStateProvider(selectedTab.value.name) { when (selectedTab.value) {
             RecordsTab.CUSTOMER -> CustomerPanel(
                 onAddCustomer = {
                     viewModel.customers.clearSelection()
@@ -296,14 +303,20 @@ fun RecordsScreen(
                 canEdit = canEdit,
                 onCustomerSelectionChange = { id -> viewModel.customers.select(id) },
                 onSearchQuery = { query -> viewModel.customers.search(query) },
+                onSearchPick = { id -> viewModel.customers.open(id) },
                 onDeleteCustomer = {
                     dataType = DataType.CUSTOMER
                     showConfirmDeleteDialog = true
                 },
                 onTicketClick = { identifier ->
-                    viewModel.tickets.select(identifier)
                     // The dialog is for editing, someone who can only look sees it on the tickets tab
-                    if (canEdit) showTicketDialog = true else viewModel.changeRecordsScreenTab(RecordsTab.TICKETS)
+                    if (canEdit) {
+                        viewModel.tickets.select(identifier)
+                        showTicketDialog = true
+                    } else {
+                        viewModel.tickets.open(identifier)
+                        viewModel.changeRecordsScreenTab(RecordsTab.TICKETS)
+                    }
                 },
                 onImageClick = { id, page -> showNoteImages(customerSeed.notes, id, page) },
                 seed = customerSeed,
@@ -330,6 +343,7 @@ fun RecordsScreen(
                     scope.launch { ticketLazyListState.scrollToItem(0) }
                 },
                 onSearchQuery = { viewModel.tickets.search(it) },
+                onSearchPick = { id -> viewModel.tickets.open(id) },
                 onDeleteTicket = {
                     dataType = DataType.TICKET
                     showConfirmDeleteDialog = true
@@ -355,6 +369,7 @@ fun RecordsScreen(
                 pendingId = pendingInventory,
                 onSelectedInventoryChange = { id -> viewModel.inventory.select(id) },
                 onSearchQuery = { viewModel.inventory.search(it) },
+                onSearchPick = { id -> viewModel.inventory.open(id) },
                 onAddInventory = {
                     viewModel.inventory.clearSelection()
                     showInventoryDialog = true
@@ -379,6 +394,6 @@ fun RecordsScreen(
                     )
                 }
             )
-        }
+        } }
     }
 }

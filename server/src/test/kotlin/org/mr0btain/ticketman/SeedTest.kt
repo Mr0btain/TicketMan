@@ -77,7 +77,7 @@ class SeedTest {
 
         val requests = TimeOffDatabase().list().orEmpty()
         assertEquals(setOf(TimeOffStatus.PENDING, TimeOffStatus.APPROVED, TimeOffStatus.DECLINED), requests.map { it.status }.toSet())
-        assertTrue(TimeOffDatabase().allowance(tech.identifier) > 0)
+        assertTrue(TimeOffDatabase().allowance(tech.identifier).hours > 0)
         assertTrue(!TimeClockDatabase().between(now - 2 * week, now).isNullOrEmpty(), "the past shifts were clocked")
 
         val appointments = AppointmentDatabase().between(now - 2 * week, now + 2 * week).orEmpty()

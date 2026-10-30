@@ -9,6 +9,7 @@ import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.castTo
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
@@ -16,6 +17,7 @@ import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
@@ -119,6 +121,28 @@ class TicketDatabase(
                         .limit(request.itemsPerPage)
                 )
                 .map { it.toTicket() }
+        }
+
+    /**
+     * How many tickets come before this one in [getPagedItems]. -1 if it isn't in that list, like one at another
+     * location, null if it failed
+     */
+    fun position(identifier: Uuid, location: Uuid?): Long? =
+        dbQuery(GET_PAGED_ITEMS_TAG) {
+            if (TicketEntity.find { (TicketTable.id eq identifier) and TicketTable.location.at(location) }.empty()) return@dbQuery -1L
+
+            TicketEntity.count(TicketTable.location.at(location) and (TicketTable.id greater identifier))
+        }
+
+    /** The same for [getPagedItemsForUser] */
+    fun positionForUser(identifier: Uuid, userId: Uuid, location: Uuid?): Long? =
+        dbQuery(GET_PAGED_FOR_USER_TAG) {
+            val assigned = TicketTable.join(UserTicketTable, JoinType.INNER, TicketTable.id, UserTicketTable.ticket).selectAll()
+                .where { (UserTicketTable.user eq userId) and TicketTable.location.at(location) }
+
+            if (assigned.copy().andWhere { TicketTable.id eq identifier }.empty()) return@dbQuery -1L
+
+            assigned.andWhere { TicketTable.id greater identifier }.count()
         }
 
     override fun count(): Long =

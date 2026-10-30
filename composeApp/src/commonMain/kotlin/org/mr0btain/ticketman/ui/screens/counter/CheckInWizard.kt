@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.components.data.rememberKept
 import org.mr0btain.ticketman.data.payment.CardExtras
 import org.mr0btain.ticketman.data.payment.CardReader
 import org.mr0btain.ticketman.data.payment.CardCharge
@@ -232,12 +233,12 @@ fun CheckInWizard(
     surchargePercent: String = "",
     onReaderCharge: ((CardReader, Long, (CardCharge) -> Unit) -> Unit)? = null
 ) {
-    val form = remember(startingCustomer, checklists, appointment) { CheckInForm(startingCustomer, checklists, appointment) }
+    val form = rememberKept("check-in", startingCustomer, checklists, appointment) { CheckInForm(startingCustomer, checklists, appointment) }
     val needsSignature = terms.isNotBlank()
     val steps = CheckInStep.entries.filter { it != CheckInStep.SIGN || needsSignature }
     val spacing = TmTheme.spacing
 
-    var step by remember(startingCustomer) { mutableStateOf(if (startingCustomer != null) CheckInStep.DEVICE else CheckInStep.CUSTOMER) }
+    var step by rememberKept("check-in-step", startingCustomer) { mutableStateOf(if (startingCustomer != null) CheckInStep.DEVICE else CheckInStep.CUSTOMER) }
     var submitting by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
