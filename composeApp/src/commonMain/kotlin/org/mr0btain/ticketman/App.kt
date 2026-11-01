@@ -24,6 +24,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
+import org.mr0btain.ticketman.ui.screens.settings.components.ChangePasswordDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.login.ServerTrustDialog
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
@@ -64,6 +65,7 @@ fun App() {
 
     // First login setup that has to be finished
     val accountSetup = mainViewModel.session.accountSetup.collectAsState()
+    val mustChangePassword = mainViewModel.session.mustChangePassword.collectAsState()
 
     // A server with its own certificate has to be checked before this device talks to it
     val untrustedCertificate = mainViewModel.session.untrustedCertificate.collectAsState()
@@ -161,6 +163,14 @@ fun App() {
                     onCancel = { mainViewModel.session.cancelAccountSetup() }
                 )
             }
+
+            // Not while first login setup is waiting, that comes first
+            ChangePasswordDialog(
+                isVisible = mustChangePassword.value && accountSetup.value == null,
+                required = true,
+                onDismiss = { mainViewModel.session.logout() },
+                onSave = { current, new, onResult -> mainViewModel.session.changePassword(current, new, onResult) }
+            )
 
             if (shouldShowLogin.value) {
                 LoginPopup(

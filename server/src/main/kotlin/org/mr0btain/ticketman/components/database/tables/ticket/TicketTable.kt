@@ -49,6 +49,9 @@ object TicketTable: UuidTable("tickets") {
     // Added with locations: the location it belongs to. Null only until LocalDatabase gives older rows the main one
     val location = uuid("location_id").nullable().index()
 
+    /** See `Ticket.revision` */
+    val revision = long("revision").default(0)
+
     // Unique on (prefix, year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
     const val NUMBER_INDEX = "tickets_number_unique"
 

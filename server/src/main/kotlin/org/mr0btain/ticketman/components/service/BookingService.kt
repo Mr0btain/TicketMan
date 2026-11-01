@@ -88,7 +88,7 @@ class BookingService(
 
     /** Books [form]'s time for the customer, if it's still free */
     fun book(form: Form, address: String): Booked {
-        if (!bookingsByAddress.tryAcquire(address)) return Booked.Limited
+        if (bookingsByAddress.isLimited(address)) return Booked.Limited
         val choices = choices(form.location) ?: return Booked.Off
         fun problem(message: String) = Booked.Problem(message, choices)
 
@@ -121,7 +121,8 @@ class BookingService(
                 notes = "Booked online"
             )
             when (val result = appointmentService.add(appointment, CUSTOMER, actor = null, location = choices.location.identifier)) {
-                is AccountResult.Done -> Booked.Done(result.value, choices)
+                // Only bookings made count, so someone fixing a typo or finding a time taken isn't locked out
+                is AccountResult.Done -> Booked.Done(result.value, choices).also { bookingsByAddress.record(address) }
                 is AccountResult.Invalid -> problem(result.message)
                 is AccountResult.Conflict -> problem(result.message)
                 else -> problem("That didn't go through, try again")

@@ -51,6 +51,7 @@ a backup by restarting, and stops it cleanly ([Testing](../testing.md)).
    CERTIFICATE=public          # private for a LAN address, a .local name or localhost
    TZ=America/New_York
    ADMIN_PASSWORD=             # optional, the first admin password
+   # ACCESS=public             # opens logins to the internet too. Left out, outsiders only get the status page
    ```
 
 3. Build the server on the host, then start both containers, from the repo root:
@@ -60,7 +61,7 @@ a backup by restarting, and stops it cleanly ([Testing](../testing.md)).
    docker compose -f docker/docker-compose.yml up -d --build
    ```
 
-4. Open `https://tickets.myshop.com`, or point a client at it (Settings > Server), and log in as `admin`. Set up the
+4. From the shop's network, open `https://tickets.myshop.com`, or point a client at it (Settings > Server), and log in as `admin`. Set up the
    shop profile on the admin screen's Server tab before taking money.
 
 To use the published image instead of building, the [Docker Hub page](../../docker/dockerhub.md#running-it-in-production-example)

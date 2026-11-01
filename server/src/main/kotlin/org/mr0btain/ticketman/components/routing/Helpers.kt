@@ -6,6 +6,7 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.database.RecordSave
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.data.audit.AuditAction
@@ -72,6 +73,24 @@ suspend fun RoutingCall.respondPosition(position: Long?) {
         position < 0 -> respond(HttpStatusCode.NotFound)
         else -> respond(HttpStatusCode.OK, RecordPosition(position))
     }
+}
+
+/**
+ * Answers a save that didn't happen, `409` when someone else saved the record since it was opened
+ * @param record What it is, for the message
+ * @return Whether it was saved, when nothing has been answered
+ */
+suspend fun RoutingCall.answerIfNotSaved(save: RecordSave?, record: String): Boolean {
+    when (save) {
+        RecordSave.DONE -> return true
+        RecordSave.NOT_FOUND -> respond(HttpStatusCode.NotFound)
+        RecordSave.CHANGED_SINCE -> respondText(
+            "Someone else changed this $record since you opened it. Cancel to see what they did, then make your change again",
+            status = HttpStatusCode.Conflict
+        )
+        null -> respond(HttpStatusCode.InternalServerError)
+    }
+    return false
 }
 
 /**

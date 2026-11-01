@@ -1,5 +1,12 @@
 package org.mr0btain.ticketman
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.mr0btain.ticketman.server.request.SendLinkRequest
 import org.mr0btain.ticketman.data.notify.SmtpSettings
 import org.mr0btain.ticketman.data.notify.SmsSettings
@@ -73,6 +80,7 @@ class PaymentTest {
 
     /** Says each charge is whatever [states] holds for it, waiting otherwise, and keeps what it was asked */
     private class Fake : PaymentProcessor {
+        var beforeRefund: () -> Unit = {}
         val states = mutableMapOf<String, ChargeState>()
         val started = mutableListOf<CardCharge>()
         val cancelled = mutableListOf<String>()
@@ -87,7 +95,10 @@ class PaymentTest {
             return ProcessorResult.Ok("pi_${charge.identifier}")
         }
 
+        var refuseLinks: String? = null
+
         override fun createLink(charge: CardCharge, description: String, returnUrl: String): ProcessorResult<StartedLink> {
+            refuseLinks?.let { return ProcessorResult.Failed(it) }
             started += charge
             return ProcessorResult.Ok(StartedLink("cs_${charge.identifier}", "https://checkout.example/${charge.identifier}?back=$returnUrl"))
         }
@@ -100,6 +111,7 @@ class PaymentTest {
         }
 
         override fun refund(paymentReference: String, amountCents: Long, key: String): ProcessorResult<String> {
+            beforeRefund()
             refuseRefunds?.let { return ProcessorResult.Failed(it) }
             refunds += Triple(paymentReference, amountCents, key)
             return ProcessorResult.Ok("re_${refunds.size}")
@@ -443,16 +455,76 @@ class PaymentTest {
         charge(started.identifier)
         val payment = invoice(invoice.identifier).payments.single()
 
+        // It sends money back, so like any refund it's only for admins
+        val refused = client.delete("/api/invoice/${invoice.identifier}/payments/${payment.identifier}") { bearerAuth(token) }
+        assertEquals(HttpStatusCode.Forbidden, refused.status)
+        assertEquals(1, invoice(invoice.identifier).payments.size)
+        assertTrue(fake.refunds.isEmpty())
+
         fake.refuseRefunds = "Square said 500: down"
-        assertEquals(HttpStatusCode.Conflict, client.delete("/api/invoice/${invoice.identifier}/payments/${payment.identifier}") { bearerAuth(token) }.status)
+        assertEquals(HttpStatusCode.Conflict, client.delete("/api/invoice/${invoice.identifier}/payments/${payment.identifier}") { bearerAuth(adminToken) }.status)
         assertEquals(1, invoice(invoice.identifier).payments.size)
         fake.refuseRefunds = null
 
-        val removed = client.delete("/api/invoice/${invoice.identifier}/payments/${payment.identifier}") { bearerAuth(token) }
+        val removed = client.delete("/api/invoice/${invoice.identifier}/payments/${payment.identifier}") { bearerAuth(adminToken) }
         assertEquals(HttpStatusCode.OK, removed.status)
         assertTrue(invoice(invoice.identifier).payments.isEmpty())
         assertEquals(3_000, fake.refunds.single().second)
         assertEquals(CardChargeStatus.REFUNDED, charge(started.identifier).status)
+    }
+
+    @Test
+    fun whatTheProcessorSaysStaysAwayFromCustomers() = testApplication {
+        setup()
+        val (ticket, _) = openInvoice()
+        val token = json.decodeFromString<Ticket>(get("/api/data/ticket/get/${ticket.identifier}").bodyAsText()).statusToken
+        fake.refuseLinks = "Stripe said 401: Invalid API key sk_live_abc"
+
+        val page = client.config { followRedirects = false }.get("/status/$token/pay")
+
+        assertEquals(HttpStatusCode.Conflict, page.status)
+        assertContains(page.bodyAsText(), "call us to pay")
+        assertFalse(page.bodyAsText().contains("Invalid API key"), "That's the shop's business")
+    }
+
+    @Test
+    fun aSlowProcessorOnlyHoldsUpItsOwnInvoice() = testApplication {
+        setup()
+        val (_, slow) = openInvoice()
+        val (_, other) = openInvoice()
+        val started = json.decodeFromString<CardCharge>(readerCharge(3_000, slow).bodyAsText())
+        fake.pay(started)
+        charge(started.identifier)
+        val payment = invoice(slow.identifier).payments.single()
+
+        val reached = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        fake.beforeRefund = {
+            reached.countDown()
+            release.await(30, TimeUnit.SECONDS)
+        }
+
+        val removing = CoroutineScope(Dispatchers.IO).async {
+            client.delete("/api/invoice/${slow.identifier}/payments/${payment.identifier}") { bearerAuth(adminToken) }
+        }
+        try {
+            assertTrue(withContext(Dispatchers.IO) { reached.await(30, TimeUnit.SECONDS) }, "The refund should have started")
+
+            // Another invoice carries on, which would have waited out the processor while the lock was held
+            val paid = withTimeout(10_000) { postJson("/api/invoice/${other.identifier}/payments", json.encodeToString(PaymentRequest(PaymentMethod.CASH, 100))) }
+            assertEquals(HttpStatusCode.OK, paid.status)
+
+            // This one says to wait, rather than refunding the same money twice or closing on a payment leaving it
+            val again = withTimeout(10_000) { client.delete("/api/invoice/${slow.identifier}/payments/${payment.identifier}") { bearerAuth(adminToken) } }
+            assertEquals(HttpStatusCode.Conflict, again.status)
+            assertContains(again.bodyAsText(), "going through")
+        } finally {
+            release.countDown()
+        }
+
+        assertEquals(HttpStatusCode.OK, removing.await().status)
+        assertEquals(1, fake.refunds.size)
+        assertTrue(invoice(slow.identifier).payments.isEmpty())
     }
 
     @Test

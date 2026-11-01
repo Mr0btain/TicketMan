@@ -10,11 +10,13 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.database.debug.seedTestData
+import org.mr0btain.ticketman.components.plugins.configureBodyLimits
 import org.mr0btain.ticketman.components.plugins.configureClientVersionCheck
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureCors
 import org.mr0btain.ticketman.components.plugins.configureProxy
 import org.mr0btain.ticketman.components.plugins.configureSecurity
+import org.mr0btain.ticketman.components.plugins.configureSecurityHeaders
 import org.mr0btain.ticketman.components.plugins.configureTransfers
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
@@ -37,8 +39,10 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.server.response.LoginLockKind
 import org.mr0btain.ticketman.components.service.ServerRestart
 import org.mr0btain.ticketman.components.service.PasscodeVault
+import org.mr0btain.ticketman.components.service.SealedSecrets
 import org.mr0btain.ticketman.components.service.ServerSecret
 import org.mr0btain.ticketman.components.service.StorageService
+import org.mr0btain.ticketman.components.service.sweepStep
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.components.proxy.ProxySettings
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -80,6 +84,12 @@ fun Application.module() {
         val secret = ServerSecret.resolve(environment.config.propertyOrNull("jwt.secret")?.getString().orEmpty(), dataPath)
         val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase, secret)
         val passcodeVault = PasscodeVault(secret)
+        SealedSecrets.vault = passcodeVault
+        // Keys saved before they were sealed get sealed now
+        database.paymentDatabase.sealStoredSecrets()
+        database.notifyDatabase.sealStoredSecrets()
+        database.compactOnceAfterSealing()
+        val secretCheck = ServerSecret.check(secret)
         val userService = UserService(
             database = database.userDatabase,
             jwtService = jwtService,
@@ -107,6 +117,8 @@ fun Application.module() {
         configureProxy(proxy)
         configureCors(environment.config.propertyOrNull("cors.hosts")?.getString().orEmpty())
         configureClientVersionCheck()
+        configureBodyLimits()
+        configureSecurityHeaders()
         val cardPayments = CardPayments(database.paymentDatabase, developmentMode)
         val invoiceService = InvoiceService(
             invoices = database.invoiceDatabase,
@@ -143,10 +155,11 @@ fun Application.module() {
             imageStore = database.imageStore,
             backupsFolder = File(database.databaseDirectory.parentFile, "backups"),
             schedule = BackupSchedule.from(environment.config),
-            auditLog = database.auditLogDatabase
+            auditLog = database.auditLogDatabase,
+            secretCheck = secretCheck
         )
 
-        val restoreService = RestoreService(database.databaseDirectory.parentFile)
+        val restoreService = RestoreService(database.databaseDirectory.parentFile, secretCheck)
         val adminService = AdminService(
             database = database,
             serverName = environment.config.propertyOrNull("env.name")?.getString() ?: "Server",
@@ -217,7 +230,7 @@ fun Application.module() {
         launch(Dispatchers.IO) {
             while (isActive) {
                 delay(PaymentService.SWEEP_INTERVAL)
-                paymentService.sweep()
+                sweepStep("card charges") { paymentService.sweep() }
             }
         }
 
@@ -225,24 +238,24 @@ fun Application.module() {
         launch(Dispatchers.IO) {
             while (isActive) {
                 delay(NotificationService.SEND_INTERVAL)
-                notificationService.sendDue()
+                sweepStep("customer messages") { notificationService.sendDue() }
             }
         }
 
         // Clears out photos deleted or never saved a day ago, backups whose link has run out, sessions that have
         // expired, old audit entries and old restore leftovers, makes the daily backup and queues pickup and appointment reminders. Stops
-        // with the application
+        // with the application. Each step on its own, so one going wrong doesn't take the others with it
         launch(Dispatchers.IO) {
             while (isActive) {
-                imageService.sweep()
-                backupService.sweep()
-                database.tokenDatabase.removeExpired()
-                housekeeping.auditCutoff()?.let { database.auditLogDatabase.removeOlderThan(it) }
-                restoreService.sweepLeftovers(housekeeping.restoreLeftoverAge)
-                backupService.runSchedule()
-                notificationService.queueReminders()
-                notificationService.queueAppointmentReminders()
-                storageService.sweep()
+                sweepStep("photos") { imageService.sweep() }
+                sweepStep("backup links") { backupService.sweep() }
+                sweepStep("sessions") { database.tokenDatabase.removeExpired() }
+                sweepStep("audit log") { housekeeping.auditCutoff()?.let { database.auditLogDatabase.removeOlderThan(it) } }
+                sweepStep("restore leftovers") { restoreService.sweepLeftovers(housekeeping.restoreLeftoverAge) }
+                sweepStep("daily backup") { backupService.runSchedule() }
+                sweepStep("pickup reminders") { notificationService.queueReminders() }
+                sweepStep("appointment reminders") { notificationService.queueAppointmentReminders() }
+                sweepStep("storage fees") { storageService.sweep() }
                 delay(ImageService.SWEEP_INTERVAL)
             }
         }
@@ -280,7 +293,9 @@ private fun ensureAdminExists(database: LocalDatabase, password: String) {
             username = username,
             password = adminPassword,
             name = "admin",
-            accessLevel = AccessLevel.ADMIN
+            accessLevel = AccessLevel.ADMIN,
+            // A generated one is sitting in the log. One from ADMIN_PASSWORD was chosen by whoever set it
+            mustChangePassword = password.isBlank()
         )
     )
 
@@ -290,7 +305,7 @@ private fun ensureAdminExists(database: LocalDatabase, password: String) {
     }
 
     if (password.isBlank()) {
-        AppLogger.m(TAG, "No admin found, created \"$username\" with password: $adminPassword  (change it from the admin screen)")
+        AppLogger.m(TAG, "No admin found, created \"$username\" with password: $adminPassword  (you'll choose your own when you log in)")
     } else {
         AppLogger.m(TAG, "No admin found, created \"$username\" with the ADMIN_PASSWORD password")
     }

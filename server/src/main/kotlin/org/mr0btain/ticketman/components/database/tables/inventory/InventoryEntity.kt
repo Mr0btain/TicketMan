@@ -26,6 +26,7 @@ class InventoryEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var category by InventoryTable.category
     var reorderPoint by InventoryTable.reorderPoint
     var supplier by InventoryTable.supplier
+    val revision by InventoryTable.revision
 
     // For notes
     var notes by NoteEntity via InventoryNoteTable
@@ -46,7 +47,8 @@ class InventoryEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             barcode = barcode,
             category = category,
             reorderPoint = reorderPoint,
-            supplierIdentifier = supplier
+            supplierIdentifier = supplier,
+            revision = revision
         )
     }
 }

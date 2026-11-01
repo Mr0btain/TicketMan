@@ -30,6 +30,7 @@ import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.AccountPanel
 import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
+import org.mr0btain.ticketman.ui.screens.settings.components.ChangePasswordDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.ChangePinDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
@@ -68,11 +69,18 @@ fun SettingsScreen(
     val currentUser = viewModel.session.currentUser.collectAsState()
 
     var showChangePin by remember { mutableStateOf(false) }
+    var showChangePassword by remember { mutableStateOf(false) }
     val clockedIn = viewModel.timeClock.current.collectAsState()
     val weekHours = viewModel.timeClock.weekHours.collectAsState()
     val weekScheduled = viewModel.timeClock.weekScheduled.collectAsState()
     LaunchedEffect(Unit) { viewModel.timeClock.refresh() }
     var showStation by remember { mutableStateOf(false) }
+
+    ChangePasswordDialog(
+        isVisible = showChangePassword,
+        onDismiss = { showChangePassword = false },
+        onSave = { current, new, onResult -> viewModel.session.changePassword(current, new, onResult) }
+    )
 
     ChangePinDialog(
         isVisible = showChangePin,
@@ -126,8 +134,8 @@ fun SettingsScreen(
                 items = listOf(
                     SettingItem.Switch(
                         icon = if (rememberLogin.value) painterResource(Res.drawable.lock) else painterResource(Res.drawable.unlock),
-                        label = "Remember login",
-                        description = "Save username and password after logging in",
+                        label = "Stay logged in",
+                        description = "Keep this device logged in between runs and remember your username. Your password is never saved",
                         checked = rememberLogin.value,
                         onToggle = { viewModel.settings.toggleRememberLogin() }
                     )
@@ -215,6 +223,13 @@ fun SettingsScreen(
                 label = "Account and station",
                 icon = Res.drawable.key,
                 items = listOf(
+                    SettingItem.Action(
+                        icon = painterResource(Res.drawable.lock),
+                        label = "Change password",
+                        description = if (currentUser.value == null) "Log in to change your password" else "Your other devices will be logged out",
+                        enabled = currentUser.value != null,
+                        onClick = { showChangePassword = true }
+                    ),
                     SettingItem.Action(
                         icon = painterResource(Res.drawable.key),
                         label = "Change PIN",

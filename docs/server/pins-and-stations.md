@@ -106,8 +106,7 @@ credentials are forgotten.
 turns kiosk mode on when the station is approved and `kioskEnabled`:
 
 - the whole app is replaced with the counter and a PIN lock screen, and the window goes full screen,
-- `RemoteHandler.credentialFallback` is turned off, so when a PIN session runs out the client doesn't log the
-  device's owner back in with their saved password; it goes back to the lock screen,
+- when a PIN session runs out it goes back to the lock screen,
 - touching or typing anything resets an idle timer; when it runs out (or someone locks it) the client logs the
   current person out on the server too (`RemoteHandler.endSession`) and shows the lock screen,
 - while someone is signed in and has touched it in the last minute, it calls `GET /api/user/me` at most once a

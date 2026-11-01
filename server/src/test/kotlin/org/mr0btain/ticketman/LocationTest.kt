@@ -325,6 +325,8 @@ class LocationTest {
 
         val nina = User(username = "nina", password = "nina_pass_123", name = "Nina", accessLevel = AccessLevel.NORMAL)
         assertEquals(HttpStatusCode.Created, postJson("/api/user/add", json.encodeToString(nina), adminToken, at = downtown).status)
+        // Past choosing her own password, which OwnPasswordTest covers
+        UserDatabase().updatePassword(nina.identifier, nina.password, mustChange = false)
         val ninaToken = login(nina)
 
         // Made by an admin working downtown, so that's her home: her lists start there without a header

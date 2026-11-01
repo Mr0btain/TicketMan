@@ -15,6 +15,8 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 class InventorySeed: DataSeed("InventorySeed") {
+    private var revision: Long? = null
+
     var name: String by mutableStateOf("")
         private set
     var description: String by mutableStateOf("")
@@ -62,7 +64,8 @@ class InventorySeed: DataSeed("InventorySeed") {
         barcode = barcode,
         category = category,
         reorderPoint = reorderPoint,
-        supplierIdentifier = supplierIdentifier
+        supplierIdentifier = supplierIdentifier,
+        revision = revision
     )
 
     // --- Initial setting up with data ---
@@ -72,6 +75,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         images: List<StoredImage> = emptyList()
     ) {
         identifier = data.identifier
+        revision = data.revision
         name = data.name
         description = data.description
         stock = data.stock
@@ -161,6 +165,7 @@ class InventorySeed: DataSeed("InventorySeed") {
     // Reset all fields
     override fun clear() {
         identifier = Uuid.generateV7()
+        revision = null
         name = ""
         description = ""
         stock = 0

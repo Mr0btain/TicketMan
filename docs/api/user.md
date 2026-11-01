@@ -27,6 +27,18 @@ First login after an approved account request: confirm details, and optionally a
 - **`202`** the updated `User`, with `needsSetup` off; their tokens now work everywhere.
 - **`400`** no name, a password under 8 characters, or a PIN `PinRules` refuses. **`409`** already set up.
 
+### `POST /api/user/me/password`
+
+**Auth:** setup
+
+Changes your own password, and logs you out of your other devices. This is also how someone with `mustChangePassword`
+(an admin set their password, or it was generated) gets past it: until then their tokens only pass the `setup`
+provider, like `needsSetup`. Wrong passwords are limited with `/me/pin`'s, 5 per user per 15 minutes.
+
+- **Body:** `ChangePasswordRequest { currentPassword, newPassword }`.
+- **`202`** no body. **`400`** the current one is wrong, or the new one is under 8 characters or the same. **`429`** too
+  many wrong passwords.
+
 ### `POST /api/user/me/pin`
 
 **Auth:** restricted
@@ -34,7 +46,7 @@ First login after an approved account request: confirm details, and optionally a
 Changes your own PIN. Needs your password, so someone at an unlocked screen can't.
 
 - **Body:** `SetPinRequest { currentPassword, pin }`.
-- **`202`** no body. **`400`** `Password is wrong`, or the PIN isn't allowed.
+- **`202`** no body. **`400`** `Password is wrong`, or the PIN isn't allowed. **`429`** too many wrong passwords.
 
 ## Looking users up
 
@@ -73,7 +85,7 @@ Adds a user who can log in straight away (`ACTIVE`).
 
 - **Body:** `User` with a plain `password`, which the server hashes. `homeLocation` is where their lists start, the
   location the admin works at when it's null.
-- **`201`** the `User` as saved, with its password blanked.
+- **`201`** the `User` as saved, with its password blanked. They choose their own at their first login (`mustChangePassword`).
 - **`400`** no username or password, a username `UsernameRules` refuses, a password `PasswordRules` refuses (under
   8 characters), `accessLevel` `NONE`, or a home that isn't an active location. **`409`** the username is taken.
 
@@ -127,10 +139,11 @@ Makes a new random code (16 characters of Crockford base 32), which stops their 
 
 **Auth:** admin
 
-Sets a new password and logs that user out of every device (except this one, if it's your own).
+Sets a new password for someone else and logs them out of every device. They choose their own at their next login
+(`mustChangePassword`). Your own goes through [`/me/password`](#post-apiusermepassword), which needs the one you have.
 
 - **Body:** `PasswordResetRequest { password }`.
-- **`202`** done. **`400`** a password under 8 characters. **`404`** no such user.
+- **`202`** done. **`400`** a password under 8 characters. **`404`** no such user. **`409`** it's your own.
 
 ### `DELETE /api/user/remove/{identifier}`
 

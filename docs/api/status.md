@@ -83,7 +83,7 @@ hour.
 Waiting payment links on the ticket's invoice are asked about first, so a customer back from paying sees it paid.
 
 - **`200`** the ticket's page. **`404`** a page saying the link doesn't work, with a link to the form, for a token
-  that isn't one or was replaced. **`429`** too many unknown links from this address.
+  that isn't one, was replaced, or whose ticket was picked up over 90 days ago (`StatusService.LINK_DAYS_AFTER_PICKUP`). **`429`** too many unknown links from this address.
 
 ### `POST /status/{token}/estimate`
 

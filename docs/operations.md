@@ -12,7 +12,8 @@ The usual setup is the server in Docker behind a reverse proxy that does HTTPS. 
 1. Point a domain (`tickets.myshop.com`) at the machine, with ports 80 and 443 reaching it from the internet so
    Caddy can get the certificate.
 2. Next to `../docker/docker-compose.yml`, make a `.env` file with `DOMAIN=tickets.myshop.com`, `TZ=` the shop's time zone
-   (like `America/New_York`), and `ADMIN_PASSWORD=` if you want to choose the first password.
+   (like `America/New_York`), and `ADMIN_PASSWORD=` if you want to choose the first password. From outside the shop's
+   network only the status page answers, unless you set `ACCESS=public` (see [the status page](#the-customer-status-page)).
 3. Build the server and start it (see [The Docker image](#the-docker-image) for why the build is on the host):
 
    ```bash
@@ -20,11 +21,11 @@ The usual setup is the server in Docker behind a reverse proxy that does HTTPS. 
    docker compose -f docker/docker-compose.yml up -d --build
    ```
 
-4. Open `https://tickets.myshop.com` in a browser, or point a client at it (Settings > Server), and log in as
+4. From the shop's network, open `https://tickets.myshop.com` in a browser, or point a client at it (Settings > Server), and log in as
    `admin`. Without `ADMIN_PASSWORD` the password is in `docker compose -f docker/docker-compose.yml logs ticketman`.
 5. Set up the shop profile on the admin screen's **Server** tab (name, address and contact details, tax rate, invoice footer, repair terms, default
    paper size). Tax and everything printed come from it, so do this before taking money.
-6. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
+6. If the password was generated, the app makes you choose your own at this first login. Set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
 
 A shop with no domain, only reached on its own network, sets `DOMAIN` to the machine's name or LAN address
 (`DOMAIN=192.168.1.20`) and `CERTIFICATE=private`. Caddy then uses its own local CA, and devices are asked once to
@@ -209,11 +210,23 @@ how it's limited. Set the shop profile's **Public address** (Admin > Server) to 
 shows it, with **New link** to cut off one that went somewhere it shouldn't. Without a public address the QR stays
 the ticket number.
 
-The status page is the only part of the server meant for the internet. Everything else, logins included, should
-stay on the shop's network. Port forwarding sends all of port 443 to the proxy whatever name was asked for, so it's
-not enough to give the status page its own name: anyone could still ask for the app's name at the shop's public
-address. The proxy has to turn away outside addresses on every site but the status page. With Caddy, in
-[`docker/Caddyfile`](../docker/Caddyfile):
+The status page is the only part of the server meant for the internet. Everything else, logins included, stays on
+the shop's network, and [`docker/Caddyfile`](../docker/Caddyfile) does that by default: with `ACCESS=shop`, a request
+from outside the private address ranges gets a `404` for anything but `/status`. Check it from a phone off the shop's
+Wi-Fi: the status page loads, and `https://<DOMAIN>/api/ping` is a 404. Two things to watch:
+
+- **Caddy has to see the real address.** `private_ranges` covers the LAN and Docker's own networks, so if every
+  request looks like it comes from Docker's gateway, outsiders pass as insiders. Docker's default port publishing on
+  Linux keeps the real IPv4 address, but Docker Desktop and rootless Docker may not; check Caddy's access log for a
+  request from outside to make sure. A tunnel or CDN in front does the opposite: everyone, staff too, looks like an
+  outsider.
+- **Staff working from outside the shop** lose the app with this, and so does a second location reaching the server
+  over the internet. Use a VPN into the shop's network. `ACCESS=public` in `.env` opens everything to anyone who can
+  reach the address instead. Wrong passwords are still limited, but then anyone on the internet can guess at logins
+  and keep a username locked out, so only use it knowingly.
+
+To give the status page its own name, add a site for it next to the main one. Port forwarding sends all of port 443
+to the proxy whatever name was asked for, so this doesn't replace `ACCESS=shop`:
 
 ```caddyfile
 # The public name, with a public certificate. Only the status page, nothing else
@@ -226,35 +239,17 @@ repairs.example.com {
 		respond 404
 	}
 }
-
-{$DOMAIN:localhost} {
-	import certificate-{$CERTIFICATE:public}
-
-	# Addresses outside the shop's network only get the status page
-	@outside {
-		not remote_ip private_ranges
-		not path /status /status/*
-	}
-	handle @outside {
-		respond 404
-	}
-
-	# ... the ca.pem and reverse_proxy handles as they are
-}
 ```
 
 Then forward ports 80 and 443 on the router to the machine running Caddy, and point `repairs.example.com` at the
-shop's public address. Check it from a phone off the shop's Wi-Fi: the status page loads, and
-`https://repairs.example.com/api/ping` is a 404. Two things to watch:
+shop's public address.
 
-- **Caddy has to see the real address.** `private_ranges` covers the LAN and Docker's own networks, so if every
-  request looks like it comes from Docker's gateway, outsiders pass as insiders. Docker's default port publishing
-  keeps the real IPv4 address; check Caddy's access log for a request from outside to make sure.
-- **Staff working from outside the shop** lose the app with this. Use a VPN into the shop's network rather than
-  leaving the whole server open.
+Another proxy needs the same rule set up by hand. The server can't enforce it, since it only knows what the proxy
+tells it.
 
 The page's own limits count devices by `X-Forwarded-For`, which Caddy sends and the server believes from
-[`TRUSTED_PROXIES`](configuration.md#trusted_proxies) (private ranges by default). The page sends no scripts and
+[`TRUSTED_PROXIES`](configuration.md#trusted_proxies), which the compose file sets to its own network. A link stops working
+90 days after its ticket is picked up.  The page sends no scripts and
 asks not to be indexed or cached. Anyone with a link sees that ticket's page, so links are only on the claim slip
 and whatever staff send; the page never shows the customer's contact details or internal notes.
 
@@ -278,8 +273,8 @@ details.
 Messages wait in an outbox and are sent within about 10 seconds; one that can't go is tried again for a few hours,
 then marked failed. Admin > Messages lists them with Retry and Cancel, and each ticket's card shows what its
 customer was sent. The server needs to reach the mail server (port 587 or 465 out) or `api.twilio.com` (443 out).
-The mail password and Twilio token are kept in the database, so they're in backups too: treat a backup like the
-passwords it holds.
+The mail password and Twilio token are kept in the database sealed under the [server secret](configuration.md#secret),
+which backups don't include. A backup still holds customers' details and photos, so keep it safe.
 
 ## More than one location
 
@@ -330,8 +325,8 @@ status page can take the balance online. They go through the shop's own [Stripe]
   never put on an invoice (a sale nobody finished) shows on Admin > Payments as not on an invoice, with **Refund**.
 - **Simulated** pretends to take cards, for trying the counter out on a server started in development mode only.
 
-The server needs to reach `api.stripe.com` or `connect.squareup.com` (443 out). The keys are kept in the database,
-so they're in backups too, like the mail password.
+The server needs to reach `api.stripe.com` or `connect.squareup.com` (443 out). The keys are kept in the database sealed
+under the [server secret](configuration.md#secret), like the mail password.
 
 ## Web client
 
@@ -401,7 +396,7 @@ On a station:
 - Staff sign in with their 6 digit PIN. Signing in ends the previous person's PIN session on that station, so only
   one person is signed in there at a time.
 - Five wrong PINs in a row lock that user's PIN until an admin resets it.
-- A kiosk never falls back to the device owner's saved password, so a locked kiosk can't quietly log someone back in.
+- No device keeps a password, so a locked kiosk has nothing to quietly log someone back in with.
 - Leaving kiosk mode on the device needs an admin's PIN.
 - Removing a station on the **Stations** tab signs out whoever is PINned in there.
 

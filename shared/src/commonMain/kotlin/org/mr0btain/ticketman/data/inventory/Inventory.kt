@@ -34,7 +34,9 @@ data class Inventory(
     val category: String = "",
     val reorderPoint: Int? = null,
     val supplierIdentifier: Uuid? = null,
-    val stockAt: List<LocationStock> = emptyList()
+    val stockAt: List<LocationStock> = emptyList(),
+    /** Goes up each time the server saves it. Sent back with an update, which is refused if someone saved since. Null skips that, for older clients */
+    val revision: Long? = null
 ): MainItem() {
     /** Whether pickups and sales count it down */
     val tracksStock: Boolean

@@ -72,7 +72,7 @@ aren't affected, and the counts reset when the server restarts.
 
 The address is the connection's, which behind a reverse proxy is the proxy's for every device. So
 `plugins/Proxy.kt` takes it from `X-Forwarded-For` instead, but only when the connection itself comes from an
-address in `TRUSTED_PROXIES` (loopback and the private ranges unless set, never with `none`). It takes the last
+address in `TRUSTED_PROXIES` (this machine unless set, never with `none`). It takes the last
 address in the header, the one the nearest proxy added, since anything before it was sent by the client. From
 anywhere else the header is ignored, so a device that reaches the server directly can't pick its own address. It's
 our own small plugin rather than Ktor's `XForwardedHeaders`, which believes the header from anyone. See
@@ -107,8 +107,11 @@ active user and that the session hasn't expired. It then returns a new access to
 and the one sent stops working.
 
 That swap is a compare and set (`TokenDatabase.rotate` only writes while the old token is still the stored one),
-so of two refreshes with the same token only the first gets through. A copied refresh token stops working as soon
-as the real device refreshes. The new refresh token runs out when the first one would have, so refreshing never
+so of two refreshes with the same token only the first swaps it. A copied refresh token stops working a minute after
+the real device refreshes: for that long (`UserService.REFRESH_GRACE`) the token just swapped can be swapped again,
+because clients keep no password to fall back on, and a lost reply would otherwise log them out. Doing that replaces
+the one it missed. Ending the session ends that too. `TokenTable` only keeps the tokens' SHA-256 hashes, so a copy of the
+database or a backup holds nothing that refreshes. The new refresh token runs out when the first one would have, so refreshing never
 stretches a session past its year (or 12 hours).
 
 Every auth provider only lets in tokens with `typ = access`, so a refresh token can't be used as a bearer token,
@@ -194,8 +197,10 @@ same hasher is used for passwords, PINs, invite codes and station secrets.
 - **A blank device id never replaces a session.** Logins without one (old clients, scripts) add a new session every
   time, and the 11th drops the oldest, so a script that logs in on every run can log its own earlier runs out.
   Send a fixed `deviceId` from scripts.
-- **A refresh whose answer is lost logs the device out.** The server has already swapped the token, so the one the
-  device still holds is refused. The client then logs in with the saved password if it has one, or asks.
+- **A refresh whose answer is lost for over a minute logs the device out.** The server has already swapped the
+  token, so the one the device still holds is refused, and it asks for a login.
+- **Two browser tabs on the web client share a session but not its token.** Each keeps its own copy in memory, so the
+  one that didn't refresh is asked to log in, and logging in there replaces the other's session.
 - **Changing `SECRET`, or deleting `server/secret`, logs every device out**, since no token verifies any more.
 - **`403` is only for access levels.** A deactivated user still gets `401`, since their sessions are already gone.
 

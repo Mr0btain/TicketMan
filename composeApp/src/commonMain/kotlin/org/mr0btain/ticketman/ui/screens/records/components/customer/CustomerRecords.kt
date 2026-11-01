@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.records.components.customer
 
+import org.mr0btain.ticketman.components.network.isConflict
 import org.mr0btain.ticketman.error.asEmptyDataResult
 import org.mr0btain.ticketman.error.getOrDefault
 import org.mr0btain.ticketman.error.getOrNull
@@ -157,6 +158,8 @@ class CustomerRecords(
             }
 
             if (saved is TmResult.Error) {
+                // Out of date, so Cancel has to load it from the server rather than this copy
+                if (saved.error.isConflict) cache.remove(customer.identifier)
                 snackBarHost.showSnackbar("Customer not saved: ${saved.error.message}")
                 return@launch
             }

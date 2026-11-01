@@ -54,9 +54,8 @@ fun Route.noteRoute(
                 return@post
             }
 
-            // Notes are signed by whoever wrote them unless an author was given
-            val received = call.receive<Note>()
-            val note = received.copy(author = received.author.ifBlank { call.username(userDatabase) })
+            // Signed by whoever's logged in, whatever was sent
+            val note = call.receive<Note>().copy(author = call.username(userDatabase))
 
             if (database.addNote(identifier, note)) {
                 call.audit(auditLog, AuditAction.CREATE, "$entityType note", identifier, note.message.take(80))

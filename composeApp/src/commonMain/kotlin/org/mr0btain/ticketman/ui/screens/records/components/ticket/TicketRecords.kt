@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.records.components.ticket
 
+import org.mr0btain.ticketman.components.network.isConflict
 import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.getOrDefault
 import org.mr0btain.ticketman.error.valueOr
@@ -205,6 +206,8 @@ class TicketRecords(
                     val updated = repo.update(ticket)
 
                     if (updated is TmResult.Error) {
+                        // Out of date, so Cancel has to load it from the server rather than this copy
+                        if (updated.error.isConflict) cache.remove(ticket.identifier)
                         snackBarHost.showSnackbar("Ticket not saved: ${updated.error.message}")
                         return@launch
                     }

@@ -21,6 +21,7 @@ import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import java.time.LocalDate
 import java.time.ZoneId
+import org.mr0btain.ticketman.components.service.BookingService
 import kotlin.test.*
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -101,6 +102,18 @@ class BookingTest {
         // Off that day takes their shift away
         ScheduleDatabase().add(listOf(ScheduleEntry(userIdentifier = clerk.identifier, kind = ScheduleKind.TIME_OFF, allDay = true, startsAt = at(0), endsAt = at(0, day = tomorrow.plusDays(1)))))
         assertEquals(listOf("09:00", "09:30", "10:30"), times(page()))
+    }
+
+    @Test
+    fun aFormWithMistakesDoesntUseUpTheLimit() = testApplication {
+        setup()
+        ScheduleDatabase().add(listOf(shift(tech, 9, 10)))
+
+        repeat(BookingService.BOOKINGS_PER_ADDRESS + 2) {
+            assertEquals(HttpStatusCode.BadRequest, book(at(9, 30), name = "").status)
+        }
+
+        assertEquals(HttpStatusCode.OK, book(at(9, 30)).status)
     }
 
     @Test

@@ -77,8 +77,7 @@ class ServerUserClient(
     /**
      * Log in to server using supplied credentials. An invite's setup code can go in place of the password
      */
-    suspend fun login(username: String = localStorage.username, password: String = localStorage.password): LoginOutcome {
-        // Nothing to log in with, this happens when credentials aren't remembered
+    suspend fun login(username: String, password: String): LoginOutcome {
         if (username.isBlank() || password.isBlank()) {
             AppLogger.i(LOGIN_TAG, "FAIL: Missing credentials")
             return LoginOutcome.Failed(NetworkError.UNAUTHORIZED)
@@ -108,7 +107,7 @@ class ServerUserClient(
                     return LoginOutcome.InviteSetup(username, token)
                 }
 
-                LoginStatus.OK, LoginStatus.NEEDS_SETUP -> if (storeSession(authResponse, username, password)) {
+                LoginStatus.OK, LoginStatus.NEEDS_SETUP -> if (storeSession(authResponse, username)) {
                     return LoginOutcome.LoggedIn(needsSetup = authResponse.status == LoginStatus.NEEDS_SETUP)
                 }
             }
@@ -119,26 +118,21 @@ class ServerUserClient(
         return LoginOutcome.Failed((result as? TmResult.Error)?.error ?: NetworkError.SERIALIZATION)
     }
 
-    // Keeps the tokens, and the credentials if they should be remembered
-    private fun storeSession(authResponse: AuthResponse, username: String, password: String): Boolean {
+    // Keeps the tokens, and the username if it should be remembered. Never the password
+    private fun storeSession(authResponse: AuthResponse, username: String): Boolean {
         val access = authResponse.accessToken ?: return false
         val refresh = authResponse.refreshToken ?: return false
 
         localStorage.accessToken = access
         localStorage.refreshToken = refresh
 
-        // Only keep credentials around if the user wants them remembered
-        if (localStorage.rememberLogin) {
-            localStorage.username = username
-            localStorage.password = password
-        }
+        if (localStorage.rememberLogin) localStorage.username = username
 
         return true
     }
 
     /**
-     * Switches to a user at this station with their PIN. Stores their tokens but not their credentials,
-     * a PIN isn't something to log back in with
+     * Switches to a user at this station with their PIN, and stores their tokens
      */
     suspend fun pinLogin(station: StationCredentials, userIdentifier: Uuid, pin: String): EmptyResult<ServerError> {
         val response = networkRequest(PIN_LOGIN_TAG) {
@@ -231,7 +225,7 @@ class ServerUserClient(
         }
 
         return when (val result = handleDataHttpResponse<AuthResponse>(INVITE_SETUP_TAG, response)) {
-            is TmResult.Success -> if (storeSession(result.data, username, request.password)) TmResult.Success(Unit)
+            is TmResult.Success -> if (storeSession(result.data, username)) TmResult.Success(Unit)
                 else TmResult.Error(ServerError(NetworkError.UNKNOWN))
             is TmResult.Error -> result
         }
@@ -239,27 +233,35 @@ class ServerUserClient(
 
     /**
      * Refresh tokens for authentication with server
+     * @return [NetworkError.UNAUTHORIZED] only when the server turned the token down, so the session is over. Anything
+     * else, like not reaching it, says nothing about the session
      */
     suspend fun refreshTokens(token: String): TmResult<AuthResponse, NetworkError> {
-        if (checkServerConnection()) {
-            networkErrorTryCatch(REFRESH_TOKEN_TAG) {
-                userHttpClient.post {
-                    url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.REFRESH}")
-                    contentType(ContentType.Application.Json)
-                    setBody(RefreshTokenRequest(token))
-                }
-            }?.let { response -> handleHttpResponse<RefreshTokenResponse>(REFRESH_TOKEN_TAG, response) }
-                ?.onSuccess { tokens ->
+        if (serverUrl.isBlank()) return TmResult.Error(NetworkError.NO_INTERNET)
+
+        val response = networkRequest(REFRESH_TOKEN_TAG) {
+            userHttpClient.post {
+                url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.REFRESH}")
+                contentType(ContentType.Application.Json)
+                setBody(RefreshTokenRequest(token))
+            }
+        }
+
+        return when (response) {
+            is TmResult.Error -> response
+            is TmResult.Success -> when (val result = handleHttpResponse<RefreshTokenResponse>(REFRESH_TOKEN_TAG, response.data)) {
+                is TmResult.Error -> result
+                is TmResult.Success -> {
+                    val tokens = result.data
                     localStorage.accessToken = tokens.token
                     // The server swaps the refresh token each time, the one just sent won't work again
                     tokens.refreshToken?.let { localStorage.refreshToken = it }
 
                     // We don't use UUID here so just slap whatever. Maybe make another data class for this??
-                    return TmResult.Success(AuthResponse(Uuid.generateV7(), tokens.token, tokens.refreshToken ?: token))
+                    TmResult.Success(AuthResponse(Uuid.generateV7(), tokens.token, tokens.refreshToken ?: token))
                 }
+            }
         }
-
-        return TmResult.Error(NetworkError.UNKNOWN)
     }
 
     /**

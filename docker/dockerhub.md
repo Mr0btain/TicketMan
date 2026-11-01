@@ -50,6 +50,7 @@ DOMAIN=tickets.myshop.com      # or the machine's LAN address / name, like 192.1
 CERTIFICATE=public             # private for a LAN address, a .local name or localhost
 TZ=America/New_York
 ADMIN_PASSWORD=                # optional, the first admin password
+# ACCESS=public                # opens logins to the internet too. Left out, outsiders only get the status page
 ```
 
 **`docker-compose.yml`**
@@ -80,6 +81,7 @@ services:
     environment:
       DOMAIN: ${DOMAIN:-localhost}
       CERTIFICATE: ${CERTIFICATE:-public}
+      ACCESS: ${ACCESS:-shop}
       HTTPS_PORT: ${HTTPS_PORT:-443}
     ports:
       - "${HTTP_PORT:-80}:80"
@@ -119,8 +121,24 @@ volumes:
 	tls internal
 }
 
+# Addresses outside the shop's network only get the status page
+(access-shop) {
+	@outside {
+		not remote_ip private_ranges
+		not path /status /status/*
+	}
+	handle @outside {
+		respond 404
+	}
+}
+
+# ACCESS=public opens everything to anyone who can reach this address
+(access-public) {
+}
+
 {$DOMAIN:localhost} {
 	import certificate-{$CERTIFICATE:public}
+	import access-{$ACCESS:shop}
 
 	# Caddy's local CA, which the apps fetch when asked to trust a private certificate
 	handle /.well-known/ticketman/ca.pem {
@@ -146,12 +164,15 @@ docker compose up -d
 docker compose logs ticketman     # the admin password, if ADMIN_PASSWORD was blank
 ```
 
-Open `https://<DOMAIN>` or point an app at it (Settings > Server), log in as `admin`, and on the admin screen's
+From the shop's network, open `https://<DOMAIN>` or point an app at it (Settings > Server), log in as `admin`, and on the admin screen's
 **Server** tab fill in the shop profile (name, contact details, tax rate, invoice footer) before taking money. Then
 change the admin password.
 
 **With a real domain** (`CERTIFICATE=public`), point it at the machine and let ports 80 and 443 reach it from the
-internet; Caddy gets a Let's Encrypt certificate on its own.
+internet; Caddy gets a Let's Encrypt certificate on its own. Outside addresses only get the customer status page, so
+logins stay on the shop's network. Check that from a phone off the shop's Wi-Fi: `https://<DOMAIN>/api/ping` should be
+a 404. Docker Desktop and rootless Docker can hide the real address, which makes outsiders look like insiders.
+`ACCESS=public` opens everything to the internet instead, for staff working from outside without a VPN.
 
 **On the shop's own network only** (`CERTIFICATE=private`), Caddy makes its own certificate authority. The desktop
 and Android apps ask once to trust it and show a fingerprint; browsers show their usual warning. Check the
@@ -187,7 +208,7 @@ Keep query strings out of the proxy's access log: a backup download link's `?tok
 |----------|---------|--------------|
 | `TZ` | UTC | The shop's time zone, like `America/New_York`. "Today", due dates and the yearly ticket number rollover follow it, so set it |
 | `ADMIN_PASSWORD` | random, logged | Password for the `admin` user made on the first start. Only read while there's no admin, so it can't reset a password |
-| `TRUSTED_PROXIES` | loopback and private ranges | Addresses or CIDR ranges allowed to say who a request is from (`X-Forwarded-For`), comma separated. Set it to your proxy's network. `none` ignores the header, for a server reached directly |
+| `TRUSTED_PROXIES` | this machine only | Addresses or CIDR ranges allowed to say who a request is from (`X-Forwarded-For`), comma separated. Set it to your proxy's network. `none` ignores the header, for a server reached directly |
 | `BACKUP_DIR` | off | Folder for a backup made once a day, like `/backups` |
 | `BACKUP_KEEP` | `7` | How many daily backups to keep |
 | `BACKUP_PHOTOS` | `true` | `false` for database only daily backups |

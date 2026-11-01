@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.select
@@ -149,10 +150,24 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
         }
     }
 
-    override fun update(data: Customer): Boolean =
-        dbWrite(UPDATE_TAG) {
-            val customerEntity = CustomerEntity.findById(data.identifier)
-                ?: return@dbWrite false.also { AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND) }
+    override fun update(data: Customer): Boolean = save(data) == RecordSave.DONE
+
+    /** Saves [data], unless it has a revision and someone saved the customer since. Null when it failed */
+    fun save(data: Customer): RecordSave? =
+        dbQuery(UPDATE_TAG) {
+            // In one statement, so of two saves at once only one gets through
+            val counted = CustomerTable.update(where = {
+                val customer = CustomerTable.id eq data.identifier
+                if (data.revision != null) customer and (CustomerTable.revision eq data.revision!!) else customer
+            }) { row -> row[CustomerTable.revision] = CustomerTable.revision + 1 } > 0
+
+            if (!counted) {
+                val exists = CustomerEntity.findById(data.identifier) != null
+                if (!exists) AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND)
+                return@dbQuery if (exists) RecordSave.CHANGED_SINCE else RecordSave.NOT_FOUND
+            }
+
+            val customerEntity = CustomerEntity.findById(data.identifier)!!
 
             customerEntity.apply {
                 name = data.name.trim()
@@ -163,7 +178,7 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
                 notifySms = data.notifySms
             }
 
-            true
+            RecordSave.DONE
         }
 
     override val noteLinkColumn: Column<EntityID<Uuid>> = CustomerNoteTable.note

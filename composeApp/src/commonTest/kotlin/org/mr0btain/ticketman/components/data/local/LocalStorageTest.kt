@@ -12,10 +12,26 @@ class LocalStorageTest {
     private val localStorage = LocalStorage(store)
 
     @Test
-    fun savedPasswordKeepsItsSpaces() {
-        localStorage.password = " pass word "
+    fun aPasswordSavedByAnOlderVersionIsErasedOnLoad() {
+        store.putString("password", "old_pass")
 
-        assertEquals(" pass word ", LocalStorage(store).password)
+        LocalStorage(store)
+
+        assertEquals("", store.getString("password", ""))
+    }
+
+    @Test
+    fun aSessionOnlyLastsTheRunWithoutStayingLoggedIn() {
+        localStorage.accessToken = "access"
+        localStorage.refreshToken = "refresh"
+        assertEquals("refresh", LocalStorage(store).refreshToken)
+
+        localStorage.rememberLogin = false
+        val next = LocalStorage(store)
+
+        assertEquals("", next.accessToken)
+        assertEquals("", next.refreshToken)
+        assertEquals("", store.getString("refresh_token", ""))
     }
 
     @Test
@@ -134,13 +150,11 @@ class LocalStorageTest {
     @Test
     fun clearCredentialsOnlyRemovesCredentialKeys() = runTest {
         localStorage.username = "user"
-        localStorage.password = "pass"
         localStorage.accessToken = "access"
 
         localStorage.clearCredentials()
 
         assertEquals("", localStorage.username)
-        assertEquals("", localStorage.password)
         assertEquals(mapOf("access_token" to "access"), store.values)
     }
 

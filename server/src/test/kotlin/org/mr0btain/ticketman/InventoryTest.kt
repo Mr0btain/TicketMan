@@ -77,12 +77,12 @@ class InventoryTest {
 
         // Its count is at the main location, where the tech works
         val read = json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText())
-        assertEquals(screen, read.copy(stockAt = emptyList()))
+        assertEquals(screen, read.copy(stockAt = emptyList(), revision = null))
         assertEquals(listOf(5), read.stockAt.map { it.stock })
 
         val repriced = screen.copy(priceCents = 11_500)
         assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(repriced), token).status)
-        assertEquals(repriced, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()).copy(stockAt = emptyList()))
+        assertEquals(repriced, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()).copy(stockAt = emptyList(), revision = null))
     }
 
     @Test
@@ -220,7 +220,7 @@ class InventoryTest {
         val moved = customer.copy(phone = "5550199", email = "jane@example.com")
         assertEquals(HttpStatusCode.Accepted, post("/api/data/customer/update", json.encodeToString(moved), token).status)
         // Names are kept lowercase and capitalised for display
-        assertEquals(moved.copy(name = "Jane Doe"), json.decodeFromString<Customer>(client.get("/api/data/customer/get/${customer.identifier}") { bearerAuth(token) }.bodyAsText()))
+        assertEquals(moved.copy(name = "Jane Doe", revision = 1), json.decodeFromString<Customer>(client.get("/api/data/customer/get/${customer.identifier}") { bearerAuth(token) }.bodyAsText()))
 
         assertEquals(HttpStatusCode.NotFound, post("/api/data/customer/update", json.encodeToString(Customer(name = "Nobody")), token).status)
     }

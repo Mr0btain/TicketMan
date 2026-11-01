@@ -112,7 +112,7 @@ fun Route.statusRoute(
 
             StatusService.Found.NotFound -> call.respondStatusPage(
                 HttpStatusCode.NotFound,
-                StatusPage.message(shop, "That link doesn't work", "It may have been replaced by a newer one. Look your repair up with its ticket number instead.", "../status")
+                StatusPage.message(shop, "That link doesn't work", "It may have been replaced by a newer one, or the repair was picked up a while ago. Look your repair up with its ticket number, or call us.", "../status")
             )
 
             StatusService.Found.Limited -> call.respondStatusPage(
@@ -184,7 +184,7 @@ fun Route.statusRoute(
     // The card processor saying a payment changed. Checked against its signature, then only used to ask about charges
     post(StatusPaths.PAYMENT_WEBHOOK) {
         if (payments == null) return@post call.respond(HttpStatusCode.NotFound)
-        val body = call.receiveText().take(MAX_WEBHOOK)
+        val body = call.receiveText()
         val headers = call.request.headers
 
         when (payments.webhook(call.parameters["provider"].orEmpty(), { headers[it] }, body)) {
@@ -233,6 +233,3 @@ private suspend fun RoutingCall.respondStatusPage(status: HttpStatusCode, html: 
 
 /** Longer than any ticket number or phone, so a huge field isn't parsed */
 private const val MAX_FIELD = 40
-
-/** Far more than a payment event, which is a few KB */
-private const val MAX_WEBHOOK = 512 * 1024

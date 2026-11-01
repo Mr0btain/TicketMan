@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.UserPaths
 import org.mr0btain.ticketman.server.fill
+import org.mr0btain.ticketman.server.request.ChangePasswordRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
 import org.mr0btain.ticketman.server.request.ApproveRequest
 import org.mr0btain.ticketman.server.request.InviteRequest
@@ -81,6 +82,20 @@ class UserRemoteRepository(
     }
 
     /** Changes your own PIN, needs your password */
+    suspend fun changeOwnPassword(currentPassword: String, newPassword: String): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkRequest(RESET_PASSWORD_TAG) {
+            client.post {
+                url("$serverUrl${UserPaths.ME_PASSWORD}")
+                contentType(ContentType.Application.Json)
+                setBody(ChangePasswordRequest(currentPassword, newPassword))
+            }
+        }
+
+        return handleActionHttpResponse(RESET_PASSWORD_TAG, response)
+    }
+
     suspend fun setOwnPin(currentPassword: String, pin: String): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 

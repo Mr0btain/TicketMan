@@ -172,10 +172,7 @@ fun Route.inventoryRoute(
             }
 
             // The reorder point is the one where the caller works
-            if (!database.update(received, call.workingLocation().identifier)) {
-                call.respond(HttpStatusCode.NotFound)
-                return@post
-            }
+            if (!call.answerIfNotSaved(database.save(received, call.workingLocation().identifier), "item")) return@post
 
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Accepted)

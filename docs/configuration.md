@@ -12,7 +12,7 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 | Setting | Env var | Default | What it does |
 |---------|---------|---------|--------------|
 | `ktor.deployment.port` | `PORT` | `8080` | Port for plain HTTP, on all interfaces. for HTTPS, see [HTTPS](#https) |
-| `env.trustedProxies` | `TRUSTED_PROXIES` | blank | Addresses and CIDR ranges whose `X-Forwarded-For` is believed, comma separated. ex: example.com. Blank means loopback and the private ranges, `none` ignores the header |
+| `env.trustedProxies` | `TRUSTED_PROXIES` | this machine | Addresses and CIDR ranges whose `X-Forwarded-For` is believed, comma separated. ex: example.com. Blank means loopback and the private ranges, `none` ignores the header |
 | `cors.hosts` | `CORS_HOSTS` | blank | Development mode only: hosts allowed to call the server from a browser, like `localhost:8080`. Blank allows any |
 | `jwt.secret` | `SECRET` | blank | Signs every access and refresh token. Blank means the server makes one and keeps it |
 | `jwt.audience` | - | `my-audience` | Put in tokens and checked on every request |
@@ -38,9 +38,11 @@ Tokens are signed with `SECRET` when it's set. When it isn't, the server makes a
 start, keeps it in `<DATA_PATH>/server/secret` (readable only by the account running the server) and logs
 `SECRET isn't set, made one in ...`. Later starts read the same file.
 
-Changing `SECRET` or deleting the file signs everyone out, since every existing token stops verifying. A backup 
-doesn't include the file, so a server restored onto a new machine makes a new secret and devices have to log in
-again.
+It also seals device passcodes and the saved mail, text and card keys. Changing `SECRET` or deleting the file signs
+everyone out, those can't be opened any more (passcodes have to be asked for again, and keys entered again), and
+putting the old secret back brings them back. **Keep a copy somewhere safe, apart from your backups.** A backup doesn't
+include it, on purpose, so a stolen backup holds no keys: a server restored onto a new machine needs the old secret set
+to keep them, and the admin screen warns when a waiting restore was made under another one.
 
 ### HTTPS
 
@@ -55,11 +57,11 @@ can send that header, so the server only believes it on requests whose connectio
 `TRUSTED_PROXIES`. It then takes the last entry, the one the nearest proxy added (earlier ones came from the client),
 and `X-Forwarded-Proto` for the scheme. From any other address the headers are ignored.
 
-Left blank it's loopback and the private ranges (`127.0.0.1`, `::1`, `10.0.0.0/8`, `172.16.0.0/12`,
-`192.168.0.0/16`, `fc00::/7`), which covers a proxy on any Docker network or the same machine with nothing set. The
-cost: if the server's own port is also reachable from the shop network, past the proxy, a device there could pick
-its own address. Don't publish the server's port when it's behind a proxy, or narrow the list to the proxy's
-address, like `TRUSTED_PROXIES=172.20.0.2`. Entries that aren't an address or range are logged and ignored. Names
+Left blank it's this machine only (`127.0.0.1`, `::1`). A proxy anywhere else has to be named, like
+`TRUSTED_PROXIES=172.20.0.2` or a range, which [`docker/docker-compose.yml`](../docker/docker-compose.yml) does for its
+own network. Until it is, its devices all count as one for the login limits, the admin Server tab shows requests as not
+forwarded, and the log says so once. Trusting every private range would let any device on the shop's network that can
+reach the server directly pick its own address. Entries that aren't an address or range are logged and ignored. Names
 aren't looked up.
 
 `TRUSTED_PROXIES=none` ignores the header from everyone, for a server devices reach directly over plain HTTP with
@@ -122,7 +124,7 @@ non-admin already has that name) and logs either:
 
 ```
 No admin found, created "admin" with the ADMIN_PASSWORD password
-No admin found, created "admin" with password: zWjmKVuMQ8OUS6Uv  (change it from the admin screen)
+No admin found, created "admin" with password: zWjmKVuMQ8OUS6Uv  (you'll choose your own when you log in)
 ```
 
 Once an admin exists, the setting does nothing. It isn't a way to reset a password.
@@ -161,8 +163,8 @@ The client has no config file. What it needs is set from the app and saved on th
 | Server address, device name | Settings > Server |
 | Start tab, page size, search result limit, cache size | Settings > Records |
 | Trusted server certificates | Saying yes when asked to trust one |
-| Remember login | Settings > Login |
-| Saved username and password, tokens | Logging in |
+| Stay logged in | Settings > Login |
+| Saved username, tokens | Logging in |
 | Theme, font, dark mode, reduce transparency | Settings > Appearance |
 | Ticket list scope (mine or all) | Records screen |
 | Device id and name, station credentials | Made on first start, and when registering a station |

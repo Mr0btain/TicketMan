@@ -103,8 +103,10 @@ request forms, since the password goes over the network readable (`session.insec
 - **The dialog's state is worked out, not stored.** `LoginPopup` derives it from `loginState`, `serverConnected` and
   whether the request form is open, so a server dropping while the dialog is open sends it back to the address.
 - **The username is trimmed, the password isn't.** Spaces at either end of a password are part of it.
-- **Remember login** decides whether the username and password are kept after logging in. Only a remembered
-  username is filled in next time (`session.savedUsername`).
+- **Stay logged in** decides whether the session carries on when the app starts again, and whether the username is
+  filled in next time (`session.savedUsername`). The password is never kept.
+- **Someone told to choose their own password** (`User.mustChangePassword`, after an admin set it) gets a
+  `ChangePasswordDialog` over everything, whose cancel logs out.
 
 ## See also
 

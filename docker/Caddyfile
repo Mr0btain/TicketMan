@@ -17,8 +17,26 @@
 	tls internal
 }
 
+# ACCESS=shop, the default: addresses outside the shop's network only get the status page, so logins and the admin
+# routes stay off the internet. private_ranges covers the LAN and Docker's own networks, so Caddy has to see the real
+# address: docs/operations.md says how to check
+(access-shop) {
+	@outside {
+		not remote_ip private_ranges
+		not path /status /status/*
+	}
+	handle @outside {
+		respond 404
+	}
+}
+
+# ACCESS=public: everything is open to anyone who can reach this address, for staff working from outside without a VPN
+(access-public) {
+}
+
 {$DOMAIN:localhost} {
 	import certificate-{$CERTIFICATE:public}
+	import access-{$ACCESS:shop}
 
 	# The local CA's root certificate, which the desktop and Android apps fetch when they're asked to trust this
 	# server, so they trust the CA rather than a certificate Caddy replaces every 12 hours. A 404 with a public

@@ -17,4 +17,7 @@ object CustomerTable : UuidTable("customer") {
 
     // Store credit, only changed by StoredValueDatabase in single updates, never by saving the customer
     val creditCents = long("credit_cents").default(0)
+
+    /** See `Customer.revision` */
+    val revision = long("revision").default(0)
 }

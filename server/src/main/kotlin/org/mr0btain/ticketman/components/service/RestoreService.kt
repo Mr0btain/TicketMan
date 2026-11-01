@@ -7,6 +7,7 @@ import org.mr0btain.ticketman.server.response.BackupManifest
 import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.RestoreRecord
 import java.io.File
+import java.sql.DriverManager
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import kotlin.time.Clock
@@ -23,9 +24,10 @@ import kotlin.time.Duration.Companion.days
  * Swapping the H2 files under a running server isn't safe, open connections and caches would see half of each,
  * so the restart is the switch over
  * @param serverDir The server's folder, holding `database/` and `images/`
+ * @param secretCheck From [ServerSecret.check], to say when a backup was made under another secret
  */
 @Suppress("PrivatePropertyName")
-class RestoreService(private val serverDir: File) {
+class RestoreService(private val serverDir: File, private val secretCheck: String? = null) {
     private val STAGE_TAG = "$TAG:Stage"
 
     private val restoreDir = File(serverDir, RESTORE_FOLDER)
@@ -46,7 +48,8 @@ class RestoreService(private val serverDir: File) {
     fun stage(upload: File): Result<PendingRestore> {
         return try {
             val manifest = inspect(upload).getOrElse { return Result.failure(it) }
-            val pending = PendingRestore(manifest, upload.length(), Clock.System.now().toEpochMilliseconds())
+            val matches = if (secretCheck != null && manifest.secretCheck != null) secretCheck == manifest.secretCheck else null
+            val pending = PendingRestore(manifest, upload.length(), Clock.System.now().toEpochMilliseconds(), matches)
 
             pendingArchive.delete()
             if (!upload.renameTo(pendingArchive)) upload.copyTo(pendingArchive, overwrite = true)
@@ -137,12 +140,44 @@ class RestoreService(private val serverDir: File) {
                 }
             }
 
+            databaseProblem(zip, manifest)?.let { return Result.failure(RestoreException(it)) }
+
             Result.success(manifest)
+        }
+    }
+
+    /**
+     * Unpacks the backup's database to the side and opens it, so one that's cut off or damaged is refused now rather
+     * than leaving the server unable to start. Its photos aren't read, a bad one only loses that photo
+     * @return What's wrong with it, null when it opens as one of ours
+     */
+    private fun databaseProblem(zip: ZipFile, manifest: BackupManifest): String? {
+        val work = File(restoreDir, ".check-${System.nanoTime()}")
+
+        return try {
+            // Checks each file against its checksum as it reads
+            ZipInputStream(zip.getInputStream(zip.getEntry(manifest.databaseFile))).use { unzipInto(it, work) }
+
+            val file = work.walkTopDown().firstOrNull { it.name.endsWith(H2_FILE_ENDING) } ?: return "The backup's database is empty"
+            val path = file.absolutePath.removeSuffix(H2_FILE_ENDING)
+
+            DriverManager.getConnection("jdbc:h2:$path;IFEXISTS=TRUE;ACCESS_MODE_DATA=r", "", "").use { connection ->
+                connection.prepareStatement("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE UPPER(TABLE_NAME) = 'TICKETS'").use { query ->
+                    val found = query.executeQuery().use { it.next() && it.getInt(1) > 0 }
+                    if (found) null else "The backup's database isn't one of TicketMan's"
+                }
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(STAGE_TAG, "Backup's database couldn't be opened: ${ex.message}")
+            "The backup's database is damaged, it couldn't be opened"
+        } finally {
+            work.deleteRecursively()
         }
     }
 
     companion object {
         private const val TAG = "RestoreService"
+        private const val H2_FILE_ENDING = ".mv.db"
         private const val APPLY_TAG = "$TAG:Apply"
         private const val SWEEP_TAG = "$TAG:Sweep"
 

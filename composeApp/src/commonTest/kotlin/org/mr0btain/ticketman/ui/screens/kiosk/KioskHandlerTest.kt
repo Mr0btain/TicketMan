@@ -110,7 +110,6 @@ class KioskHandlerTest {
         assertTrue(kiosk.active.value)
         assertTrue(kiosk.locked.value)
         assertTrue(AppWindow.fullscreen.value)
-        assertFalse(remote.credentialFallback, "A locked kiosk shouldn't log the owner back in")
         assertEquals(listOf(member), kiosk.staff.value)
     }
 
@@ -174,8 +173,6 @@ class KioskHandlerTest {
 
         assertFalse(kiosk.active.value)
         assertFalse(AppWindow.fullscreen.value)
-        assertTrue(remote.credentialFallback)
-
         // The server is told, so the admin's PIN session stops ending with the idle lock
         assertTrue("POST /api/auth/kiosk/leave" in requests)
     }

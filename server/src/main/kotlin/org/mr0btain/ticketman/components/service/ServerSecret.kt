@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.service
 
+import java.security.MessageDigest
 import org.mr0btain.ticketman.logging.AppLogger
 import java.io.File
 import java.security.SecureRandom
@@ -16,6 +17,10 @@ object ServerSecret {
     private const val BYTES = 64
 
     fun file(dataPath: String) = File(dataPath, "server/$FILE_NAME")
+
+    /** Tells whether two servers share a secret, without saying anything about it. Goes in backups */
+    fun check(secret: String): String =
+        MessageDigest.getInstance("SHA-256").digest("ticketman-secret-check:$secret".toByteArray()).joinToString("") { "%02x".format(it) }
 
     /**
      * @param configured `jwt.secret` from the config, blank when `SECRET` isn't set

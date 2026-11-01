@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.data.ticket.customerChoice
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.logging.AppLogger
 import java.io.File
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.uuid.ExperimentalUuidApi
@@ -44,10 +45,20 @@ class StatusService(
     private val badLinksByAddress: RequestLimiter = RequestLimiter(BAD_LINKS_PER_ADDRESS, 15.minutes),
     private val payments: PaymentService? = null,
     // Each one asks the processor for a checkout page, so a script can't make thousands
-    private val paysByAddress: RequestLimiter = RequestLimiter(PAYS_PER_ADDRESS, 15.minutes)
+    private val paysByAddress: RequestLimiter = RequestLimiter(PAYS_PER_ADDRESS, 15.minutes),
+    private val now: () -> Long = { System.currentTimeMillis() }
 ) {
     private val TAG = "StatusService"
     private val LOOKUP_TAG = "$TAG:Lookup"
+    private val PAY_TAG = "$TAG:Pay"
+
+    // The ticket with this link, unless it's been picked up long enough ago that the link has done its job. Anyone who
+    // finds an old slip shouldn't see someone's name and repair forever
+    private fun liveTicket(token: String): Ticket? =
+        tickets.getByStatusToken(token)?.takeIf { !it.linkExpired }
+
+    private val Ticket.linkExpired: Boolean
+        get() = pickedUpAt?.let { now() - it > LINK_DAYS_AFTER_PICKUP.days.inWholeMilliseconds } == true
 
     /** One status in the timeline, as the customer sees it */
     data class Step(val choice: StatusChoice, val time: Long)
@@ -96,7 +107,7 @@ class StatusService(
     fun page(token: String, address: String): Found {
         if (badLinksByAddress.isLimited(address)) return Found.Limited
 
-        val ticket = tickets.getByStatusToken(token) ?: return Found.NotFound.also { badLinksByAddress.record(address) }
+        val ticket = liveTicket(token) ?: return Found.NotFound.also { badLinksByAddress.record(address) }
         return Found.Page(view(ticket))
     }
 
@@ -113,7 +124,7 @@ class StatusService(
     /** A checkout page for the balance, for the customer's Pay button */
     fun pay(token: String, address: String): Pay {
         if (badLinksByAddress.isLimited(address)) return Pay.Limited
-        val ticket = tickets.getByStatusToken(token) ?: return Pay.NotFound.also { badLinksByAddress.record(address) }
+        val ticket = liveTicket(token) ?: return Pay.NotFound.also { badLinksByAddress.record(address) }
         if (!paysByAddress.tryAcquire(address)) return Pay.Limited
 
         val view = view(ticket)
@@ -122,8 +133,9 @@ class StatusService(
 
         return when (val result = payments.link(PaymentLinkRequest(invoice.identifier), CUSTOMER, null)) {
             is AccountResult.Done -> Pay.Checkout(result.value.url)
-            is AccountResult.Conflict -> Pay.Problem(view.copy(payProblem = "Paying online didn't start, call us to pay. (${result.message})"))
-            is AccountResult.Invalid -> Pay.Problem(view.copy(payProblem = "Paying online didn't start, call us to pay. (${result.message})"))
+            // Why is for staff, it can be the processor's own words about the shop's account
+            is AccountResult.Conflict -> Pay.Problem(view.copy(payProblem = PAY_FAILED)).also { AppLogger.i(PAY_TAG, "${invoice.label}: ${result.message}") }
+            is AccountResult.Invalid -> Pay.Problem(view.copy(payProblem = PAY_FAILED)).also { AppLogger.i(PAY_TAG, "${invoice.label}: ${result.message}") }
             AccountResult.NotFound -> Pay.Problem(view.copy(payProblem = "There's nothing to pay online right now"))
         }
     }
@@ -142,7 +154,7 @@ class StatusService(
      */
     fun answerEstimate(token: String, approve: Boolean, name: String, address: String): Answer {
         if (badLinksByAddress.isLimited(address)) return Answer.Limited
-        val ticket = tickets.getByStatusToken(token) ?: return Answer.NotFound.also { badLinksByAddress.record(address) }
+        val ticket = liveTicket(token) ?: return Answer.NotFound.also { badLinksByAddress.record(address) }
 
         val signed = name.trim()
         if (signed.length !in MIN_NAME..MAX_NAME) return Answer.Problem(view(ticket).copy(problem = "Type your full name to sign"))
@@ -212,7 +224,7 @@ class StatusService(
         val ticket = parsed?.takeIf { digits.length == PHONE_DIGITS }?.let { tickets.getByNumber(it) }
         val phone = ticket?.let { tickets.getCustomer(it.identifier) }?.let { customers.getById(it.identifier) }?.phone
             ?.filter { it.isDigit() }.orEmpty()
-        val token = ticket?.statusToken
+        val token = ticket?.takeIf { !it.linkExpired }?.statusToken
 
         if (token != null && phone.length >= PHONE_DIGITS && phone.takeLast(PHONE_DIGITS) == digits) return Lookup.Match(token)
 
@@ -229,7 +241,7 @@ class StatusService(
     fun photo(token: String, identifier: Uuid, variant: ImageVariant, address: String): Pair<File, String>? {
         if (variant !in PHOTO_VARIANTS || badLinksByAddress.isLimited(address)) return null
 
-        val ticket = tickets.getByStatusToken(token) ?: return null.also { badLinksByAddress.record(address) }
+        val ticket = liveTicket(token) ?: return null.also { badLinksByAddress.record(address) }
         val shared = tickets.getNotes(ticket.identifier).orEmpty()
             .filter { it.customerVisible }
             .any { note -> note.images.any { it.identifier == identifier } }
@@ -245,6 +257,8 @@ class StatusService(
         const val MIN_NAME = 2
         const val MAX_NAME = 100
         const val PAYS_PER_ADDRESS = 10
+        const val LINK_DAYS_AFTER_PICKUP = 90
+        private const val PAY_FAILED = "Paying online didn't start, call us to pay."
 
         /** Who started a payment from the status page, in the charge and the audit log */
         const val CUSTOMER = "customer"

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.components.database.TicketDatabase
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
@@ -312,6 +313,26 @@ class StatusPageTest {
         }
         assertEquals(HttpStatusCode.TooManyRequests, lookup(ticket.label, "4567", forwardedFor = "198.51.100.200").status)
         assertEquals(HttpStatusCode.SeeOther, lookup(other.label, "4567", forwardedFor = "198.51.100.200").status)
+    }
+
+    @Test
+    fun aLinkRunsOutAWhileAfterPickup() = testApplication {
+        setup()
+        val ticket = newTicket()
+        val days = StatusService.LINK_DAYS_AFTER_PICKUP
+        fun ago(n: Int) = System.currentTimeMillis() - n * 86_400_000L
+
+        // Still works for a while, for the warranty and the receipt
+        assertTrue(TicketDatabase().markPickedUp(ticket.identifier, ago(days - 1)))
+        assertEquals(HttpStatusCode.OK, page(ticket.statusToken).status)
+
+        assertTrue(TicketDatabase().markPickedUp(ticket.identifier, ago(days + 1)))
+        val gone = page(ticket.statusToken, forwardedFor = "203.0.113.50")
+        assertEquals(HttpStatusCode.NotFound, gone.status)
+        assertContains(gone.bodyAsText(), "picked up a while ago")
+
+        // Nor does knowing the number and phone get to it
+        assertEquals(HttpStatusCode.NotFound, lookup(ticket.label, "4567", forwardedFor = "203.0.113.51").status)
     }
 
     @Test

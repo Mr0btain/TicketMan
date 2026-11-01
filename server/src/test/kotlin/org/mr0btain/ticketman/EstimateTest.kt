@@ -273,19 +273,37 @@ class EstimateTest {
     fun anApprovalThatCantGoOnTheInvoiceLeavesTheEstimateWaiting() = testApplication {
         setup()
         val ticket = newTicket()
-        val estimate = send(ticket, listOf(labor))
+        val part = Inventory(name = "Screen", stock = 5, priceCents = 2_000)
+        assertEquals(HttpStatusCode.Created, post("/api/data/inventory/add", json.encodeToString(part)).status)
+        val estimate = send(ticket, listOf(Charge(type = ChargeType.PART, description = "Screen", quantity = 1.0, unitPriceCents = 2_000, inventoryIdentifier = part.identifier)))
 
-        // The invoice is voided meanwhile
-        val invoice = invoice(ticket.identifier)
-        assertEquals(HttpStatusCode.OK, post("/api/invoice/${invoice.identifier}/void", "", adminToken).status)
+        // The part is deleted meanwhile
+        assertEquals(HttpStatusCode.Accepted, client.delete("/api/data/inventory/remove/${part.identifier}") { bearerAuth(token) }.status)
 
         val decide = EstimateDecisionRequest(approved = true, method = DecisionMethod.IN_PERSON)
-        assertEquals(HttpStatusCode.Conflict, post("/api/estimate/${estimate.identifier}/decide", json.encodeToString(decide)).status)
+        assertEquals(HttpStatusCode.BadRequest, post("/api/estimate/${estimate.identifier}/decide", json.encodeToString(decide)).status)
         assertEquals(EstimateStatus.PENDING, estimates(ticket.identifier).single().status)
 
         // Withdrawn by staff instead
         assertEquals(HttpStatusCode.OK, post("/api/estimate/${estimate.identifier}/withdraw", "").status)
         assertEquals(HttpStatusCode.Conflict, post("/api/estimate/${estimate.identifier}/withdraw", "").status)
         assertEquals(EstimateStatus.WITHDRAWN, estimates(ticket.identifier).single().status)
+    }
+
+    @Test
+    fun anApprovalAfterTheInvoiceWasVoidedGoesOnItsNewOne() = testApplication {
+        setup()
+        val ticket = newTicket()
+        val estimate = send(ticket, listOf(labor))
+        val voided = invoice(ticket.identifier)
+        assertEquals(HttpStatusCode.OK, post("/api/invoice/${voided.identifier}/void", "", adminToken).status)
+
+        val decide = EstimateDecisionRequest(approved = true, method = DecisionMethod.IN_PERSON)
+        assertEquals(HttpStatusCode.OK, post("/api/estimate/${estimate.identifier}/decide", json.encodeToString(decide)).status)
+        assertEquals(EstimateStatus.APPROVED, estimates(ticket.identifier).single().status)
+
+        val current = invoice(ticket.identifier)
+        assertNotEquals(voided.identifier, current.identifier)
+        assertEquals(listOf(labor.description), current.charges.map { it.description })
     }
 }

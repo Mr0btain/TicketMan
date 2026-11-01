@@ -431,7 +431,7 @@ class InvoiceTest {
         assertEquals(TicketStatusType.PICKED_UP, edited.status.status)
 
         // A save that started before the pickup still has the old status, it mustn't reopen the ticket
-        assertTrue(TicketDatabase().update(ticket.copy(problem = "Late save")))
+        assertTrue(TicketDatabase().update(ticket.copy(problem = "Late save", revision = null)))
         assertEquals(TicketStatusType.PICKED_UP, TicketDatabase().getById(ticket.identifier)!!.status.status)
     }
 

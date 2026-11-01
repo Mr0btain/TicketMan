@@ -247,6 +247,10 @@ class LocalDatabase (
         runOnce("invoice-ticket-nullable") {
             TransactionManager.current().exec("ALTER TABLE ${InvoiceTable.tableName} ALTER COLUMN ${InvoiceTable.ticket.name} SET NULL")
         }
+        // After backfillExpiry above, which reads the tokens. Done once, a hash isn't a token any more
+        runOnce("hash-refresh-tokens") { tokenDatabase.hashStoredTokens() }
+        // A ticket whose invoice was voided gets a new one, and keeps the void one on file
+        runOnce("invoice-ticket-not-unique") { dropInvoiceTicketUnique() }
         // Devices are kept per customer since; older tickets get theirs from what was typed on them
         runOnce("customer-devices") { deviceDatabase.backfill() }
         // Locations: numbers are unique per location's code, stock is counted per location, and everything from
@@ -256,6 +260,24 @@ class LocalDatabase (
         runOnce("stock-per-location") { inventoryDatabase.moveStockTo(main.identifier) }
         assignMainLocation(main.identifier)
         removeDetachedNotes()
+    }
+
+    /**
+     * H2 keeps old versions of what it rewrites in its file until it's compacted, so the tokens and keys from before they
+     * were hashed and sealed would still be readable in it, and in every backup made from it. Compacts it once, after
+     * those are done and before anything else is using it; the next connection opens it again
+     */
+    fun compactOnceAfterSealing() {
+        var needed = false
+        runOnce("compact-after-sealing") { needed = true }
+        if (!needed) return
+
+        try {
+            transaction { exec("SHUTDOWN COMPACT") }
+        } catch (ex: Exception) {
+            // Shutting down cuts the connection it was asked on
+            AppLogger.i(DATA_FIX_TAG, "Compacted: ${ex.message}")
+        }
     }
 
     /**
@@ -281,7 +303,7 @@ class LocalDatabase (
 
     /**
      * Invoices used to be deleted with their ticket by a foreign key. Now one with money against it outlives the
-     * ticket, so the key is dropped; the column and its unique index stay
+     * ticket, so the key is dropped; the column stays
      */
     private fun dropInvoiceTicketKey() {
         val transaction = TransactionManager.current()
@@ -294,6 +316,24 @@ class LocalDatabase (
         ) { result -> buildList { while (result.next()) add(result.getString(1)) } }.orEmpty()
 
         keys.forEach { name -> transaction.exec("ALTER TABLE ${InvoiceTable.tableName} DROP CONSTRAINT \"$name\"") }
+    }
+
+    /**
+     * Each ticket could only ever have one invoice, so voiding its open one left it unable to be picked up. The unique
+     * constraint goes and a plain index takes its place (a fresh database already has it)
+     */
+    private fun dropInvoiceTicketUnique() {
+        val transaction = TransactionManager.current()
+        val constraints = transaction.exec(
+            "SELECT tc.CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc " +
+                "JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE k ON k.CONSTRAINT_NAME = tc.CONSTRAINT_NAME " +
+                "AND k.TABLE_SCHEMA = tc.TABLE_SCHEMA " +
+                "WHERE tc.CONSTRAINT_TYPE = 'UNIQUE' AND UPPER(tc.TABLE_NAME) = 'INVOICES' " +
+                "AND UPPER(k.COLUMN_NAME) = 'TICKET_ID'"
+        ) { result -> buildList { while (result.next()) add(result.getString(1)) } }.orEmpty()
+
+        constraints.forEach { name -> transaction.exec("ALTER TABLE ${InvoiceTable.tableName} DROP CONSTRAINT \"$name\"") }
+        transaction.exec("CREATE INDEX IF NOT EXISTS invoices_ticket_id ON ${InvoiceTable.tableName} (${InvoiceTable.ticket.name})")
     }
 
     /**
@@ -357,6 +397,7 @@ class LocalDatabase (
         listOf(
             UserTable.status to "DEFAULT '${UserStatus.ACTIVE.name}' NOT NULL",
             UserTable.needsSetup to "DEFAULT FALSE NOT NULL",
+            UserTable.mustChangePassword to "DEFAULT FALSE NOT NULL",
             UserTable.pinHash to "DEFAULT '' NOT NULL",
             UserTable.pinFailedAttempts to "DEFAULT 0 NOT NULL",
             UserTable.pinLocked to "DEFAULT FALSE NOT NULL",

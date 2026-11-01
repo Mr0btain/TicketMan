@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 13
+const val API_VERSION = 14
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -164,6 +164,9 @@ object UserPaths {
     const val SETUP = "/setup"
     const val ME = "/me"
     const val ME_PIN = "/me/pin"
+
+    /** Body `ChangePasswordRequest`: your own password, ends your other sessions */
+    const val ME_PASSWORD = "/me/password"
     const val PIN_UNLOCK = "/pin/{identifier}/unlock"
     const val PIN = "/pin/{identifier}"
     const val PENDING = "/pending"

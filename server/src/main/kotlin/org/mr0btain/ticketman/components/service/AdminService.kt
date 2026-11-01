@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.components.service
 
-import com.auth0.jwt.JWT
 import org.mr0btain.ticketman.BuildInfo
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.proxy.ProxySettings
@@ -29,7 +28,6 @@ class AdminService(
     val restart: ServerRestart = ServerRestart(enabled = false)
 ) {
     private val TAG = "AdminService"
-    private val SESSIONS_TAG = "$TAG:Sessions"
 
     private val startedAt = Clock.System.now().toEpochMilliseconds()
 
@@ -38,14 +36,6 @@ class AdminService(
         return database.tokenDatabase.getAll().mapNotNull { session ->
             val identifier = Uuid.parseOrNull(session.userIdentifier) ?: return@mapNotNull null
             val user = database.userDatabase.getById(identifier) ?: return@mapNotNull null
-
-            // Only reading the expiry for display, the token was verified when it was handed out
-            val decoded = try {
-                JWT.decode(session.token)
-            } catch (ex: Exception) {
-                AppLogger.i(SESSIONS_TAG, "Couldn't decode token for $identifier")
-                null
-            }
 
             SessionResponse(
                 sessionId = session.sessionId,
@@ -57,7 +47,7 @@ class AdminService(
                 kind = session.kind,
                 createdAt = session.createdAt.takeIf { it > 0 },
                 lastUsedAt = session.lastUsedAt.takeIf { it > 0 },
-                expiresAt = decoded?.expiresAtAsInstant?.toEpochMilli()
+                expiresAt = session.expiresAt.takeIf { it > 0 }
             )
         }.sortedByDescending { it.lastUsedAt ?: 0 }
     }

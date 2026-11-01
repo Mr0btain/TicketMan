@@ -43,6 +43,7 @@ private val INVOICE_MIN_WIDTH = 560.dp
  * wrong or null if it worked
  * @param onReaderCharge Sends an amount to a card reader for the invoice, which lands on it once paid
  * @param onPaymentLink Shows a link the customer pays the balance from
+ * @param canRefundCards Whether a payment through the card processor can be taken off, which refunds it. Admins only
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -59,7 +60,8 @@ fun PickupScreen(
     onReaderCharge: ((CardReader, Long, Long) -> Unit)? = null,
     tipPercents: List<Int> = emptyList(),
     surchargePercent: String = "",
-    onPaymentLink: (() -> Unit)? = null
+    onPaymentLink: (() -> Unit)? = null,
+    canRefundCards: Boolean = false
 ) {
     val ticket = detail.ticket
     val invoice = detail.invoice ?: return
@@ -148,6 +150,7 @@ fun PickupScreen(
                     taxLabel = "Tax, ${invoice.taxRateBasisPoints / 100.0}%",
                     taken = invoice.payments,
                     onRemoveTaken = onRemovePayment,
+                    canRemoveTaken = { canRefundCards || it.processor == null },
                     pending = pending,
                     problem = message ?: problem,
                     finishText = "Finish pickup",

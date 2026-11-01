@@ -97,12 +97,6 @@ class RemoteHandler(
     private val repositories: List<ServerRepository> =
         listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo, paymentRepo, locationRepo, scheduleRepo, timeOffRepo)
 
-    /**
-     * Whether an expired session can be fixed by logging in again with the saved username and password.
-     * Kiosks turn this off so a locked counter can't quietly sign the device's owner back in
-     */
-    var credentialFallback: Boolean = true
-
     // Base url once a server has been reached, used for routes outside the repositories
     private var serverUrl = ""
 
@@ -125,7 +119,7 @@ class RemoteHandler(
     val authExpired = _authExpired.asSharedFlow()
 
     /**
-     * Sets url to the server in all clients and tries to log in with the stored credentials
+     * Sets url to the server in all clients and carries on the session this device has, if the server still takes it
      */
     suspend fun setUrl(requested: String): ConnectionResult {
         // A server that only takes HTTPS redirects plain HTTP, so go straight to where it points
@@ -155,13 +149,12 @@ class RemoteHandler(
 
                 AppLogger.m(SET_SERVER_URL_TAG, SimpleResult.SUCCESS)
 
-                // Log in with stored credentials, then drop the tokens the http client cached
-                // before login so the next request loads the new ones
-                return if (userClient.login() is LoginOutcome.LoggedIn) {
+                // Then drop the tokens the http client cached so the next request loads the new ones
+                return if (resumeSession()) {
                     onLoggedIn()
                     ConnectionResult.LOGGED_IN
                 } else {
-                    AppLogger.i(SET_SERVER_URL_TAG, "Connected but login failed")
+                    AppLogger.i(SET_SERVER_URL_TAG, "Connected, not logged in")
                     ConnectionResult.CONNECTED
                 }
             }
@@ -188,6 +181,21 @@ class RemoteHandler(
         }
 
         return ConnectionResult.UNREACHABLE
+    }
+
+    // Swaps the stored refresh token for fresh ones. One the server turned down, like a session an admin ended or
+    // another server's, is dropped. Not reaching it keeps the token for next time
+    private suspend fun resumeSession(): Boolean {
+        val token = localStorage.refreshToken
+        if (token.isBlank()) return false
+
+        return when (val result = userClient.refreshTokens(token)) {
+            is TmResult.Success -> true
+            is TmResult.Error -> {
+                if (result.error == NetworkError.UNAUTHORIZED) localStorage.clearSession()
+                false
+            }
+        }
     }
 
     /**
@@ -221,31 +229,30 @@ class RemoteHandler(
     suspend fun setUser(user: User) =  "" //dataHandler.userDataHandler.setCurrent(user)
 
     /**
-     * Refreshes tokens for authentication. Falls back to logging in with the stored credentials
-     * if there is no refresh token or the server rejects it.
+     * Refreshes tokens for authentication. Only when the server turns the refresh token down is the session over and
+     * someone asked to log in again. Failing to reach it just fails this request, the session is still good
      * @return The new tokens, or null if we couldn't authenticate
      */
     suspend fun refreshTokens(): Token? {
-        if (localStorage.refreshToken.isNotBlank()) {
-            // On success this stores the new access token through updateAuthTokens
-            if (userClient.refreshTokens(localStorage.refreshToken) is TmResult.Success) {
+        val result = if (localStorage.refreshToken.isNotBlank()) userClient.refreshTokens(localStorage.refreshToken)
+            else TmResult.Error(NetworkError.UNAUTHORIZED)
+
+        return when (result) {
+            is TmResult.Success -> {
                 AppLogger.m(REFRESH_TOKENS_TAG, SimpleResult.SUCCESS)
-                return getStoredToken()
+                getStoredToken()
             }
 
-            AppLogger.i(REFRESH_TOKENS_TAG, "Refresh token rejected, logging in again")
-        }
+            is TmResult.Error -> {
+                AppLogger.i(REFRESH_TOKENS_TAG, "${SimpleResult.FAIL}: ${result.error}")
 
-        return if (credentialFallback && userClient.login() is LoginOutcome.LoggedIn) {
-            AppLogger.m(REFRESH_TOKENS_TAG, SimpleResult.SUCCESS)
-            getStoredToken()
-        } else {
-            AppLogger.i(REFRESH_TOKENS_TAG, SimpleResult.FAIL)
-
-            // Drop the dead tokens and let whoever is listening know we need a fresh login
-            localStorage.clearSession()
-            _authExpired.tryEmit(Unit)
-            null
+                if (result.error == NetworkError.UNAUTHORIZED) {
+                    // Drop the dead tokens and let whoever is listening know we need a fresh login
+                    localStorage.clearSession()
+                    _authExpired.tryEmit(Unit)
+                }
+                null
+            }
         }
     }
 
@@ -291,8 +298,7 @@ class RemoteHandler(
         }
 
     /**
-     * Drops the current session. The saved password is cleared too so the refresh fallback
-     * doesn't log us straight back in, the username is kept for prefilling the login form
+     * Drops the current session. The username is kept for prefilling the login form
      */
     suspend fun logout() {
         // Tell the server so this device's session ends, other devices stay logged in
@@ -303,13 +309,12 @@ class RemoteHandler(
         }
 
         localStorage.clearSession()
-        localStorage.password = ""
         httpClient.authProvider<BearerAuthProvider>()?.clearToken()
         AppLogger.m(LOGOUT_TAG, SimpleResult.SUCCESS)
     }
 
     /**
-     * Ends this device's session but keeps the saved login, used when a kiosk locks
+     * Ends this device's session, used when a kiosk locks
      */
     suspend fun endSession() {
         if (serverUrl.isNotBlank() && localStorage.accessToken.isNotBlank()) {

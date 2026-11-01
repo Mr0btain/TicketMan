@@ -24,4 +24,7 @@ object InventoryTable : UuidTable("inventory") {
 
     // Added with purchase orders: who it's usually ordered from. No foreign key, a deleted supplier just isn't found
     val supplier = uuid("supplier_id").nullable()
+
+    /** See `Inventory.revision` */
+    val revision = long("revision").default(0)
 }

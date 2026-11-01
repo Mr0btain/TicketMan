@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
+import org.mr0btain.ticketman.components.service.SealedSecrets
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -40,19 +41,39 @@ class NotifyDatabase {
     /** The saved settings with their password and token, or the defaults */
     fun settings(): NotificationSettings =
         dbQuery(SETTINGS_TAG) {
-            NotifySettingsTable.selectAll().where { NotifySettingsTable.id eq ROW_ID }.firstOrNull()?.get(NotifySettingsTable.settings)
+            NotifySettingsTable.selectAll().where { NotifySettingsTable.id eq ROW_ID }.firstOrNull()?.get(NotifySettingsTable.settings)?.withSecrets(SealedSecrets::open)
         } ?: NotificationSettings()
+
+    private fun NotificationSettings.withSecrets(change: (String?) -> String?) = copy(
+        smtp = smtp.copy(password = change(smtp.password)),
+        sms = sms.copy(authToken = change(sms.authToken))
+    )
+
+    /**
+     * Seals keys saved before they were, leaving sealed ones as they are: read under another secret they'd come back
+     * empty, and putting the right secret back should still find them
+     */
+    fun sealStoredSecrets() {
+        dbWrite(SETTINGS_TAG) {
+            NotifySettingsTable.selectAll().where { NotifySettingsTable.id eq ROW_ID }.firstOrNull()?.get(NotifySettingsTable.settings)?.let { stored ->
+                val sealed = stored.withSecrets(SealedSecrets::seal)
+                if (sealed != stored) NotifySettingsTable.update(where = { NotifySettingsTable.id eq ROW_ID }) { row -> row[NotifySettingsTable.settings] = sealed }
+            }
+            true
+        }
+    }
 
     fun saveSettings(settings: NotificationSettings): Boolean =
         dbWrite(SETTINGS_TAG) {
+            val sealed = settings.withSecrets(SealedSecrets::seal)
             val updated = NotifySettingsTable.update(where = { NotifySettingsTable.id eq ROW_ID }) { row ->
-                row[NotifySettingsTable.settings] = settings
+                row[NotifySettingsTable.settings] = sealed
             }
 
             if (updated == 0) {
                 NotifySettingsTable.insert { row ->
                     row[NotifySettingsTable.id] = ROW_ID
-                    row[NotifySettingsTable.settings] = settings
+                    row[NotifySettingsTable.settings] = sealed
                 }
             }
 

@@ -78,7 +78,7 @@ class KeptInvoiceTest {
     }
 
     private suspend fun ApplicationTestBuilder.deleteTicket(ticket: Ticket) =
-        assertEquals(HttpStatusCode.Accepted, client.delete("/api/data/ticket/remove/${ticket.identifier}") { bearerAuth(token) }.status)
+        assertEquals(HttpStatusCode.Accepted, client.delete("/api/data/ticket/remove/${ticket.identifier}") { bearerAuth(adminToken) }.status)
 
     private suspend fun ApplicationTestBuilder.invoice(invoice: Invoice): HttpResponse =
         client.get("/api/invoice/${invoice.identifier}") { bearerAuth(token) }

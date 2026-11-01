@@ -129,13 +129,13 @@ Adds a ticket and gives it the next number.
 
 **Auth:** normal
 
-Replaces the ticket's device, status, priority, problem, condition, accessories, estimate and promised time. The
+Replaces the ticket's device, status, priority, problem, condition, accessories, estimate, promised time and checklist. The
 number, status token and pickup time stay the server's. A status change, including a move between two of the shop's own statuses
 that count as the same built-in one, is added to the history.
 
 - **Body:** `Ticket`. A `status.custom` (one of the shop profile's `statuses`) sets `status.status` to the built-in
   status it counts as, whatever was sent.
-- **`202`** saved. **`404`** no such ticket.
+- **`202`** saved. **`404`** no such ticket. **`409`** someone saved it since `revision` was read (see [Revisions](README.md#revisions)).
 - **`400`** a `status.custom` that isn't one of the shop's, or is retired, unless the ticket is already in it.
 - **`409`** setting `PICKED_UP` (`Pick tickets up at the counter, so the invoice gets paid`), or changing a picked
   up ticket's status. Other changes to a picked up ticket are fine.
@@ -147,9 +147,10 @@ that count as the same built-in one, is added to the history.
 Deletes the ticket with its notes, work log, signature, history and technician link. Note photos are cleared up by
 the next sweep. Its invoice goes too when it's open with nothing paid; one with money taken against it, or a void
 one, is kept with the ticket's number (`ticketLabel`, `ticketRemovedAt`) and the audit entry says so. An admin can
-delete it later with [`DELETE /api/invoice/{identifier}`](invoice.md#delete-apiinvoiceidentifier).
+delete it later with [`DELETE /api/invoice/{identifier}`](invoice.md#delete-apiinvoiceidentifier). Only an admin can
+delete a ticket that's been picked up, or has an invoice that would be kept.
 
-- **`202`** deleted. **`404`** no such ticket.
+- **`202`** deleted. **`403`** it's one of those and the caller isn't an admin. **`404`** no such ticket.
 
 ### `POST /api/data/ticket/set/customer/{identifier}`
 

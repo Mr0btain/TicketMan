@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.records.components.inventory
 
+import org.mr0btain.ticketman.components.network.isConflict
 import org.mr0btain.ticketman.error.getOrDefault
 import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.asEmptyDataResult
@@ -155,6 +156,8 @@ class InventoryRecords(
                 val saved = if (isNew) repo.add(inventory).asEmptyDataResult() else repo.update(inventory)
 
                 if (saved is TmResult.Error) {
+                    // Out of date, so Cancel has to load it from the server rather than this copy
+                    if (saved.error.isConflict) cache.remove(inventory.identifier)
                     snackBarHost.showSnackbar("Item not saved: ${saved.error.message}")
                     return@launch
                 }

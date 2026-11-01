@@ -35,8 +35,8 @@ read KSafe's in-memory cache and write to disk in the background. On the web KSa
 
 | Key area | Properties | Notes |
 |----------|------------|-------|
-| Session | `accessToken`, `refreshToken` | Cleared by `clearSession()` on logout or when refreshing fails |
-| Credentials | `username`, `password` | Only saved when **Remember login** is on. Logout clears the password and keeps the username to prefill the form. `clearCredentials()` removes both |
+| Session | `accessToken`, `refreshToken` | Cleared by `clearSession()` on logout or when the server turns the refresh token down, and on start with **Stay logged in** off |
+| Credentials | `username` | Only saved when **Stay logged in** is on, to prefill the form. `clearCredentials()` removes it. Passwords are never kept; one saved by an older version is erased on load |
 | Server | `serverUrl` | |
 | This device | `deviceId`, `deviceName` | `deviceId` is a random UUID made the first time it's read. `deviceName` defaults to the platform's name |
 | Station | `stationCredentials` | The station id and secret, set when the device registers as a station |
@@ -62,11 +62,9 @@ used without asking the server. See [Transfers and photos](transfers-and-photos.
 
 ## Gotchas
 
-- **The password is stored** (encrypted by KSafe) when Remember login is on, so the client can log back in when a
-  refresh token is refused. Turn Remember login off on shared devices.
-- **Values are trimmed when saved, except the password.** Tokens, the username and the server address lose
-  spaces at either end; the password is saved exactly as typed. Passwords saved by older versions were trimmed, so
-  one with a space at either end fails to log back in once, and is saved correctly when typed again.
+- **Tokens are what stay on the device.** With Stay logged in on, the refresh token (encrypted by KSafe) carries the
+  session across restarts, until the server ends it. Turn it off on shared devices.
+- **Values are trimmed when saved.** Tokens, the username and the server address lose spaces at either end.
 - **Clearing app data loses the device id and station credentials.** The device then looks new to the server: old
   sessions stay listed until removed, and the station has to be registered and approved again.
 

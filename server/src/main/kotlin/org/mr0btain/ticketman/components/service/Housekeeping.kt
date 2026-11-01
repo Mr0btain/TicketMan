@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
+import kotlinx.coroutines.CancellationException
+import org.mr0btain.ticketman.logging.AppLogger
 import io.ktor.server.config.*
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -34,5 +36,20 @@ data class Housekeeping(
                 restoreLeftoverDays = days("restoreLeftoverDays", defaults.restoreLeftoverDays)
             )
         }
+    }
+}
+
+/**
+ * Runs one step of a background loop, so whatever goes wrong in it is logged and the loop carries on to the next step
+ * and its next round, rather than backups and session clean up quietly stopping until a restart. Being stopped still
+ * stops it
+ */
+suspend fun sweepStep(name: String, step: suspend () -> Unit) {
+    try {
+        step()
+    } catch (ex: CancellationException) {
+        throw ex
+    } catch (ex: Exception) {
+        AppLogger.e("SERVER:Sweep", "Couldn't do $name, trying again next time", ex)
     }
 }

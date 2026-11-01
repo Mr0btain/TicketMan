@@ -14,12 +14,10 @@ login works on the server, are in [PINs and stations](../../server/pins-and-stat
 watches this device's `Station` (from `SessionHandler`). Kiosk mode is **active** when the station is approved, has
 `kioskEnabled`, and an admin hasn't left it on this device. When `active` turns on, the handler:
 
-1. sets `RemoteHandler.credentialFallback = false`, so a PIN session that runs out isn't quietly replaced by the
-   device owner's saved password,
-2. asks for full screen through `AppWindow.setFullscreen(true)`, which on Android also pins the app (see
+1. asks for full screen through `AppWindow.setFullscreen(true)`, which on Android also pins the app (see
    [Pinning on Android](#pinning-on-android)),
-3. starts the idle watch,
-4. locks, which signs out whoever logged the device in.
+2. starts the idle watch,
+3. locks, which signs out whoever logged the device in.
 
 `App()` sees `kiosk.active` and shows
 [`KioskShell`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/kiosk/KioskShell.kt)

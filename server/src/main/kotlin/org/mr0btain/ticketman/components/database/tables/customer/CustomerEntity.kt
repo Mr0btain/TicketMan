@@ -19,6 +19,7 @@ class CustomerEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var notifyEmail by CustomerTable.notifyEmail
     var notifySms by CustomerTable.notifySms
     val creditCents by CustomerTable.creditCents
+    val revision by CustomerTable.revision
 
     var notes by NoteEntity via CustomerNoteTable
 
@@ -33,7 +34,8 @@ class CustomerEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             phone = phone,
             notifyEmail = notifyEmail,
             notifySms = notifySms,
-            creditCents = creditCents
+            creditCents = creditCents,
+            revision = revision
         )
     }
 

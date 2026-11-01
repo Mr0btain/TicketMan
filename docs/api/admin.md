@@ -212,9 +212,11 @@ Downloads a backup. The `token` in the link is the login, so a browser can open 
 
 Uploads a backup to restore on the next start. The body is the raw zip (`application/zip`), streamed to disk.
 
-- **`202`** `PendingRestore { manifest, sizeBytes, stagedAt }`. Restart the server to apply it. A manifest with
-  `includesImages` false means photos on records won't load afterwards.
-- **`400`** cut off, or not a backup this server can restore (the text says why).
+- **`202`** `PendingRestore { manifest, sizeBytes, stagedAt, secretMatches }`. Restart the server to apply it. A manifest
+  with `includesImages` false means photos on records won't load afterwards. `secretMatches` false means it was made
+  under another server secret, so passcodes and saved keys won't open and everyone logs in again; null means the backup
+  doesn't say.
+- **`400`** cut off, its database damaged, or not a backup this server can restore (the text says why).
 - **`507`** not enough disk space: it needs room for the zip and for it unpacked.
 
 ### `GET /api/admin/restore`

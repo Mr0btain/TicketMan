@@ -20,7 +20,7 @@ wider, one under the other on narrower ones.
 | | Font | `TmFonts.all` |
 | | Reduce transparency | Draws glass as solid |
 | | Component gallery | Opens the [kit gallery](../kit.md#the-component-gallery) |
-| **Login** | Remember login | Keeps the username and password after logging in, so the app can log back in when a refresh token is refused. Off on shared devices |
+| **Login** | Stay logged in | Keeps this device logged in between runs and remembers the username. The password is never saved. Off on shared devices |
 | **Server** | Server address | Where the server is, like `tickets.myshop.com`, or a LAN address for a shop with no domain. No scheme means `https://`; an `http://` address off this machine connects but shows **Not secure**. Saving it reconnects (`session.changeServer`); if that fails, the Account panel says why (**Can't connect**) |
 | | Device name | What admins see for this device on the Sessions tab, from the next login. Also the suggested name when registering a station |
 | **Records** | Start tab | Which records tab opens first, picked from a dropdown |
@@ -28,7 +28,8 @@ wider, one under the other on narrower ones.
 | | Page size | Records loaded per page, 5 to 100. Reloads the lists |
 | | Search result limit | 1 to 100 |
 | | Cache size | Opened records kept in each cache, 1 to 200. Resizes the caches straight away |
-| **Account and station** | Change PIN | Opens `ChangePinDialog`, which asks for your password as well. Says when your PIN is locked |
+| **Account and station** | Change password | Opens `ChangePasswordDialog`, which asks for the current one. Your other devices are logged out |
+| | Change PIN | Opens `ChangePinDialog`, which asks for your password as well. Says when your PIN is locked |
 | | Counter station | Opens `StationDialog`: register this device as a station, see if it's approved, refresh it, or go back to kiosk mode after an admin left it |
 
 Every value comes from a `StateFlow` on

@@ -20,6 +20,10 @@ data class ServerError(
 val ServerError.isNotFound: Boolean
     get() = type == NetworkError.NOT_FOUND
 
+/** Whether someone else saved the record since it was opened, so what's on screen is out of date */
+val ServerError.isConflict: Boolean
+    get() = type == NetworkError.CONFLICT
+
 /** For a linked record that may not be there, like a ticket's technician: not found becomes null, other failures stay */
 fun <T> TmResult<T, ServerError>.orNullIfNotFound(): TmResult<T?, ServerError> =
     if (this is TmResult.Error && error.isNotFound) TmResult.Success(null) else this

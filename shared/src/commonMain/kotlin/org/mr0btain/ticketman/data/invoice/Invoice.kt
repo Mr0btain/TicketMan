@@ -74,6 +74,25 @@ data class Invoice(
     val netPaidCents: Long
         get() = paidCents - refundedCents
 
+    /** What it put on gift cards. Refunds come off the rest of what was paid first */
+    val giftCardCents: Long
+        get() = charges.filter { it.type == ChargeType.GIFT_CARD }.sumOf { it.totalCents }
+
+    /** Each gift card line's code with how much of it the [refundedCents] given back so far has taken off the card */
+    fun giftCardsTakenBack(refunded: Long = refundedCents): List<Pair<String, Long>> {
+        var left = (refunded - (paidCents - giftCardCents)).coerceAtLeast(0)
+
+        return charges.filter { it.type == ChargeType.GIFT_CARD }.map { line ->
+            val taken = left.coerceAtMost(line.totalCents)
+            left -= taken
+            line.reference to taken
+        }
+    }
+
+    /** Whether money can go back on it: a paid one, or a void one still holding some */
+    val canRefund: Boolean
+        get() = status == InvoiceStatus.PAID || (status == InvoiceStatus.VOID && netPaidCents > 0)
+
     /** What's still owed, negative means change is due. Refunds don't make anything owed */
     val balanceCents: Long
         get() = totalCents - paidCents

@@ -11,6 +11,7 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.max
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
@@ -54,10 +55,23 @@ class InvoiceDatabase(
             InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
         }
 
+    /** The ticket's live invoice, or the newest void one when that's all it has */
     fun getByTicket(ticketIdentifier: Uuid): Invoice? =
         dbQuery(GET_TAG) {
-            InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.firstOrNull()?.toInvoice()
+            InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.currentInvoice()
         }
+
+    /** Every invoice the ticket has had. Null when the read failed */
+    fun allForTicket(ticketIdentifier: Uuid): List<Invoice>? =
+        dbQuery(GET_TAG) {
+            InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.map { it.toInvoice() }
+        }
+
+    // Must be called inside a transaction
+    private fun Iterable<ResultRow>.currentInvoice(): Invoice? {
+        val rows = toList()
+        return (rows.firstOrNull { it[InvoiceTable.status] != InvoiceStatus.VOID.name } ?: rows.maxByOrNull { it[InvoiceTable.createdAt] })?.toInvoice()
+    }
 
     /**
      * Runs [block] holding the numbering lock, for an outer transaction that makes an invoice, see
@@ -66,13 +80,13 @@ class InvoiceDatabase(
     fun <T> whileNumbering(block: () -> T): T = synchronized(NUMBER_LOCK, block)
 
     /**
-     * The ticket's invoice, made empty and OPEN at the ticket's location if it doesn't have one yet
+     * The ticket's invoice, made empty and OPEN at the ticket's location if it has none yet or only void ones
      */
     fun getOrCreate(ticketIdentifier: Uuid, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate> = emptyList()): Invoice? =
         // Numbers are handed out one at a time like ticket numbers
         synchronized(NUMBER_LOCK) {
             dbQuery(CREATE_TAG) {
-                InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.firstOrNull()?.let {
+                InvoiceTable.selectAll().where { (InvoiceTable.ticket eq ticketIdentifier) and (InvoiceTable.status neq InvoiceStatus.VOID.name) }.firstOrNull()?.let {
                     return@dbQuery it.toInvoice()
                 }
 
