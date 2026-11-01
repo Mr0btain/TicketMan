@@ -99,8 +99,10 @@ Tests replace `ServerRestart.exit` so the test JVM keeps running.
 2. Streams the body to a temp file in `server/restore/` with `copyToFile`, capped at half the free space. A cut off
    upload is `400`.
 3. [`RestoreService.stage`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/service/RestoreService.kt)
-   checks it: it's a zip, it has a manifest that parses, the format version isn't newer, the database entry is there,
-   and every entry is one it expects. Any failure is `400` with the reason.
+   checks it: it's a zip, it has a manifest that parses, the format version isn't newer, every entry is one it expects,
+   and its database unpacks to the side with good checksums, opens and has TicketMan's tables. Any failure is `400` with
+   the reason, so a damaged backup can't stop the server starting. Photos aren't read, a bad one only loses that photo.
+   `secretMatches` says whether it was made under this server's secret.
 4. Saves it as `restore/pending.zip` with a `pending.json` (`PendingRestore`), replacing any restore already waiting.
 
 `GET /api/admin/restore` shows what's waiting (`204` if nothing), and `DELETE /api/admin/restore` cancels it.
@@ -132,6 +134,10 @@ same age and `last.json` once its folder is gone. Only names with a time in them
 - **Restoring a database only backup leaves `images/` empty**, so photos on restored records won't load. The
   confirm dialog warns when the file name ends in `-database.zip`, the waiting restore says so once the server has
   read its manifest, and the restored server's Server tab says so until the `pre-restore` folder is swept.
+- **What a stolen archive holds.** Customers' details and photos, but no logins (refresh tokens are hashed) and no keys
+  (sealed under the secret, which isn't in it). Archives are only readable by the account running the server. A backup
+  made before this version may still hold them readable, so replace older ones. Without the secret a restore can't open
+  passcodes and keys, so keep a copy of it apart from the backups, see [`SECRET`](../configuration.md#secret).
 - **The download link is a bearer credential** until it expires. It ends up in browser history and possibly proxy
   logs, which is why it only lasts 5 minutes after it's used.
 

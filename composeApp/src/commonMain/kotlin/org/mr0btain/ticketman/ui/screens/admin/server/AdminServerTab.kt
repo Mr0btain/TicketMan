@@ -311,6 +311,14 @@ private fun BackupCard(
                     if (pendingRestore.manifest.includesImages) "" else " It has no photos in it, so photos on " +
                         "records won't load afterwards."
             )
+            if (pendingRestore.secretMatches == false) {
+                TmNotice(
+                    kind = TmNoticeKind.WARNING,
+                    title = "Made under another server secret",
+                    text = "Device passcodes and the saved mail, text and card keys won't open, and everyone logs in again. " +
+                        "To keep them, give this server the old one (the SECRET setting, or server/secret in the data folder) before restarting."
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
                 // Only when something starts the server again after it exits (RESTART_ON_EXIT, set in the Docker image)
                 if (serverInfo?.canRestart == true) {

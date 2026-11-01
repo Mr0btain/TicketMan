@@ -32,11 +32,13 @@ data class User(
     /** Has an ID card code, the code itself only goes to admins */
     val hasBadge: Boolean = false,
     /** The location they usually work at, which their lists start on. Null for the main location */
-    val homeLocation: Uuid? = null
+    val homeLocation: Uuid? = null,
+    /** An admin set their password, or it was generated for them. Like [needsSetup], nothing works until they choose their own */
+    val mustChangePassword: Boolean = false
 ): MainItem() {
-    /** Active, set up, with a real access level. The only kind of user that can do anything */
+    /** Active, set up, on a password of their own, with a real access level. The only kind of user that can do anything */
     fun canAccess(minimum: AccessLevel): Boolean =
-        status == UserStatus.ACTIVE && !needsSetup && accessLevel.meets(minimum)
+        status == UserStatus.ACTIVE && !needsSetup && !mustChangePassword && accessLevel.meets(minimum)
 
     /** Copy that's safe to send over the network */
     fun withoutPassword(): User = copy(password = "")

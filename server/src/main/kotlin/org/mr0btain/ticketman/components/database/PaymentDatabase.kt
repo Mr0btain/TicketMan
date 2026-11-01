@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
+import org.mr0btain.ticketman.components.service.SealedSecrets
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -39,19 +40,43 @@ class PaymentDatabase {
     /** The saved settings with their keys, or the defaults */
     fun settings(): PaymentSettings =
         dbQuery(SETTINGS_TAG) {
-            PaymentSettingsTable.selectAll().where { PaymentSettingsTable.id eq ROW_ID }.firstOrNull()?.get(PaymentSettingsTable.settings)
+            PaymentSettingsTable.selectAll().where { PaymentSettingsTable.id eq ROW_ID }.firstOrNull()?.get(PaymentSettingsTable.settings)?.openedSecrets()
         } ?: PaymentSettings()
+
+    private fun PaymentSettings.sealedSecrets() = withSecrets(SealedSecrets::seal)
+
+    private fun PaymentSettings.openedSecrets() = withSecrets(SealedSecrets::open)
+
+    private fun PaymentSettings.withSecrets(change: (String?) -> String?) = copy(
+        stripe = stripe.copy(secretKey = change(stripe.secretKey), webhookSecret = change(stripe.webhookSecret)),
+        square = square.copy(accessToken = change(square.accessToken), webhookSignatureKey = change(square.webhookSignatureKey))
+    )
+
+    /**
+     * Seals keys saved before they were, leaving sealed ones as they are: read under another secret they'd come back
+     * empty, and putting the right secret back should still find them
+     */
+    fun sealStoredSecrets() {
+        dbWrite(SETTINGS_TAG) {
+            PaymentSettingsTable.selectAll().where { PaymentSettingsTable.id eq ROW_ID }.firstOrNull()?.get(PaymentSettingsTable.settings)?.let { stored ->
+                val sealed = stored.sealedSecrets()
+                if (sealed != stored) PaymentSettingsTable.update(where = { PaymentSettingsTable.id eq ROW_ID }) { row -> row[PaymentSettingsTable.settings] = sealed }
+            }
+            true
+        }
+    }
 
     fun saveSettings(settings: PaymentSettings): Boolean =
         dbWrite(SETTINGS_TAG) {
+            val sealed = settings.sealedSecrets()
             val updated = PaymentSettingsTable.update(where = { PaymentSettingsTable.id eq ROW_ID }) { row ->
-                row[PaymentSettingsTable.settings] = settings
+                row[PaymentSettingsTable.settings] = sealed
             }
 
             if (updated == 0) {
                 PaymentSettingsTable.insert { row ->
                     row[PaymentSettingsTable.id] = ROW_ID
-                    row[PaymentSettingsTable.settings] = settings
+                    row[PaymentSettingsTable.settings] = sealed
                 }
             }
 

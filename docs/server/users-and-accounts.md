@@ -71,7 +71,16 @@ setup token instead of session tokens. They then post their details, password an
 ### Direct add
 
 `POST /api/user/add` (admin) makes an `ACTIVE` user straight away with the given password and level, with no setup
-step.
+step. They have to replace that password at their first login, see [Passwords](#passwords).
+
+## Passwords
+
+`User.mustChangePassword` is set by an admin adding someone or resetting their password, and on the first admin when
+its password was generated (not one from `ADMIN_PASSWORD`, which whoever set it chose). Like `needsSetup` it makes
+`canAccess` false and their login answer `NEEDS_SETUP`, so their tokens only pass the `"setup"` provider, and PIN login
+is refused. `POST /api/user/me/password` clears it, and is also how anyone changes their own. It needs the current
+password, and ends the caller's other sessions. An admin can't use the reset route on themselves, so a borrowed admin
+session can't take the account over. Wrong passwords on this and `/me/pin` share a limit, 5 per user per 15 minutes.
 
 ## First login setup
 
@@ -79,6 +88,7 @@ Approved requests start with `needsSetup = true`. Their login returns tokens wit
 tokens only pass the `"setup"` auth provider, so the only routes that work are:
 
 - `POST /api/user/setup` (`AccountSetupRequest`): name, email, phone, optionally a new password, and a PIN,
+- `POST /api/user/me/password`,
 - `GET /api/user/me`,
 - `POST /api/auth/logout`.
 
@@ -94,9 +104,10 @@ All under `/api/user`, admin only unless noted:
 | `GET /get/{id}`, `/fetch`, `/search` | Read users (Restricted access and up, passwords and PINs blanked) |
 | `GET /me` | The caller (setup provider) |
 | `POST /update` | Change details, level or status. Not the password |
-| `POST /password/{id}` | Set a new password, ending all that user's sessions (except the caller's, if it's their own) |
+| `POST /password/{id}` | Set someone else's password, ending all their sessions. They choose their own at next login |
 | `DELETE /remove/{id}` | Delete the user, their staff notes and sessions |
 | `GET /pending` | Requests and invites waiting |
+| `POST /me/password` | Change your own password, checked against the current one (setup provider) |
 | `POST /me/pin` | Change your own PIN, checked against your password (Restricted and up) |
 | `POST /pin/{id}/unlock`, `DELETE /pin/{id}` | Unlock a locked PIN; clear someone's PIN |
 | Staff notes (`/add/note/{id}`, ...) | Notes on a user, like training or schedule. Admin only to read and write |

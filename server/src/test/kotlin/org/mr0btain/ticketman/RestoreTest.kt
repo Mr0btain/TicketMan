@@ -268,6 +268,72 @@ class RestoreTest {
     }
 
     @Test
+    fun aDamagedDatabaseIsRefusedBeforeItCanStopTheServerStarting() = testApplication {
+        configureTestServer(dataDir)
+        startApplication()
+        UserDatabase().add(admin)
+        val token = token()
+        val manifest = json.encodeToString(
+            BackupManifest(serverVersion = "1", createdAt = 0, includesImages = false, imageCount = 0, imageBytes = 0)
+        ).encodeToByteArray()
+
+        // Not a zip, an empty one, and one whose file isn't a database
+        listOf(
+            "not a database".encodeToByteArray(),
+            zip(),
+            zip("database.mv.db" to "not a database".encodeToByteArray())
+        ).forEach { database ->
+            val refused = restore(zip(BackupManifest.FILE_NAME to manifest, BackupManifest.DATABASE_FILE to database), token)
+            assertEquals(HttpStatusCode.BadRequest, refused.status, refused.bodyAsText())
+            assertContains(refused.bodyAsText(), "database")
+        }
+
+        // Nothing waiting, and no trace of the checks
+        assertEquals(HttpStatusCode.NoContent, client.get("/api/admin/restore") { bearerAuth(token) }.status)
+        assertTrue(File(dataDir.toFile(), "server/restore").listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun aBackupFromUnderAnotherSecretIsCalledOut() = testApplication {
+        configureTestServer(dataDir)
+        startApplication()
+        UserDatabase().add(admin)
+        val token = token()
+
+        val ticket = json.decodeFromString<BackupTicket>(
+            post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = false)), token).bodyAsText()
+        )
+        val archive = client.get(ticket.downloadPath).readRawBytes()
+
+        val same = restore(archive, token)
+        assertEquals(HttpStatusCode.Accepted, same.status, same.bodyAsText())
+        val pending = json.decodeFromString<PendingRestore>(same.bodyAsText())
+        assertEquals(true, pending.secretMatches)
+        assertNotNull(pending.manifest.secretCheck)
+
+        // The same archive saying it was made under another secret
+        val edited = ByteArrayOutputStream().also { out ->
+            ZipOutputStream(out).use { zip ->
+                ZipInputStream(archive.inputStream()).use { source ->
+                    generateSequence { source.nextEntry }.forEach { entry ->
+                        zip.putNextEntry(ZipEntry(entry.name))
+                        val bytes = source.readBytes()
+                        zip.write(
+                            if (entry.name != BackupManifest.FILE_NAME) bytes
+                            else json.encodeToString(pending.manifest.copy(secretCheck = "another")).encodeToByteArray()
+                        )
+                        zip.closeEntry()
+                    }
+                }
+            }
+        }.toByteArray()
+
+        val other = restore(edited, token)
+        assertEquals(HttpStatusCode.Accepted, other.status, other.bodyAsText())
+        assertEquals(false, json.decodeFromString<PendingRestore>(other.bodyAsText()).secretMatches)
+    }
+
+    @Test
     fun waitingRestoreCanBeCancelled() = testApplication {
         configureTestServer(dataDir)
         startApplication()

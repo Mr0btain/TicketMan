@@ -53,7 +53,9 @@ data class BackupManifest(
     val includesImages: Boolean,
     val imageCount: Int,
     val imageBytes: Long,
-    val includesCertificate: Boolean = false
+    val includesCertificate: Boolean = false,
+    /** Tells a server restoring it whether it has the secret this was made under, null in archives from before this */
+    val secretCheck: String? = null
 ) {
     companion object {
         /** 2 added `tls/`, which new archives no longer have */
@@ -74,7 +76,12 @@ data class BackupManifest(
 data class PendingRestore(
     val manifest: BackupManifest,
     val sizeBytes: Long,
-    val stagedAt: Long
+    val stagedAt: Long,
+    /**
+     * False when it was made under another server secret, so device passcodes, saved mail and card keys and everyone's
+     * logins won't carry over. Null when the backup doesn't say
+     */
+    val secretMatches: Boolean? = null
 )
 
 /**

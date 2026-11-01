@@ -35,6 +35,7 @@ import org.mr0btain.ticketman.components.payments.ProcessorResult
 import org.mr0btain.ticketman.data.payment.CardCharge
 import org.mr0btain.ticketman.data.payment.CardChargeStatus
 import org.mr0btain.ticketman.components.utils.formatQuantity
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
 import kotlin.math.roundToLong
 import kotlin.time.Clock
@@ -58,12 +59,18 @@ class InvoiceService(
 ) {
     private val storedValue = StoredValuePayments(values) { money(it) }
 
-    /** The ticket's invoice, made if it doesn't have one, with its storage fee brought up to date */
+    /**
+     * The ticket's invoice with its storage fee brought up to date. One is made if it has none, or if its last was
+     * voided while the ticket is still open, so the ticket can still be charged and picked up. A picked up ticket is
+     * finished, so its void invoice stays the last
+     */
     fun forTicket(ticketIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> {
         val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
 
         val existing = invoices.getByTicket(ticketIdentifier)
-        if (existing != null) return AccountResult.Done(syncStorage(existing, ticket))
+        if (existing != null && (existing.status != InvoiceStatus.VOID || ticket.status.status == TicketStatusType.PICKED_UP)) {
+            return AccountResult.Done(syncStorage(existing, ticket))
+        }
 
         val customer = tickets.getCustomer(ticketIdentifier)?.identifier
         // At the ticket's location's rates
@@ -158,31 +165,56 @@ class InvoiceService(
      * and one taken through the card processor is refunded onto the card first, so it's only taken off once the
      * money is on its way back
      */
-    fun removePayment(identifier: Uuid, paymentIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
-        val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
-        if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Payments on a ${invoice.status.name.lowercase()} invoice can't be removed")
-        val payment = invoice.payments.firstOrNull { it.identifier == paymentIdentifier } ?: return AccountResult.NotFound
-        if (payment.isRefund) return AccountResult.Conflict("A refund can't be taken off")
+    fun removePayment(identifier: Uuid, paymentIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> {
+        val (invoice, payment) = synchronized(CHANGE_LOCK) {
+            val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
+            if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Payments on a ${invoice.status.name.lowercase()} invoice can't be removed")
+            busyProblem(identifier)?.let { return it }
+            val payment = invoice.payments.firstOrNull { it.identifier == paymentIdentifier } ?: return AccountResult.NotFound
+            if (payment.isRefund) return AccountResult.Conflict("A refund can't be taken off")
 
-        val refunded = if (payment.processor != null) {
-            when (val result = cards.refund(payment, invoice.refundableCents(payment), "remove-${payment.identifier}")) {
-                is ProcessorResult.Ok -> result.value
-                is ProcessorResult.Failed -> return AccountResult.Conflict("The card wasn't refunded, so the payment is still on: ${result.reason}")
-            }
-        } else null
-
-        transaction {
-            if (!invoices.removePayment(identifier, paymentIdentifier)) throw IllegalStateException("Payment not removed")
-            // Refunds made against it go with it, the money they gave back is part of this one's
-            invoice.payments.filter { it.refundOf == paymentIdentifier }.forEach { invoices.removePayment(identifier, it.identifier) }
-            storedValue.giveBack(payment, invoice.customerIdentifier, identifier, invoice.label, payment.receivedBy)
-            payment.chargeIdentifier?.let { cards.charges.markReturned(it, Clock.System.now().toEpochMilliseconds()) }
-            val back = refunded?.let { ", refunded onto the card ($it)" }.orEmpty()
-            auditLog.log(actor, AuditAction.DELETE, "payment", identifier.toString(), "Removed ${money(payment.amountCents)} ${describe(payment)} from ${invoice.label}$back")
+            if (payment.processor == null) return takeOff(invoice, payment, null, actor)
+            processorCalls += identifier
+            invoice to payment
         }
 
-        return AccountResult.Done(invoices.getById(identifier)!!)
+        // Outside the lock, so a slow processor only holds up this invoice
+        val result = try {
+            cards.refund(payment, invoice.refundableCents(payment), "remove-${payment.identifier}")
+        } catch (ex: Exception) {
+            ProcessorResult.Failed(ex.message ?: ex.toString())
+        }
+
+        return synchronized(CHANGE_LOCK) {
+            try {
+                when (result) {
+                    is ProcessorResult.Ok -> takeOff(invoice, payment, result.value, actor)
+                    is ProcessorResult.Failed -> AccountResult.Conflict("The card wasn't refunded, so the payment is still on: ${result.reason}")
+                }
+            } finally {
+                processorCalls -= identifier
+            }
+        }
     }
+
+    // Under the lock
+    private fun takeOff(invoice: Invoice, payment: Payment, refunded: String?, actor: Uuid?): AccountResult<Invoice> {
+        transaction {
+            if (!invoices.removePayment(invoice.identifier, payment.identifier)) throw IllegalStateException("Payment not removed")
+            // Refunds made against it go with it, the money they gave back is part of this one's
+            invoice.payments.filter { it.refundOf == payment.identifier }.forEach { invoices.removePayment(invoice.identifier, it.identifier) }
+            storedValue.giveBack(payment, invoice.customerIdentifier, invoice.identifier, invoice.label, payment.receivedBy)
+            payment.chargeIdentifier?.let { cards.charges.markReturned(it, Clock.System.now().toEpochMilliseconds()) }
+            val back = refunded?.let { ", refunded onto the card ($it)" }.orEmpty()
+            auditLog.log(actor, AuditAction.DELETE, "payment", invoice.identifier.toString(), "Removed ${money(payment.amountCents)} ${describe(payment)} from ${invoice.label}$back")
+        }
+
+        return AccountResult.Done(invoices.getById(invoice.identifier)!!)
+    }
+
+    // A refund on its way through the processor, whose outcome the invoice's state depends on
+    private fun busyProblem(identifier: Uuid): AccountResult.Conflict? =
+        if (identifier in processorCalls) AccountResult.Conflict("A card refund is going through on that invoice, try again in a moment") else null
 
     /**
      * Puts a charge the processor says is paid onto its invoice, as a card payment, and marks the charge paid, both
@@ -247,6 +279,7 @@ class InvoiceService(
         }
 
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}")
+        busyProblem(invoice.identifier)?.let { return it }
 
         val paying = request.payments.sumOf { it.amountCents }
         val owed = invoice.balanceCents - paying
@@ -379,96 +412,177 @@ class InvoiceService(
     }
 
     /**
-     * Gives money back on a paid invoice, and puts returned parts back in stock, together. Admin only. The refund is
+     * Gives money back on a paid invoice, and puts returned parts back in stock, together. Admin only. A void invoice
+     * still holding money can be refunded too, parts aside since voiding put them back. The refund is
      * a payment with a negative amount and the reason as its note; it can't be more than was paid less earlier
      * refunds, and a part can't come back more times than it was sold. Store credit goes to the invoice's customer,
-     * a gift card refund onto the card given or a new one
+     * a gift card refund onto the card given or a new one. Once a refund is past what was paid for everything else on
+     * the invoice, the rest comes off the gift cards it sold, refused if they've been spent
      */
-    fun refund(identifier: Uuid, request: RefundRequest, givenBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
-        val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
-        if (invoice.status != InvoiceStatus.PAID) {
-            return AccountResult.Conflict("Only a paid invoice can be refunded, ${invoice.label} is ${invoice.status.name.lowercase()}" +
-                if (invoice.status == InvoiceStatus.OPEN) ", take the payment off instead" else "")
-        }
+    fun refund(identifier: Uuid, request: RefundRequest, givenBy: String, actor: Uuid?): AccountResult<Invoice> {
+        val started = synchronized(CHANGE_LOCK) {
+            val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
+            if (invoice.status == InvoiceStatus.OPEN) return AccountResult.Conflict("Only a paid invoice can be refunded, ${invoice.label} is open, take the payment off instead")
+            busyProblem(identifier)?.let { return it }
+            // Voiding already put its parts back, only money can be left
+            if (invoice.status == InvoiceStatus.VOID && request.returns.isNotEmpty()) return AccountResult.Invalid("${invoice.label} is void, its parts are back in stock already")
+            if (invoice.status == InvoiceStatus.VOID && invoice.netPaidCents <= 0) return AccountResult.Conflict("${invoice.label} is void and has nothing left to refund")
 
-        val reason = request.reason.trim()
-        if (reason.isBlank()) return AccountResult.Invalid("Give a reason for the refund")
-        if (request.amountCents < 0) return AccountResult.Invalid("Refund the amount as a positive number")
-        if (request.amountCents == 0L && request.returns.isEmpty()) return AccountResult.Invalid("Refund an amount or return a part")
-        if (request.amountCents > invoice.netPaidCents) return AccountResult.Invalid("Only ${money(invoice.netPaidCents)} was paid on ${invoice.label}")
-        if (request.method == PaymentMethod.STORE_CREDIT && invoice.customerIdentifier == null) return AccountResult.Invalid("${invoice.label} has no customer to give store credit to")
-        if (request.method == PaymentMethod.GIFT_CARD && request.reference.isNotBlank()) GiftCardCode.problem(request.reference)?.let { return AccountResult.Invalid(it) }
+            val reason = request.reason.trim()
+            if (reason.isBlank()) return AccountResult.Invalid("Give a reason for the refund")
+            if (request.amountCents < 0) return AccountResult.Invalid("Refund the amount as a positive number")
+            if (request.amountCents == 0L && request.returns.isEmpty()) return AccountResult.Invalid("Refund an amount or return a part")
+            if (request.amountCents > invoice.netPaidCents) return AccountResult.Invalid("Only ${money(invoice.netPaidCents)} was paid on ${invoice.label}")
+            if (request.method == PaymentMethod.STORE_CREDIT && invoice.customerIdentifier == null) return AccountResult.Invalid("${invoice.label} has no customer to give store credit to")
+            if (request.method == PaymentMethod.GIFT_CARD && request.reference.isNotBlank()) GiftCardCode.problem(request.reference)?.let { return AccountResult.Invalid(it) }
 
-        // Back onto the card it came from, through the processor, no more than is left of that payment
-        val onto = request.paymentIdentifier?.let { paymentIdentifier ->
-            val paid = invoice.payments.firstOrNull { it.identifier == paymentIdentifier } ?: return AccountResult.Invalid("That payment isn't on ${invoice.label}")
-            if (paid.processor == null || paid.isRefund) return AccountResult.Invalid("Only a card payment taken through the processor goes back onto its card")
-            if (request.method != PaymentMethod.CARD) return AccountResult.Invalid("A refund onto the card is by card")
-            val left = invoice.refundableCents(paid)
-            if (request.amountCents > left) return AccountResult.Invalid("Only ${money(left)} of that card payment is left to give back")
-            paid
-        }
-
-        // Each item once, added up, and only what was sold and not already returned
-        val returns = request.returns.groupBy { it.inventoryIdentifier }.map { (item, lines) -> ReturnedPart(item, lines.sumOf { it.quantity }) }
-        val sold = invoice.partsSold
-        val returned = invoice.returnedParts
-        returns.forEach { part ->
-            if (part.quantity <= 0) return AccountResult.Invalid("Return a whole number of parts, more than zero")
-            if (part.inventoryIdentifier !in sold) return AccountResult.Invalid("That part isn't on ${invoice.label}")
-            val left = (sold[part.inventoryIdentifier] ?: 0) - (returned[part.inventoryIdentifier] ?: 0)
-            if (part.quantity > left) {
-                val name = invoice.charges.first { it.inventoryIdentifier == part.inventoryIdentifier }.description
-                return AccountResult.Invalid(if (left <= 0) "No $name left to return on ${invoice.label}" else "Only $left of $name can be returned on ${invoice.label}")
+            // Back onto the card it came from, through the processor, no more than is left of that payment
+            val onto = request.paymentIdentifier?.let { paymentIdentifier ->
+                val paid = invoice.payments.firstOrNull { it.identifier == paymentIdentifier } ?: return AccountResult.Invalid("That payment isn't on ${invoice.label}")
+                if (paid.processor == null || paid.isRefund) return AccountResult.Invalid("Only a card payment taken through the processor goes back onto its card")
+                if (request.method != PaymentMethod.CARD) return AccountResult.Invalid("A refund onto the card is by card")
+                val left = invoice.refundableCents(paid)
+                if (request.amountCents > left) return AccountResult.Invalid("Only ${money(left)} of that card payment is left to give back")
+                paid
             }
-        }
 
-        val card = if (request.method == PaymentMethod.GIFT_CARD && request.amountCents > 0) GiftCardCode.normalize(request.reference.ifBlank { GiftCardCode.generate() }) else ""
-        val payment = Payment(
-            method = request.method,
-            amountCents = -request.amountCents,
-            receivedAt = Clock.System.now().toEpochMilliseconds(),
-            receivedBy = givenBy,
-            note = reason,
-            returns = returns,
-            reference = card,
-            processor = onto?.processor,
-            refundOf = onto?.identifier
-        ).let { refund ->
-            if (onto == null || request.amountCents == 0L) return@let refund
-            // The money goes back before it's recorded, so a refused refund leaves nothing saved
-            when (val result = cards.refund(onto, request.amountCents, "refund-${refund.identifier}")) {
-                is ProcessorResult.Ok -> refund.copy(processorReference = result.value)
-                is ProcessorResult.Failed -> return AccountResult.Conflict("The card wasn't refunded: ${result.reason}")
-            }
-        }
-
-        transaction {
-            invoices.addPayment(identifier, payment) ?: throw IllegalStateException("Refund not saved")
-            returns.forEach { part -> inventory.adjustStock(part.inventoryIdentifier, locationOf(invoice), -part.quantity) }
-
-            if (request.amountCents > 0) when (request.method) {
-                PaymentMethod.STORE_CREDIT -> if (!values.changeCredit(invoice.customerIdentifier!!, request.amountCents, "Refund on ${invoice.label}: $reason", identifier, givenBy)) {
-                    throw IllegalStateException("Store credit not given")
+            // Each item once, added up, and only what was sold and not already returned
+            val returns = request.returns.groupBy { it.inventoryIdentifier }.map { (item, lines) -> ReturnedPart(item, lines.sumOf { it.quantity }) }
+            val sold = invoice.partsSold
+            val returned = invoice.returnedParts
+            returns.forEach { part ->
+                if (part.quantity <= 0) return AccountResult.Invalid("Return a whole number of parts, more than zero")
+                if (part.inventoryIdentifier !in sold) return AccountResult.Invalid("That part isn't on ${invoice.label}")
+                val left = (sold[part.inventoryIdentifier] ?: 0) - (returned[part.inventoryIdentifier] ?: 0)
+                if (part.quantity > left) {
+                    val name = invoice.charges.first { it.inventoryIdentifier == part.inventoryIdentifier }.description
+                    return AccountResult.Invalid(if (left <= 0) "No $name left to return on ${invoice.label}" else "Only $left of $name can be returned on ${invoice.label}")
                 }
-                PaymentMethod.GIFT_CARD -> values.loadGiftCard(card, request.amountCents, identifier, invoice.customerIdentifier) ?: throw IllegalStateException("Gift card not loaded")
-                else -> {}
             }
 
-            val back = if (returns.isEmpty()) "" else ", ${returns.sumOf { it.quantity }} part${if (returns.sumOf { it.quantity } == 1) "" else "s"} back in stock"
-            auditLog.log(actor, AuditAction.REFUND, "invoice", identifier.toString(), "Refunded ${money(request.amountCents)} ${describe(payment)} on ${invoice.label}$back: $reason")
+            val card = if (request.method == PaymentMethod.GIFT_CARD && request.amountCents > 0) GiftCardCode.normalize(request.reference.ifBlank { GiftCardCode.generate() }) else ""
+            val payment = Payment(
+                method = request.method,
+                amountCents = -request.amountCents,
+                receivedAt = Clock.System.now().toEpochMilliseconds(),
+                receivedBy = givenBy,
+                note = reason,
+                returns = returns,
+                reference = card,
+                processor = onto?.processor,
+                refundOf = onto?.identifier
+            )
+            val draft = RefundDraft(invoice, request.amountCents, request.method, reason, returns, card, payment, givenBy, actor, cardsToTakeBack(invoice, request.amountCents))
+
+            try {
+                if (onto == null || request.amountCents == 0L) {
+                    return transaction {
+                        takeBackCards(draft.cards)
+                        recordRefund(draft)
+                    }
+                }
+
+                // Taken off first: a card spent meanwhile should stop this before the money goes, not after
+                transaction { takeBackCards(draft.cards) }
+            } catch (ex: StoredValuePayments.ShortOfValue) {
+                return AccountResult.Conflict(ex.message)
+            }
+
+            processorCalls += identifier
+            draft to onto
         }
+        val (draft, onto) = started
+
+        // The money goes back before it's recorded, so a refused refund leaves nothing saved. Outside the lock, so a
+        // slow processor only holds up this invoice
+        val result = try {
+            cards.refund(onto, draft.amountCents, "refund-${draft.payment.identifier}")
+        } catch (ex: Exception) {
+            ProcessorResult.Failed(ex.message ?: ex.toString())
+        }
+
+        return synchronized(CHANGE_LOCK) {
+            try {
+                when (result) {
+                    is ProcessorResult.Ok -> transaction { recordRefund(draft.copy(payment = draft.payment.copy(processorReference = result.value))) }
+                    is ProcessorResult.Failed -> {
+                        transaction { draft.cards.forEach { (code, cents) -> values.loadGiftCard(code, cents, identifier, draft.invoice.customerIdentifier) } }
+                        AccountResult.Conflict("The card wasn't refunded: ${result.reason}")
+                    }
+                }
+            } finally {
+                processorCalls -= identifier
+            }
+        }
+    }
+
+    private data class RefundDraft(
+        val invoice: Invoice,
+        val amountCents: Long,
+        val method: PaymentMethod,
+        val reason: String,
+        val returns: List<ReturnedPart>,
+        val card: String,
+        val payment: Payment,
+        val givenBy: String,
+        val actor: Uuid?,
+        val cards: List<Pair<String, Long>>
+    )
+
+    // What a refund of [amountCents] has to take off the gift cards the invoice sold, so the money doesn't come back
+    // with the card still loaded. A void invoice's were taken back by voiding it
+    private fun cardsToTakeBack(invoice: Invoice, amountCents: Long): List<Pair<String, Long>> {
+        if (invoice.status == InvoiceStatus.VOID) return emptyList()
+        val before = invoice.giftCardsTakenBack().toMap()
+        return invoice.giftCardsTakenBack(invoice.refundedCents + amountCents)
+            .map { (code, taken) -> code to taken - (before[code] ?: 0) }
+            .filter { (_, cents) -> cents > 0 }
+    }
+
+    // Inside a transaction
+    private fun takeBackCards(cards: List<Pair<String, Long>>) {
+        cards.forEach { (code, cents) ->
+            if (!values.unloadGiftCard(code, cents)) throw StoredValuePayments.ShortOfValue("Gift card $code has been spent, so that much can't be refunded")
+        }
+    }
+
+    // Inside a transaction
+    private fun recordRefund(draft: RefundDraft): AccountResult<Invoice> {
+        val identifier = draft.invoice.identifier
+        val invoice = draft.invoice
+
+        invoices.addPayment(identifier, draft.payment) ?: throw IllegalStateException("Refund not saved")
+        draft.returns.forEach { part -> inventory.adjustStock(part.inventoryIdentifier, locationOf(invoice), -part.quantity) }
+
+        if (draft.amountCents > 0) when (draft.method) {
+            PaymentMethod.STORE_CREDIT -> if (!values.changeCredit(invoice.customerIdentifier!!, draft.amountCents, "Refund on ${invoice.label}: ${draft.reason}", identifier, draft.givenBy)) {
+                throw IllegalStateException("Store credit not given")
+            }
+            PaymentMethod.GIFT_CARD -> values.loadGiftCard(draft.card, draft.amountCents, identifier, invoice.customerIdentifier) ?: throw IllegalStateException("Gift card not loaded")
+            else -> {}
+        }
+
+        val partCount = draft.returns.sumOf { it.quantity }
+        val back = if (partCount == 0) "" else ", $partCount part${if (partCount == 1) "" else "s"} back in stock"
+        val taken = draft.cards.joinToString("") { (code, cents) -> ", ${money(cents)} taken off gift card $code" }
+        auditLog.log(draft.actor, AuditAction.REFUND, "invoice", identifier.toString(), "Refunded ${money(draft.amountCents)} ${describe(draft.payment)} on ${invoice.label}$back$taken: ${draft.reason}")
 
         return AccountResult.Done(invoices.getById(identifier)!!)
     }
 
     /**
      * Cancels an invoice. A paid one puts its parts back in stock, less any a refund already returned, and takes back
-     * the gift cards it loaded, refusing if one has been spent since. The ticket stays as it is
+     * the gift cards it loaded, refusing if one has been spent since; money it took stays on it until it's refunded.
+     * An open one holding payments is refused, since taking them off first gives them back properly. The ticket stays
+     * as it is, and an open ticket gets a new invoice when it next needs one
      */
     fun void(identifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status == InvoiceStatus.VOID) return AccountResult.Conflict("Invoice ${invoice.label} is already void")
+        busyProblem(identifier)?.let { return it }
+        if (invoice.status == InvoiceStatus.OPEN && invoice.payments.isNotEmpty()) {
+            return AccountResult.Conflict("${invoice.label} has payments on it, take them off before voiding it")
+        }
 
         try {
             transaction {
@@ -479,8 +593,11 @@ class InvoiceService(
                         if (back > 0) inventory.adjustStock(identifier, locationOf(invoice), -back)
                     }
 
+                    // Less what refunds already took off them
+                    val taken = invoice.giftCardsTakenBack().toMap()
                     invoice.charges.filter { it.type == ChargeType.GIFT_CARD && it.reference.isNotBlank() }.forEach { charge ->
-                        if (!values.unloadGiftCard(charge.reference, charge.totalCents)) {
+                        val left = charge.totalCents - (taken[charge.reference] ?: 0)
+                        if (left > 0 && !values.unloadGiftCard(charge.reference, left)) {
                             throw StoredValuePayments.ShortOfValue("Gift card ${charge.reference} has been spent, refund instead of voiding")
                         }
                     }
@@ -503,6 +620,7 @@ class InvoiceService(
     fun remove(identifier: Uuid, actor: Uuid?): AccountResult<Unit> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (!invoice.ticketRemoved) return AccountResult.Conflict("Invoice ${invoice.label} still has its ticket, it's deleted with the ticket")
+        busyProblem(identifier)?.let { return it }
 
         transaction {
             if (!invoices.remove(identifier)) throw IllegalStateException("Invoice ${invoice.label} wasn't deleted")
@@ -511,6 +629,10 @@ class InvoiceService(
 
         return AccountResult.Done(Unit)
     }
+
+    /** Whether deleting the ticket should take an admin: it's been handed back, or has money or a void invoice on it */
+    fun deletingNeedsAdmin(ticket: Ticket): Boolean =
+        ticket.status.status == TicketStatusType.PICKED_UP || invoices.allForTicket(ticket.identifier).orEmpty().any { it.outlivesTicket }
 
     /** The ticket's invoice, without making one */
     fun invoiceFor(ticketIdentifier: Uuid): Invoice? = invoices.getByTicket(ticketIdentifier)
@@ -748,5 +870,11 @@ class InvoiceService(
          * ticket can't both pass the checks before either is saved
          */
         private val CHANGE_LOCK = Any()
+
+        /**
+         * Invoices with a refund on its way through the card processor. That call can take a while, so it's made
+         * outside [CHANGE_LOCK], and what depends on how it turns out waits on this instead of everyone waiting on it
+         */
+        private val processorCalls: MutableSet<Uuid> = ConcurrentHashMap.newKeySet()
     }
 }

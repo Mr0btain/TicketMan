@@ -96,7 +96,11 @@ fun Application.configureRouting(
         // in the log, the caller gets a plain reason
         exception<BadRequestException> { call, cause ->
             AppLogger.i(BAD_REQUEST_TAG, "${call.request.httpMethod.value} ${call.request.path()}: ${cause.rootMessage()}")
-            call.respondText(text = BAD_REQUEST_MESSAGE, status = HttpStatusCode.BadRequest)
+            if (cause.isTooLarge()) {
+                call.respondText(text = TOO_LARGE_MESSAGE, status = HttpStatusCode.PayloadTooLarge)
+            } else {
+                call.respondText(text = BAD_REQUEST_MESSAGE, status = HttpStatusCode.BadRequest)
+            }
         }
 
         // A body over one of Ktor's limits. Always with a reason, since clients take a 413 without one as their
@@ -107,6 +111,13 @@ fun Application.configureRouting(
         }
 
         exception<Throwable> { call, cause ->
+            // A body cut off by the limit can reach here wrapped in whatever was reading it
+            if (cause.isTooLarge()) {
+                AppLogger.i(BAD_REQUEST_TAG, "${call.request.httpMethod.value} ${call.request.path()}: ${cause.rootMessage()}")
+                call.respondText(text = TOO_LARGE_MESSAGE, status = HttpStatusCode.PayloadTooLarge)
+                return@exception
+            }
+
             AppLogger.e(SERVER_ERROR_TAG, "${call.request.httpMethod.value} ${call.request.path()}", cause)
             call.respondText(text = SERVER_ERROR_MESSAGE, status = HttpStatusCode.InternalServerError)
         }
@@ -366,3 +377,6 @@ const val TOO_LARGE_MESSAGE = "That's bigger than the server takes"
 // Ktor wraps the serializer's message ("Field 'password' is required") a couple of levels down
 private fun Throwable.rootMessage(): String =
     generateSequence(this) { it.cause }.last().message ?: toString()
+
+private fun Throwable.isTooLarge(): Boolean =
+    generateSequence(this) { it.cause }.any { it is PayloadTooLargeException }

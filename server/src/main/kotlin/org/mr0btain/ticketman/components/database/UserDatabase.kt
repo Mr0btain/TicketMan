@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.plus
 import org.mr0btain.ticketman.components.database.tables.location.LocationTable
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.core.isNull
@@ -192,6 +194,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             access = data.accessLevel
             status = data.status.name
             needsSetup = data.needsSetup
+            mustChangePassword = data.mustChangePassword
             homeLocation = data.homeLocation
         }
     }
@@ -217,11 +220,13 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
 
     /**
      * Replaces a user's password
+     * @param mustChange Whether they have to choose their own before doing anything else, null leaves that as it is
      * @return Whether the user was found
      */
-    fun updatePassword(identifier: Uuid, newPassword: String): Boolean =
+    fun updatePassword(identifier: Uuid, newPassword: String, mustChange: Boolean? = null): Boolean =
         updateUser(UPDATE_PASSWORD_TAG, identifier) {
             password = PasswordHasher.hash(newPassword)
+            mustChange?.let { mustChangePassword = it }
         }
 
     /**
@@ -273,30 +278,40 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
         }
 
     /**
-     * Checks a PIN, counting wrong ones. The PIN locks after [PinRules.MAX_ATTEMPTS] wrong tries in a row
+     * Checks a PIN. Each try is counted before it's checked, in one statement, so guesses sent all at once can't all be
+     * checked against the same count: past [PinRules.MAX_ATTEMPTS] tries with no right one nothing more gets checked.
+     * The PIN locks once that many in a row are wrong
      */
-    fun checkPin(identifier: Uuid, pin: String): PinCheck =
-        dbQuery(CHECK_PIN_TAG) {
-            val userEntity = UserEntity.findById(identifier)
+    fun checkPin(identifier: Uuid, pin: String): PinCheck {
+        val hash = dbQuery(CHECK_PIN_TAG) {
+            val userEntity = UserEntity.findById(identifier) ?: return@dbQuery ""
+            if (userEntity.pinLocked) LOCKED_MARK else userEntity.pinHash
+        }.orEmpty()
 
-            when {
-                userEntity == null || userEntity.pinHash.isBlank() -> PinCheck.NO_PIN
-                userEntity.pinLocked -> PinCheck.LOCKED
+        if (hash.isBlank()) return PinCheck.NO_PIN
+        if (hash == LOCKED_MARK) return PinCheck.LOCKED
 
-                PasswordHasher.verify(pin, userEntity.pinHash) -> {
-                    userEntity.pinFailedAttempts = 0
-                    PinCheck.OK
-                }
+        val counted = dbQuery(CHECK_PIN_TAG) {
+            UserTable.update(where = {
+                (UserTable.id eq identifier) and (UserTable.pinLocked eq false) and (UserTable.pinFailedAttempts less PinRules.MAX_ATTEMPTS)
+            }) { row -> row[UserTable.pinFailedAttempts] = UserTable.pinFailedAttempts + 1 } > 0
+        } ?: return PinCheck.NO_PIN
+        if (!counted) return PinCheck.LOCKED
 
-                else -> {
-                    userEntity.pinFailedAttempts += 1
-                    if (userEntity.pinFailedAttempts >= PinRules.MAX_ATTEMPTS) {
-                        userEntity.pinLocked = true
-                        PinCheck.LOCKED
-                    } else PinCheck.WRONG
-                }
-            }
+        // Outside any transaction, it's slow on purpose
+        if (PasswordHasher.verify(pin, hash)) {
+            updateUser(CHECK_PIN_TAG, identifier) { pinFailedAttempts = 0 }
+            return PinCheck.OK
+        }
+
+        return dbQuery(CHECK_PIN_TAG) {
+            val userEntity = UserEntity.findById(identifier) ?: return@dbQuery PinCheck.NO_PIN
+            if (userEntity.pinFailedAttempts >= PinRules.MAX_ATTEMPTS) {
+                userEntity.pinLocked = true
+                PinCheck.LOCKED
+            } else PinCheck.WRONG
         } ?: PinCheck.NO_PIN
+    }
 
     fun getPinFailedAttempts(identifier: Uuid): Int =
         dbQuery(CHECK_PIN_TAG) { UserEntity.findById(identifier)?.pinFailedAttempts ?: 0 } ?: 0
@@ -308,6 +323,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
                 .find {
                     (UserTable.status eq UserStatus.ACTIVE.name) and
                         (UserTable.needsSetup eq false) and
+                        (UserTable.mustChangePassword eq false) and
                         (UserTable.pinHash neq "") and
                         (UserTable.pinLocked eq false)
                 }
@@ -390,6 +406,8 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             true
         }
 }
+
+private const val LOCKED_MARK = "locked"
 
 /** Result of checking a PIN */
 enum class PinCheck {

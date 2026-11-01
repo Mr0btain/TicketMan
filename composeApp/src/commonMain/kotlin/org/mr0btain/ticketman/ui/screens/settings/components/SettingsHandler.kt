@@ -127,7 +127,7 @@ class SettingsHandler(
         localStorage.serverUrl = url
     }
 
-    /** Turns remembering the username and password on or off. Turning it off forgets what was saved */
+    /** Turns staying logged in on or off. Turning it off forgets the username, and the session ends with the app */
     fun toggleRememberLogin() {
         val value = !_rememberLogin.value
         _rememberLogin.value = value

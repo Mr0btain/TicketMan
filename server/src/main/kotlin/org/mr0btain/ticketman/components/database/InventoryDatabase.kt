@@ -181,7 +181,10 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
     /** What the shop last paid for one, set when an order arrives */
     fun setCost(identifier: Uuid, costCents: Long): Boolean =
         dbWrite(UPDATE_TAG) {
-            InventoryTable.update(where = { InventoryTable.id eq identifier }) { row -> row[InventoryTable.costCents] = costCents } > 0
+            InventoryTable.update(where = { InventoryTable.id eq identifier }) { row ->
+                row[InventoryTable.costCents] = costCents
+                row[InventoryTable.revision] = InventoryTable.revision + 1
+            } > 0
         }
 
     /** The item whose barcode or SKU is exactly [code], ignoring case, barcodes first, with its count at [location] */
@@ -269,10 +272,27 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
      * Saves everything but the stock count, which only changes through [setStock] and [adjustStock]. The reorder
      * point is [location]'s (the main one for null)
      */
-    fun update(data: Inventory, location: Uuid?): Boolean =
-        dbWrite(UPDATE_TAG) {
-            val inventoryEntity = InventoryEntity.findById(data.identifier)
-                ?: return@dbWrite false.also { AppLogger.i(UPDATE_TAG, InventoryError.NOT_FOUND) }
+    fun update(data: Inventory, location: Uuid?): Boolean = save(data, location) == RecordSave.DONE
+
+    /**
+     * Saves [data] as [update] does, unless it has a revision and someone saved the item since. Null when it failed.
+     * Stock isn't part of it, so counts changing don't get in the way
+     */
+    fun save(data: Inventory, location: Uuid?): RecordSave? =
+        dbQuery(UPDATE_TAG) {
+            // In one statement, so of two saves at once only one gets through
+            val counted = InventoryTable.update(where = {
+                val item = InventoryTable.id eq data.identifier
+                if (data.revision != null) item and (InventoryTable.revision eq data.revision!!) else item
+            }) { row -> row[InventoryTable.revision] = InventoryTable.revision + 1 } > 0
+
+            if (!counted) {
+                val exists = InventoryEntity.findById(data.identifier) != null
+                if (!exists) AppLogger.i(UPDATE_TAG, InventoryError.NOT_FOUND)
+                return@dbQuery if (exists) RecordSave.CHANGED_SINCE else RecordSave.NOT_FOUND
+            }
+
+            val inventoryEntity = InventoryEntity.findById(data.identifier)!!
 
             inventoryEntity.apply {
                 name = data.name
@@ -301,7 +321,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                 }
             }
 
-            true
+            RecordSave.DONE
         }
 
     /**

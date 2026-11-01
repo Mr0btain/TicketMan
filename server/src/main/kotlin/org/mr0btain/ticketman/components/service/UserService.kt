@@ -95,7 +95,7 @@ class UserService(
         auditLog.log(foundUser.identifier, AuditAction.LOGIN, "user", foundUser.identifier.toString(), loginRequest.deviceName)
 
         return LoginResult.Success(
-            if (foundUser.needsSetup) response.copy(status = LoginStatus.NEEDS_SETUP) else response
+            if (foundUser.needsSetup || foundUser.mustChangePassword) response.copy(status = LoginStatus.NEEDS_SETUP) else response
         )
     }
 
@@ -240,30 +240,49 @@ class UserService(
 
     /**
      * Swaps a refresh token for a new access token and a new refresh token. The old refresh token stops working,
-     * so a copied one is no good once the real device has refreshed
+     * so a copied one is no good once the real device has refreshed. For [REFRESH_GRACE] after that it can still be
+     * swapped: clients have no saved password to fall back on, so a reply lost on the way back would otherwise log the
+     * device out
      */
     fun refreshToken(token: String): RefreshTokenResponse? {
         val decoded = decodeJWT(token) ?: return null
         // Refresh tokens from before the type claim have none, they still match their stored session below
         if (decoded.getClaim(JwtService.TYPE_CLAIM).asString() == JwtService.ACCESS_TYPE) return null
-        val session = tokenDatabase.findByToken(token) ?: return null
+        val now = Clock.System.now().toEpochMilliseconds()
 
-        if (!jwtService.audienceMatches(decoded.audience.first())) return null
-        if (!session.isLive(Clock.System.now().toEpochMilliseconds())) return null
-
-        val foundUser = database.getById(Uuid.parse(session.userIdentifier)) ?: return null
-        val idFromToken = decoded.getClaim("identifier").asString()
-
-        if (foundUser.status != UserStatus.ACTIVE || idFromToken != session.userIdentifier) return null
+        val session = tokenDatabase.findByToken(token)?.takeIf { isUsable(it, decoded, now) }
+            ?: return justRotated(token, decoded, now)
 
         val expiresAt = Instant.fromEpochMilliseconds(decoded.expiresAt.time)
         val newRefreshToken = jwtService.createRefreshToken(session.userIdentifier, session.sessionId, expiresAt)
-        if (!tokenDatabase.rotate(session.sessionId, token, newRefreshToken)) return null
+        if (!tokenDatabase.rotate(session.sessionId, token, newRefreshToken)) return justRotated(token, decoded, now)
 
         return RefreshTokenResponse(
             token = jwtService.createAccessToken(session.userIdentifier, session.sessionId),
             refreshToken = newRefreshToken
         )
+    }
+
+    // A token swapped moments ago can be swapped again, for a device that never got the reply. Only hashes are kept, so
+    // it gets a new one rather than the one it missed, which stops working. The minute still counts from the first swap
+    private fun justRotated(token: String, decoded: DecodedJWT, now: Long): RefreshTokenResponse? {
+        val session = tokenDatabase.findRotatedFrom(token, now - REFRESH_GRACE.inWholeMilliseconds)?.takeIf { isUsable(it, decoded, now) } ?: return null
+
+        val expiresAt = Instant.fromEpochMilliseconds(decoded.expiresAt.time)
+        val newRefreshToken = jwtService.createRefreshToken(session.userIdentifier, session.sessionId, expiresAt)
+        if (!tokenDatabase.replaceCurrent(session.sessionId, newRefreshToken)) return null
+
+        return RefreshTokenResponse(
+            token = jwtService.createAccessToken(session.userIdentifier, session.sessionId),
+            refreshToken = newRefreshToken
+        )
+    }
+
+    private fun isUsable(session: StoredSession, decoded: DecodedJWT, now: Long): Boolean {
+        if (!jwtService.audienceMatches(decoded.audience.first()) || !session.isLive(now)) return false
+
+        val foundUser = database.getById(Uuid.parse(session.userIdentifier)) ?: return false
+        return foundUser.status == UserStatus.ACTIVE && decoded.getClaim("identifier").asString() == session.userIdentifier
     }
 
     /**
@@ -293,5 +312,8 @@ class UserService(
 
         /** How long past a kiosk's idle lock its PIN session lasts on the server */
         val KIOSK_IDLE_MARGIN = 10.minutes
+
+        /** How long a refresh token keeps answering after it was swapped */
+        val REFRESH_GRACE = 1.minutes
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
+import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
@@ -20,6 +21,66 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmPinField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
+
+/**
+ * Changes your own password. Your other devices are logged out
+ * @param required They can't do anything else until they've changed it, like after an admin set it. Cancel logs out
+ * @param onSave Sends it, calls back with null when done or what went wrong
+ */
+@Composable
+fun ChangePasswordDialog(
+    isVisible: Boolean,
+    onDismiss: () -> Unit,
+    onSave: (current: String, new: String, onResult: (String?) -> Unit) -> Unit,
+    required: Boolean = false
+) {
+    if (!isVisible) return
+
+    var current by remember { mutableStateOf("") }
+    var new by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
+    var serverError by remember { mutableStateOf<String?>(null) }
+
+    val problem = when {
+        current.isEmpty() -> "Enter your current password"
+        PasswordRules.problem(new) != null -> PasswordRules.problem(new)
+        new != confirm -> "Passwords don't match"
+        new == current -> "Choose a password that's different from the one you have"
+        else -> null
+    }
+
+    TmDialog(
+        title = if (required) "Choose your own password" else "Change password",
+        description = if (required) "Your password was set for you. Choose one only you know to carry on." else "Your other devices will be logged out.",
+        onDismissRequest = onDismiss,
+        maxWidth = 420.dp,
+        actions = {
+            TmButtonRow(
+                confirmText = "Save password",
+                cancelText = if (required) "Log out" else "Cancel",
+                confirmEnabled = problem == null,
+                loading = saving,
+                onCancel = onDismiss,
+                onConfirm = {
+                    saving = true
+                    serverError = null
+                    onSave(current, new) { error ->
+                        saving = false
+                        serverError = error
+                        if (error == null && !required) onDismiss()
+                    }
+                }
+            )
+        }
+    ) {
+        TmPasswordField(value = current, onValueChange = { current = it }, label = "Current password")
+        TmPasswordField(value = new, onValueChange = { new = it }, label = "New password")
+        TmPasswordField(value = confirm, onValueChange = { confirm = it }, label = "New password again")
+
+        (serverError ?: problem?.takeIf { current.isNotEmpty() && new.isNotEmpty() })?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }
+    }
+}
 
 /**
  * Changes your own station PIN. Asks for your password so someone at an unlocked screen can't do it

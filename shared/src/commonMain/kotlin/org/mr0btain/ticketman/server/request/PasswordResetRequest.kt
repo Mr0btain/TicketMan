@@ -6,3 +6,10 @@ import kotlinx.serialization.Serializable
 data class PasswordResetRequest(
     val password: String
 )
+
+/** Changing your own password, needs the one you have */
+@Serializable
+data class ChangePasswordRequest(
+    val currentPassword: String,
+    val newPassword: String
+)

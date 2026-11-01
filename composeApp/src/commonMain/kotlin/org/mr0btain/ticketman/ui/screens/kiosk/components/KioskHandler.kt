@@ -173,7 +173,6 @@ class KioskHandler(
         }
 
         _active.value = shouldBeActive
-        remoteHandler.credentialFallback = !shouldBeActive
         AppWindow.setFullscreen(shouldBeActive)
 
         if (shouldBeActive) {

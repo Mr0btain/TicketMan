@@ -131,13 +131,13 @@ class ServerUserClientTest {
     }
 
     @Test
-    fun loginSavesCredentialsWhenRemembered() = runTest {
+    fun loginSavesTheUsernameButNeverThePassword() = runTest {
         localStorage.rememberLogin = true
 
         assertIs<LoginOutcome.LoggedIn>(client.login("user", "pass"))
 
         assertEquals("user", localStorage.username)
-        assertEquals("pass", localStorage.password)
+        assertFalse(store.values.values.any { "pass" == it }, "The password shouldn't be kept anywhere")
     }
 
     @Test
@@ -147,7 +147,6 @@ class ServerUserClientTest {
         assertIs<LoginOutcome.LoggedIn>(client.login("user", "pass"))
 
         assertEquals("", localStorage.username)
-        assertEquals("", localStorage.password)
         assertFalse(store.values.containsKey("username"))
         assertFalse(store.values.containsKey("password"))
     }
@@ -166,8 +165,7 @@ class ServerUserClientTest {
 
         assertEquals(LoginOutcome.InviteSetup("user", "setup"), client.login("user", "CODE1234"))
 
-        // The code isn't a password, so it shouldn't be remembered
-        assertEquals("", localStorage.password)
+        assertFalse(store.values.values.any { "CODE1234" == it }, "The code shouldn't be kept anywhere")
     }
 
     @Test
@@ -198,14 +196,12 @@ class ServerUserClientTest {
     @Test
     fun pinLoginSwapsTheTokensButNotTheSavedLogin() = runTest {
         localStorage.username = "owner"
-        localStorage.password = "owner_pass"
 
         val result = client.pinLogin(station, Uuid.random(), "246813")
 
         assertIs<TmResult.Success<Unit>>(result)
         assertEquals("pin-access", localStorage.accessToken)
         assertEquals("owner", localStorage.username)
-        assertEquals("owner_pass", localStorage.password)
     }
 
     @Test

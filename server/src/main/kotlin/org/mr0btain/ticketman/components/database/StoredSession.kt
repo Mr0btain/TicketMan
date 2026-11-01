@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.server.response.SessionKind
 data class StoredSession(
     val sessionId: String,
     val userIdentifier: String,
+    /** The refresh token when saving one. Read back it's only the token's hash */
     val token: String,
     val deviceId: String = "",
     val deviceName: String = "",

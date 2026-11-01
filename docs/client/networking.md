@@ -77,7 +77,9 @@ calls `RemoteHandler.setUrl(url)`:
    else changes.
 3. Every repository's `serverUrl` is set. Until then it's blank, and every repository call returns straight away
    with a "No server set" error instead of hitting a relative URL.
-4. It tries to log in with the saved username and password. The result is `LOGGED_IN` or `CONNECTED`.
+4. It swaps the saved refresh token for fresh ones to carry on the session. The result is `LOGGED_IN`, or `CONNECTED`
+   with none. A token the server turned down, like one for a session an admin ended, is dropped; not reaching it keeps
+   the token for next time. No password is ever sent or kept for this, so moving to another server asks for a login.
 
 ## Trusting a server's certificate
 
@@ -147,15 +149,14 @@ After connecting, `SessionHandler` reloads the current user (`GET /api/user/me`)
 
 `RemoteHandler.login(user, pass)` → `ServerUserClient.login`, which posts a `LoginRequest` with this device's id and
 name and returns a `LoginOutcome`: `LoggedIn(needsSetup)`, `PendingApproval`, `InviteSetup(username, setupToken)`
-or `Failed(error)`. On success the tokens go in `LocalStorage`, and the username and password too if **Remember login** is on.
+or `Failed(error)`. On success the tokens go in `LocalStorage`, and the username too if **Stay logged in** is on. The password never is.
 `Failed` carries the `NetworkError`: `UNAUTHORIZED` (the server's 401) is a wrong username or password, and the login
 dialog says so; anything else, like a timeout or the server being down, shows that error's message instead.
 
 `onLoggedIn()` then clears the auth plugin's cached tokens so the next request loads the new ones.
 
-`logout()` posts `/api/auth/logout`, clears the tokens and the saved password (the username stays to prefill the
-form), and clears the auth plugin's tokens. `endSession()` is the same without touching credentials; the kiosk uses
-it when locking.
+`logout()` and `endSession()` (the kiosk's, when locking) post `/api/auth/logout` and clear the tokens, here and in the
+auth plugin. The username stays to prefill the form.
 
 ## Keeping tokens fresh
 
@@ -164,12 +165,9 @@ flowchart TD
     A[Request gets 401] --> B{Refresh token saved?}
     B -- yes --> C[POST /api/auth/refresh]
     C -- ok --> R[Retry with new access token]
-    C -- refused --> D
-    B -- no --> D{credentialFallback and saved password?}
-    D -- yes --> E[Log in again]
-    E -- ok --> R
-    D -- no --> F["clearSession(), emit authExpired"]
-    E -- fails --> F
+    C -- "401" --> F["clearSession(), emit authExpired"]
+    C -- anything else --> H[This request fails, the session stays]
+    B -- no --> F
     F --> G[Login dialog, or kiosk lock screen]
 ```
 
@@ -179,9 +177,6 @@ rotation sends no refresh token, and the saved one is kept.
 
 A `403` isn't a token problem, so it isn't refreshed: the call fails with `NetworkError.FORBIDDEN` ("You don't have
 access to that").
-
-`credentialFallback` is on by default and turned off by kiosk mode, so an expired PIN session doesn't silently log
-the device's owner back in.
 
 `authExpired` is collected in `MainViewModel.init()`: a kiosk locks, anything else shows the login dialog.
 

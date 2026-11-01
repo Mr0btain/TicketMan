@@ -17,6 +17,8 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 class CustomerSeed: DataSeed("CustomerSeed") {
+    private var revision: Long? = null
+
     private val ADD_TICKET_TAG = "ADD_TICKET"
     private val DELETE_TICKET_TAG = "DELETE_TICKET"
 
@@ -54,7 +56,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         get() = Address(street, city, state, zip)
 
     val customer: Customer
-        get() = Customer(identifier, name, address, email, phone, notifyEmail, notifySms)
+        get() = Customer(identifier, name, address, email, phone, notifyEmail, notifySms, revision = revision)
 
     fun changeName(newName: String) {
         name = newName
@@ -119,6 +121,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
     ) {
         // Identifier
         identifier = customer.identifier
+        revision = customer.revision
 
         name = customer.name
 
@@ -159,6 +162,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
 
     override fun clear() {
         identifier = Uuid.generateV7()
+        revision = null
         name = ""
         street = ""
         city = ""

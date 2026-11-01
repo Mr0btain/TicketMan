@@ -134,16 +134,18 @@ Deletes the device. Its tickets stay, with their copy of its details.
 
 Replaces the customer's details.
 
-- **Body:** `Customer`. **`202`** saved. **`404`** no such customer.
+- **Body:** `Customer`. **`202`** saved. **`404`** no such customer. **`409`** someone saved it since `revision` was read (see [Revisions](README.md#revisions)).
 
 ### `DELETE /api/data/customer/remove/{identifier}`
 
 **Auth:** normal
 
-Deletes the customer, their notes and their devices; the note photos are cleared up by the next sweep. Their tickets
-stay, with no customer.
+Deletes the customer, their notes and their devices; the note photos are cleared up by the next sweep. Their
+picked up tickets stay, with no customer. Only an admin can delete one with tickets or invoices.
 
-- **`202`** deleted. **`404`** no such customer. **`409`** they still have store credit, which would go with them.
+- **`202`** deleted. **`403`** they have tickets or invoices and the caller isn't an admin. **`404`** no such customer.
+  **`409`** they still have store credit, which would go with them, or an open ticket, which would have nobody to go
+  back to.
 
 ### `POST /api/data/customer/add/ticket/{identifier}`
 

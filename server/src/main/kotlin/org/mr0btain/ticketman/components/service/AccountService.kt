@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
+import org.mr0btain.ticketman.server.request.ChangePasswordRequest
 import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
 import org.mr0btain.ticketman.server.request.SetPinRequest
@@ -23,6 +24,7 @@ import org.mr0btain.ticketman.server.response.PendingUserResponse
 import org.mr0btain.ticketman.server.response.SessionKind
 import java.security.SecureRandom
 import java.util.Base64
+import kotlin.time.Duration.Companion.minutes
 import kotlin.uuid.Uuid
 
 /** Outcome of an account action, [message] says what was wrong */
@@ -44,6 +46,20 @@ class AccountService(
     private val auditLog: AuditLogDatabase
 ) {
     private val random = SecureRandom()
+
+    // Wrong passwords from someone already logged in, per user: a borrowed session shouldn't get to keep guessing
+    private val wrongPasswords = RequestLimiter(MAX_WRONG_PASSWORDS, 15.minutes)
+
+    /** Whether [identifier] has guessed wrong too often to have their password checked for now */
+    fun passwordChecksLimited(identifier: Uuid): Boolean = wrongPasswords.isLimited(identifier.toString())
+
+    private fun passwordIsRight(user: User, password: String): Boolean =
+        PasswordHasher.verify(password, user.password).also { right ->
+            if (!right) {
+                wrongPasswords.record(user.identifier.toString())
+                auditLog.log(user.identifier, AuditAction.LOGIN_FAILED, "user", user.identifier.toString(), "Wrong password confirming a change")
+            }
+        }
 
     /**
      * Saves a request as a pending user. They can't do anything until an admin approves it
@@ -195,11 +211,25 @@ class AccountService(
     fun setOwnPin(identifier: Uuid, request: SetPinRequest): AccountResult<Unit> {
         val user = users.getById(identifier) ?: return AccountResult.NotFound
 
-        if (!PasswordHasher.verify(request.currentPassword, user.password)) return AccountResult.Invalid("Password is wrong")
+        if (!passwordIsRight(user, request.currentPassword)) return AccountResult.Invalid("Password is wrong")
         PinRules.problem(request.pin)?.let { return AccountResult.Invalid(it) }
 
         users.setPin(identifier, request.pin)
         auditLog.log(identifier, AuditAction.UPDATE, "user", identifier.toString(), "Changed PIN")
+
+        return AccountResult.Done(Unit)
+    }
+
+    /** Changes your own password, checked against the one you have. The caller ends their other sessions */
+    fun changeOwnPassword(identifier: Uuid, request: ChangePasswordRequest): AccountResult<Unit> {
+        val user = users.getById(identifier) ?: return AccountResult.NotFound
+
+        if (!passwordIsRight(user, request.currentPassword)) return AccountResult.Invalid("Your current password is wrong")
+        PasswordRules.problem(request.newPassword)?.let { return AccountResult.Invalid(it) }
+        if (request.newPassword == request.currentPassword) return AccountResult.Invalid("Choose a password that's different from the one you have")
+
+        if (!users.updatePassword(identifier, request.newPassword, mustChange = false)) return AccountResult.NotFound
+        auditLog.log(identifier, AuditAction.PASSWORD_RESET, "user", identifier.toString(), "Changed their own password")
 
         return AccountResult.Done(Unit)
     }
@@ -223,6 +253,7 @@ class AccountService(
 
     companion object {
         private const val MAX_WAITING_REQUESTS = 50
+        private const val MAX_WRONG_PASSWORDS = 5
         private const val SAVE_SETUP_TAG = "AccountService:SaveSetup"
         private const val SAVE_FAILED = "Your account couldn't be saved, try again"
     }

@@ -24,13 +24,15 @@ class ProxyTest {
     private fun config(vararg pairs: Pair<String, String>) = MapApplicationConfig(*pairs)
 
     @Test
-    fun trustedProxiesDefaultToLoopbackAndPrivateRanges() {
+    fun trustedProxiesDefaultToThisMachineOnly() {
         val settings = ProxySettings.from(config())
 
-        listOf("127.0.0.1", "::1", "10.1.2.3", "172.18.0.2", "192.168.1.20", "fd12:3456::1", "localhost", "::ffff:10.0.0.9").forEach {
+        listOf("127.0.0.1", "::1", "localhost").forEach {
             assertTrue(settings.trusts(it), "$it should be trusted")
         }
-        listOf("203.0.113.5", "172.32.0.1", "2001:db8::1", "proxy.example.com", "").forEach {
+
+        // Any device on the shop's network could otherwise say it's someone else
+        listOf("10.1.2.3", "172.18.0.2", "192.168.1.20", "fd12:3456::1", "::ffff:10.0.0.1", "203.0.113.5", "2001:db8::1", "proxy.example.com", "").forEach {
             assertFalse(settings.trusts(it), "$it shouldn't be trusted")
         }
     }
@@ -73,7 +75,7 @@ class ProxyTest {
 
         val usual = startupNotes(ProxySettings.from(config()), 8080, zone = shop, tzSet = false)
         assertTrue(usual.first().text.contains("HTTPS is the reverse proxy's job"))
-        assertTrue(usual.any { it.text.contains("10.0.0.0/8") })
+        assertTrue(usual.any { it.text.contains("127.0.0.1") })
         assertTrue(usual.none { it.warning })
 
         val none = startupNotes(ProxySettings.from(config("env.trustedProxies" to "none")), 8080, zone = shop, tzSet = false)

@@ -66,7 +66,7 @@ owns the rules; `InvoiceDatabase` just stores.
 | `POST /ticket/{ticketId}` | Normal | Get the ticket's invoice, making it if needed |
 | `POST /{id}/update` | Normal | Apply what changed since it was opened (`InvoiceChangeRequest`, see below) |
 | `POST /{id}/payments` | Normal | Add a payment |
-| `DELETE /{id}/payments/{paymentId}` | Normal | Remove a payment |
+| `DELETE /{id}/payments/{paymentId}` | Normal, admin for one through the card processor | Remove a payment, which refunds a processor one |
 | `POST /{id}/void` | Admin | Void it |
 | `POST /{id}/refund` | Admin | Give money back, parts back in stock |
 
@@ -79,12 +79,16 @@ Rules:
 - Saving charges recalculates the totals with `InvoiceMath`, using the tax rate stored on the invoice when it was
   made. Changing the shop's rate later doesn't touch invoices that already exist.
 
-Voiding a paid invoice puts its parts back in stock, less any a refund already returned. Voiding never changes the
-ticket.
+Voiding a paid invoice puts its parts back in stock, less any a refund already returned, and the money it took stays
+on it until it's refunded. An open invoice holding payments can't be voided (`409`), since taking them off first gives
+them back properly. Voiding never changes the ticket. An open ticket gets a new invoice with a new number the next
+time one is needed, so it can still be charged and picked up; the void one stays on file, and work logged earlier
+isn't carried over. `getByTicket` answers the live invoice, or the newest void one when that's all there is.
 
 ### Refunds
 
-`POST /api/invoice/{id}/refund` (admin) gives money back on a `PAID` invoice with a `RefundRequest(method,
+`POST /api/invoice/{id}/refund` (admin) gives money back on a `PAID` invoice, or a `VOID` one still holding money
+(a voided paid one, or a card payment that landed after it was voided; no parts, voiding put them back), with a `RefundRequest(method,
 amountCents, reason, returns)`. `InvoiceService.refund` checks there's a reason, that the amount isn't more than was
 paid less earlier refunds (`Invoice.netPaidCents`), and that each returned part was sold on the invoice and hasn't
 all come back already (`partsSold` less `returnedParts`). Then in one transaction it adds a payment with the
@@ -185,6 +189,11 @@ through.
 - **Selling gift cards.** A `ChargeType.GIFT_CARD` line (one card, untaxed, more than zero) sells or tops up a card.
   It's loaded when the invoice is paid, at pickup or in a sale: a blank `reference` gets a new code from
   `GiftCardCode.generate`, saved on the line so the receipt shows it.
+- **Discounts can't pay for a card.** `InvoiceMath` limits a discount to the lines that aren't gift cards, since a
+  card's line puts that much money on it.
+- **Refunding a sold card takes its money back off.** Once a refund is past what was paid for everything else on the
+  invoice, the rest comes off the cards it sold (`Invoice.giftCardsTakenBack`, worked out from what's been refunded), and
+  it's refused if they've been spent. Voiding only takes back what's left on them.
 - **Refunds** can go to store credit (the invoice's customer) or onto a gift card (the code given, or a new one).
 - **Voiding** a paid invoice takes back the cards it loaded, and is refused if one has been spent from.
 - **By hand**, admins give or take credit (`POST /api/data/customer/credit/{id}`) and correct a card
@@ -200,6 +209,12 @@ Pickup checks things and then writes, so two at once could both pass the checks.
 does that (update, add or remove a payment, pickup, sale, refund, void) runs inside `synchronized(CHANGE_LOCK)`, so the second waits,
 then sees the ticket is picked up and gets a `409`. Reads and `forTicket` don't need it. A new change of that kind
 should take the lock too.
+
+A call to the card processor can take a while, so a refund or taking off a card payment is split around it and never
+holds the lock through it: checked under the lock, the invoice noted in `processorCalls`, the call made outside it, then
+saved under the lock. Meanwhile only that invoice waits: pickup, void, removing and refunding on it answer `409`, and
+every other invoice carries on. A refund takes gift cards' money back off before the call, and puts it back if the
+processor refuses, so a card spent meanwhile can't leave the money gone and the card loaded.
 
 ### `PICKED_UP` is the server's
 

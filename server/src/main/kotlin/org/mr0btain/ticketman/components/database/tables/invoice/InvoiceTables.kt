@@ -8,14 +8,15 @@ import org.mr0btain.ticketman.data.invoice.ReturnedPart
 import org.mr0btain.ticketman.data.invoice.TaxRate
 
 /**
- * One invoice per ticket. [ticket] isn't a foreign key, since an invoice with money against it outlives its ticket
- * (databases from before that have it dropped by `LocalDatabase`'s `invoice-ticket-key` fix). It's null for a
- * counter sale (made nullable on older databases by the `invoice-ticket-nullable` fix)
+ * One live invoice per ticket, plus any void ones it had before (older databases have their unique index dropped by
+ * `LocalDatabase`'s `invoice-ticket-not-unique` fix). [ticket] isn't a foreign key, since an invoice with money
+ * against it outlives its ticket (databases from before that have it dropped by the `invoice-ticket-key` fix). It's
+ * null for a counter sale (made nullable on older databases by the `invoice-ticket-nullable` fix)
  */
 object InvoiceTable : UuidTable("invoices") {
     val numberYear = integer("number_year")
     val numberSequence = long("number_sequence")
-    val ticket = uuid("ticket_id").nullable().uniqueIndex()
+    val ticket = uuid("ticket_id").nullable().index()
     val customer = text("customer_id").nullable()
     val status = text("status")
     val discountCents = long("discount_cents").default(0)

@@ -8,6 +8,7 @@ import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 object TokenTable: IntIdTable("token") {
     /** The user's identifier */
     val identifier = text("identifier")
+    /** The SHA-256 of the current refresh token, so a copy of the database or a backup holds nothing that logs in */
     val token = text("token")
 
     // Columns added for sessions per device, rows from before these existed are dropped on start
@@ -22,4 +23,8 @@ object TokenTable: IntIdTable("token") {
     val expiresAt = long("expires_at").default(0)
     /** A kiosk PIN session ends after this long unused, 0 for none */
     val idleTimeoutSeconds = integer("idle_timeout_seconds").default(0)
+
+    /** The hash of the refresh token [token] replaced and when, see `UserService.refreshToken` */
+    val previousToken = text("previous_token").nullable()
+    val rotatedAt = long("rotated_at").default(0)
 }

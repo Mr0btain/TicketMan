@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.data.ticket
 
+import org.mr0btain.ticketman.data.ticket.ChecklistItem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -34,6 +35,9 @@ class TicketSeed: DataSeed("TicketSeed") {
         private set
     var pickedUpAt: Long? by mutableStateOf(null)
         private set
+    private var revision: Long? = null
+    // Not edited here, but an update saves it, so it has to go back as it came
+    private var checklist: List<ChecklistItem> = emptyList()
 
     var problem: String by mutableStateOf("")
         private set
@@ -58,7 +62,9 @@ class TicketSeed: DataSeed("TicketSeed") {
             accessories = accessories,
             estimateCents = estimateCents,
             promisedAt = promisedAt,
-            pickedUpAt = pickedUpAt
+            pickedUpAt = pickedUpAt,
+            checklist = checklist,
+            revision = revision
         )
 
     // --- Initial setting up with data ---
@@ -76,6 +82,8 @@ class TicketSeed: DataSeed("TicketSeed") {
         user = userId
         number = ticket.number
         pickedUpAt = ticket.pickedUpAt
+        checklist = ticket.checklist
+        revision = ticket.revision
         problem = ticket.problem
         condition = ticket.condition
         accessories = ticket.accessories
@@ -148,6 +156,8 @@ class TicketSeed: DataSeed("TicketSeed") {
     // Reset all fields
     override fun clear() {
         identifier = Uuid.generateV7()
+        checklist = emptyList()
+        revision = null
         device = Device()
         status = TicketStatus()
         priority = TicketPriority()

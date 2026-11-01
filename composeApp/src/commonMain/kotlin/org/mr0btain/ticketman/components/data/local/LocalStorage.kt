@@ -11,7 +11,6 @@ import kotlin.uuid.Uuid
 
 class LocalStorage(private val store: KeyValueStore) {
     private var _username: String = ""
-    private var _password: String = ""
     private var _accessToken: String = ""
     private var _refreshToken: String = ""
     private var _darkMode: Boolean = DEFAULT_DARK_MODE
@@ -38,13 +37,6 @@ class LocalStorage(private val store: KeyValueStore) {
         set(value) {
             _username = value
             store.putString(USERNAME_KEY, value.trim())
-        }
-
-    var password: String
-        get() = _password
-        set(value) {
-            _password = value
-            store.putString(PASSWORD_KEY, value)
         }
 
     var accessToken: String
@@ -122,7 +114,7 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(TRUSTED_AUTHORITIES_KEY, Json.encodeToString(value))
         }
 
-    /** Whether the username and password should be saved after a successful login */
+    /** Whether this device stays logged in between runs and remembers the username. Passwords are never kept */
     var rememberLogin: Boolean
         get() = _rememberLogin
         set(value) {
@@ -239,7 +231,8 @@ class LocalStorage(private val store: KeyValueStore) {
         _accessToken = store.getString(ACCESS_TOKEN_KEY, "")
         _refreshToken = store.getString(REFRESH_TOKEN_KEY, "")
         _username = store.getString(USERNAME_KEY, "")
-        _password = store.getString(PASSWORD_KEY, "")
+        // Older versions kept the password to log back in with, a refresh token does that now
+        if (store.getString(PASSWORD_KEY, "").isNotEmpty()) store.putString(PASSWORD_KEY, "")
         _darkMode = getBoolean(DARK_MODE_KEY, DEFAULT_DARK_MODE)
         _themeId = store.getString(THEME_ID_KEY, "")
         _fontId = store.getString(FONT_ID_KEY, "")
@@ -249,6 +242,11 @@ class LocalStorage(private val store: KeyValueStore) {
         _serverUrl = migrateSavedServerAddress(savedUrl)
         if (_serverUrl != savedUrl) store.putString(SERVER_URL_KEY, _serverUrl)
         _rememberLogin = getBoolean(REMEMBER_LOGIN_KEY, DEFAULT_REMEMBER_LOGIN)
+        // A session only lasts as long as the app does without it
+        if (!_rememberLogin && (_accessToken.isNotEmpty() || _refreshToken.isNotEmpty())) {
+            accessToken = ""
+            refreshToken = ""
+        }
         _defaultAdminTab = getInt(DEFAULT_ADMIN_TAB_KEY, DEFAULT_ADMIN_TAB)
         _defaultRecordsTab = getInt(DEFAULT_RECORDS_TAB_KEY, DEFAULT_RECORDS_TAB)
         _lowStockThreshold = getInt(LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD)
@@ -285,14 +283,13 @@ class LocalStorage(private val store: KeyValueStore) {
     }
 
     /**
-     * Removes the stored username and password
+     * Removes the stored username
      */
     suspend fun clearCredentials() {
         store.delete(USERNAME_KEY)
         store.delete(PASSWORD_KEY)
 
         _username = ""
-        _password = ""
     }
 
     companion object {

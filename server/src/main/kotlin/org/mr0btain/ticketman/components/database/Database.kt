@@ -153,7 +153,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
 
 
     /**
-     * Updates a note's text, images and whether the customer sees it. Images left off are marked deleted and their files go with a later sweep
+     * Updates a note's text, images and whether the customer sees it, never who wrote it. Images left off are marked deleted and their files go with a later sweep
      * @param note Note data
      * @return Whether the note was found
      */
@@ -162,7 +162,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
             val noteEntity = findOwnNote(note.identifier)
                 ?: return@dbWrite false.also { AppLogger.i(UPDATE_NOTE_TAG, NoteError.NOT_FOUND) }
 
-            noteEntity.author = note.author
+            // Whoever wrote it stays, whatever was sent
             noteEntity.message = note.message
             noteEntity.customerVisible = note.customerVisible
             noteEntity.images = SizedCollection(linkImages(note.images, noteEntity.images.toList()))

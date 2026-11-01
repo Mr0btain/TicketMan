@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
+import org.mr0btain.ticketman.components.network.isConflict
 import org.mr0btain.ticketman.components.data.FormMemory
 import org.mr0btain.ticketman.data.location.Location
 import org.mr0btain.ticketman.error.getOrNull
@@ -244,7 +245,11 @@ class CounterHandler(
                     refreshQueue()
                 }
 
-                is TmResult.Error -> support.notify(result.error.message)
+                is TmResult.Error -> {
+                    support.notify(result.error.message)
+                    // Someone saved it since, so show what they did. A press of the button can then go through
+                    if (result.error.isConflict) reloadTicket()
+                }
             }
         }
     }

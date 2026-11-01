@@ -22,13 +22,13 @@ object InvoiceMath {
      * The discount comes off the taxable lines first, then tax is charged on what's left of them. Lines are taxed
      * at their class's rate from [taxRates], or [taxRateBasisPoints] when they have no class or one that isn't
      * there; when there's more than one rate the discount is shared between them by how much each is charged on.
-     * A discount can't take the total below zero
+     * A discount can't take the total below zero, or come off a gift card line, which puts that much money on a card
      */
     fun totals(charges: List<Charge>, discountCents: Long, taxRateBasisPoints: Int, taxRates: List<TaxRate> = emptyList()): Totals {
         val subtotal = charges.sumOf { it.totalCents }
         val taxableLines = charges.filter { it.taxable }
         val taxable = taxableLines.sumOf { it.totalCents }
-        val discount = discountCents.coerceIn(0, subtotal)
+        val discount = discountCents.coerceIn(0, subtotal - charges.filter { it.type == ChargeType.GIFT_CARD }.sumOf { it.totalCents })
 
         // The main rate's group first, then the classes in the shop's order
         val groups = taxableLines

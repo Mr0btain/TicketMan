@@ -179,6 +179,13 @@ class RefundTest {
         assertEquals(HttpStatusCode.OK, postJson("/api/invoice/${invoice.identifier}/void", "", adminToken).status)
         assertEquals(10, stock(cable))
 
-        assertEquals(HttpStatusCode.Conflict, refund(invoice, RefundRequest(PaymentMethod.CASH, 100, "After void")).status)
+        // The money it still holds can go back, but its parts already did
+        val parts = RefundRequest(PaymentMethod.CASH, 0, "After void", listOf(ReturnedPart(cable.identifier, 1)))
+        assertEquals(HttpStatusCode.BadRequest, refund(invoice, parts).status)
+        assertEquals(10, stock(cable))
+
+        assertEquals(HttpStatusCode.OK, refund(invoice, RefundRequest(PaymentMethod.CASH, 2_000, "After void")).status)
+        val nothingLeft = refund(invoice, RefundRequest(PaymentMethod.CASH, 100, "Again"))
+        assertEquals(HttpStatusCode.Conflict, nothingLeft.status)
     }
 }

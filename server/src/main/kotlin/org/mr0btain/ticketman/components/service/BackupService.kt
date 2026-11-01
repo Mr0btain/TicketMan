@@ -50,6 +50,10 @@ import kotlin.uuid.Uuid
  * @param backupsFolder Where finished archives wait to be downloaded
  * @param schedule The daily backup, off when its folder is blank
  * @param auditLog Where scheduled backups are logged
+ *
+ * Refresh tokens are only kept hashed and saved keys sealed under the server's secret, which isn't in the archive, so
+ * it holds nothing that logs in or reaches the shop's accounts. It does hold customers' details and photos, so archives
+ * are only readable by the account running the server
  */
 @OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
@@ -59,7 +63,9 @@ class BackupService(
     private val imageStore: ImageStore,
     private val backupsFolder: File,
     private val schedule: BackupSchedule = BackupSchedule(),
-    private val auditLog: AuditLogDatabase? = null
+    private val auditLog: AuditLogDatabase? = null,
+    /** From [ServerSecret.check], written in each backup */
+    private val secretCheck: String? = null
 ) {
     private val TAG = "BackupService"
     private val PREPARE_TAG = "$TAG:Prepare"
@@ -186,10 +192,15 @@ class BackupService(
                 createdAt = now,
                 includesImages = includeImages,
                 imageCount = imageFiles.map { it.first.substringBeforeLast('/') }.distinct().size,
-                imageBytes = imageFiles.sumOf { it.second.length() }
+                imageBytes = imageFiles.sumOf { it.second.length() },
+                secretCheck = secretCheck
             )
 
             val digest = MessageDigest.getInstance("SHA-256")
+
+            // Before anything goes in it
+            archive.createNewFile()
+            archive.ownerOnly()
 
             ZipOutputStream(BufferedOutputStream(DigestOutputStream(archive.outputStream(), digest), BUFFER_BYTES)).use { zip ->
                 zip.setLevel(Deflater.BEST_SPEED)
@@ -296,6 +307,13 @@ class BackupService(
                 }
             }
         }
+
+    private fun File.ownerOnly() {
+        setReadable(false, false)
+        setReadable(true, true)
+        setWritable(false, false)
+        setWritable(true, true)
+    }
 
     private fun ZipOutputStream.addFile(name: String, file: File) {
         putNextEntry(ZipEntry(name).apply { time = file.lastModified() })

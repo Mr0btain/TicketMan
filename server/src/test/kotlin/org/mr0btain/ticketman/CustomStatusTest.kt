@@ -145,7 +145,7 @@ class CustomStatusTest {
 
         // Moving between two custom statuses, or back to a plain one, is a change too
         assertEquals(HttpStatusCode.Accepted, update(added.copy(status = qualityCheck.choice.toStatus())).status)
-        assertEquals(HttpStatusCode.Accepted, update(added.copy(status = TicketStatus(TicketStatusType.IN_PROGRESS))).status)
+        assertEquals(HttpStatusCode.Accepted, update(added.copy(status = TicketStatus(TicketStatusType.IN_PROGRESS), revision = 1)).status)
 
         assertEquals(
             listOf(awaitingParts.choice, qualityCheck.choice, StatusChoice(TicketStatusType.IN_PROGRESS)),

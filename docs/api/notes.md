@@ -14,7 +14,7 @@ only. How notes are stored and checked is in [Database layer](../server/database
 | `POST <prefix>/update/note/{note id}` | `Note`, whose `identifier` matches the path | **`202`** saved. **`400`** the ids don't match. **`404`** no such note on this record type |
 | `DELETE <prefix>/remove/note/{note id}` | - | **`202`** deleted. **`404`** no such note on this record type |
 
-- **Adding** signs the note with the caller's username when `author` is blank.
+- **Adding** signs the note with the caller's username, whatever `author` says. Updating never changes it.
 - **Update and remove take the note's id**, not the record's, so the server checks the note is on this record type
   (`noteLinkColumn`) before touching it. A ticket's note can't be changed through the customer routes.
 - **Photos** go in the note's `images`, uploaded first with [`POST /api/image/upload`](image.md). Saving the note

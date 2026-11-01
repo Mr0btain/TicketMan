@@ -86,8 +86,8 @@ fun AdminInvoicesTab(
     voiding?.let { invoice ->
         TmConfirmDialog(
             title = "Void ${invoice.label}?",
-            message = if (invoice.status == InvoiceStatus.PAID) "Its parts go back into stock. The ticket stays picked up and the money isn't refunded automatically."
-                else "It can't be used again.",
+            message = if (invoice.status == InvoiceStatus.PAID) "Its parts go back into stock. The ticket stays picked up and the money isn't refunded automatically, refund it after."
+                else "It stays on file and can't be used again. If its ticket is still open, the ticket gets a new invoice.",
             confirmText = "Void invoice",
             destructive = true,
             onConfirm = {
@@ -217,7 +217,7 @@ internal fun InvoiceList(
                                     5 -> TmMoneyText(invoice.balanceCents, color = if (invoice.balanceCents > 0) colors.danger.color else colors.text)
                                     6 -> TmButton(text = "View", onClick = { onPreview(invoice) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                                     7 -> Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                                        if (invoice.status == InvoiceStatus.PAID) {
+                                        if (invoice.canRefund) {
                                             TmButton(text = "Refund", onClick = { onRefund(invoice) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                                         }
                                         if (invoice.status != InvoiceStatus.VOID) {
@@ -314,7 +314,7 @@ private fun CompactInvoiceRow(
                             action(invoice)
                         }
                         TmMenuItem(text = "View, print or save", leadingIcon = Res.drawable.file_text, onClick = { pick(onPreview) })
-                        if (invoice.status == InvoiceStatus.PAID) TmMenuItem(text = "Refund", leadingIcon = Res.drawable.rotate_ccw, onClick = { pick(onRefund) })
+                        if (invoice.canRefund) TmMenuItem(text = "Refund", leadingIcon = Res.drawable.rotate_ccw, onClick = { pick(onRefund) })
                         if (invoice.status != InvoiceStatus.VOID) TmMenuItem(text = "Void", leadingIcon = Res.drawable.x_circle, onClick = { pick(onVoid) })
                         if (invoice.ticketRemoved) TmMenuItem(text = "Delete", leadingIcon = Res.drawable.trash_2, onClick = { pick(onDelete) })
                     }

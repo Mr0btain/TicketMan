@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman
 
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
+import org.mr0btain.ticketman.components.service.UserService
 import com.auth0.jwt.JWT
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -153,9 +157,20 @@ class SessionTest {
         val second = json.decodeFromString<RefreshTokenResponse>(response.bodyAsText()).refreshToken!!
         assertNotEquals(first, second)
 
-        // The old one is no good now, so a copy of it stops working once the real device refreshes
+        // A reply lost on the way back can be asked for again for a moment, which gets a new token
+        val again = refresh(first)
+        assertEquals(HttpStatusCode.Accepted, again.status)
+        val third = json.decodeFromString<RefreshTokenResponse>(again.bodyAsText()).refreshToken!!
+        assertEquals(HttpStatusCode.Unauthorized, refresh(second).status, "The one it missed is gone")
+
+        // After that it's no good, so a copy of it stops working once the real device refreshes
+        transaction {
+            TokenTable.update(where = { TokenTable.sessionId eq sessionOf(first) }) { row ->
+                row[rotatedAt] = System.currentTimeMillis() - UserService.REFRESH_GRACE.inWholeMilliseconds - 1
+            }
+        }
         assertEquals(HttpStatusCode.Unauthorized, refresh(first).status)
-        assertEquals(HttpStatusCode.Accepted, refresh(second).status)
+        assertEquals(HttpStatusCode.Accepted, refresh(third).status)
 
         // Refreshing doesn't stretch the session, the new token runs out when the first one would have
         assertEquals(JWT.decode(first).expiresAt, JWT.decode(second).expiresAt)
@@ -193,7 +208,11 @@ class SessionTest {
         val sessionId = sessionOf(desk.accessToken!!)
 
         transaction {
-            TokenTable.update({ TokenTable.sessionId eq sessionId }) { it[expiresAt] = 0 }
+            // As one of those was kept, with the token itself rather than its hash
+            TokenTable.update({ TokenTable.sessionId eq sessionId }) {
+                it[expiresAt] = 0
+                it[token] = desk.refreshToken!!
+            }
         }
         TokenDatabase().backfillExpiry()
 

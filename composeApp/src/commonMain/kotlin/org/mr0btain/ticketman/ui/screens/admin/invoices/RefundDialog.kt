@@ -8,6 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.invoice.ReturnedPart
 import org.mr0btain.ticketman.server.request.RefundRequest
@@ -45,8 +46,16 @@ fun RefundDialog(
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // Each part sold with how many can still come back
-    val sold = invoice.partsSold
+    // Card payments through the processor with some left to give back, newest first. A card refund goes back onto one
+    // of them unless it's marked as done by hand, like one already made on the processor's own site
+    val onCards = invoice.payments.filter { it.processor != null && !it.isRefund && invoice.refundableCents(it) > 0 }.reversed()
+    var ontoChoice by remember { mutableStateOf(onCards.firstOrNull()) }
+    val onto = ontoChoice?.takeIf { method == PaymentMethod.CARD }
+    val cardLabels = onCards.associateWith { "${it.processor?.label} ${formatMoney(invoice.refundableCents(it))}" }
+
+    // Each part sold with how many can still come back. Voiding put a void invoice's back already
+    val isVoid = invoice.status == InvoiceStatus.VOID
+    val sold = if (isVoid) emptyMap() else invoice.partsSold
     val returned = invoice.returnedParts
     val returnable = sold.mapNotNull { (item, count) ->
         val left = count - (returned[item] ?: 0)
@@ -58,6 +67,7 @@ fun RefundDialog(
     val problem = when {
         reason.isBlank() -> "Give a reason"
         amountCents > invoice.netPaidCents -> "Only ${formatMoney(invoice.netPaidCents)} was paid"
+        onto != null && amountCents > invoice.refundableCents(onto) -> "Only ${formatMoney(invoice.refundableCents(onto))} of that card payment is left"
         amountCents == 0L && returns.isEmpty() -> "Refund an amount or return a part"
         returnable.any { (item, _, left) -> returning[item]?.let { text -> text.isNotBlank() && (text.toIntOrNull()?.let { it in 0..left } != true) } == true } ->
             "Return a whole number of each part, up to how many are left"
@@ -66,7 +76,7 @@ fun RefundDialog(
 
     TmDialog(
         title = "Refund ${invoice.label}",
-        description = "Money goes back to the customer and returned parts go back in stock. The invoice stays paid.",
+        description = if (isVoid) "Money goes back to the customer. The invoice stays void." else "Money goes back to the customer and returned parts go back in stock. The invoice stays paid.",
         onDismissRequest = onDismissRequest,
         actions = {
             TmButtonRow(
@@ -78,7 +88,7 @@ fun RefundDialog(
                 onConfirm = {
                     busy = true
                     error = null
-                    onRefund(RefundRequest(method, amountCents, reason.trim(), returns, reference = if (method == PaymentMethod.GIFT_CARD) cardCode.trim() else "")) { failed ->
+                    onRefund(RefundRequest(method, amountCents, reason.trim(), returns, reference = if (method == PaymentMethod.GIFT_CARD) cardCode.trim() else "", paymentIdentifier = onto?.identifier?.takeIf { amountCents > 0 })) { failed ->
                         busy = false
                         error = failed
                         if (failed == null) onDismissRequest()
@@ -92,6 +102,15 @@ fun RefundDialog(
             if (invoice.refundedCents > 0) TmKeyValueRow(label = "Already refunded") { TmMoneyText(invoice.refundedCents) }
         }
 
+        // Past what was paid for everything else, a refund comes off the cards it sold
+        if (!isVoid && invoice.giftCardCents > 0) {
+            val rest = (invoice.paidCents - invoice.giftCardCents - invoice.refundedCents).coerceAtLeast(0)
+            TmNotice(
+                text = if (rest > 0) "Past ${formatMoney(rest)}, this takes the money off the gift cards this invoice sold." else "This takes the money off the gift cards this invoice sold.",
+                kind = TmNoticeKind.INFO
+            )
+        }
+
         TmMoneyField(label = "Refund", cents = amountCents, onCentsChange = { amountCents = it })
 
         TmSegmented(
@@ -102,6 +121,16 @@ fun RefundDialog(
             onSelect = { method = it },
             optionLabel = { formatEnumName(it.name) }
         )
+
+        if (method == PaymentMethod.CARD && onCards.isNotEmpty()) {
+            TmSegmented(
+                label = "Back onto",
+                options = onCards + null,
+                selected = ontoChoice,
+                onSelect = { ontoChoice = it },
+                optionLabel = { payment -> cardLabels[payment] ?: "Done by hand" }
+            )
+        }
 
         if (method == PaymentMethod.GIFT_CARD) {
             TmTextField(

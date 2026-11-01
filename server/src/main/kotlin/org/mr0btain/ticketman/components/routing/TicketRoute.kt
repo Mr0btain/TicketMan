@@ -279,10 +279,7 @@ fun Route.ticketRoute(
                 }
             }
 
-            if (!database.update(received)) {
-                call.respond(HttpStatusCode.InternalServerError)
-                return@post
-            }
+            if (!call.answerIfNotSaved(database.save(received), "ticket")) return@post
 
             if (existing.status.choice != received.status.choice) {
                 database.recordStatusChange(received.identifier, received.status, call.username(userDatabase))
@@ -295,6 +292,14 @@ fun Route.ticketRoute(
 
         delete(RecordPaths.REMOVE) {
             val identifier = call.uuidParameter("identifier")
+
+            // Its record of a finished repair or money taken isn't Normal staff's to remove
+            val found = identifier?.let { database.getById(it) }
+            val caller = call.getIdentifierFromToken()?.let { userDatabase.getById(it) }
+            if (found != null && invoiceService.deletingNeedsAdmin(found) && caller?.canAccess(AccessLevel.ADMIN) != true) {
+                call.respondText("Only an admin can delete a ticket that's been picked up or has money on it", status = HttpStatusCode.Forbidden)
+                return@delete
+            }
 
             // Looked at first, the delete decides whether the invoice stays
             val kept = identifier?.let { invoiceService.invoiceFor(it) }?.takeIf { it.outlivesTicket }

@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.components.database
 
+import java.security.MessageDigest
 import com.auth0.jwt.JWT
+import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -45,9 +47,15 @@ class TokenDatabase() {
 
     fun findByToken(refreshToken: String): StoredSession? {
         return dbQuery(FIND_BY_TOKEN_TAG) {
-            TokenTable.selectAll().where { TokenTable.token eq refreshToken }.firstOrNull()?.toSession()
+            TokenTable.selectAll().where { TokenTable.token eq hashed(refreshToken) }.firstOrNull()?.toSession()
         }
     }
+
+    /** The session whose refresh token replaced [refreshToken] at [since] or later */
+    fun findRotatedFrom(refreshToken: String, since: Long): StoredSession? =
+        dbQuery(FIND_BY_TOKEN_TAG) {
+            TokenTable.selectAll().where { (TokenTable.previousToken eq hashed(refreshToken)) and (TokenTable.rotatedAt greaterEq since) }.firstOrNull()?.toSession()
+        }
 
     /**
      * Saves a new session. A device that logs in again replaces its old session for that user. Logins with no
@@ -64,7 +72,7 @@ class TokenDatabase() {
 
             TokenTable.insert { row ->
                 row[identifier] = session.userIdentifier
-                row[token] = session.token
+                row[token] = hashed(session.token)
                 row[sessionId] = session.sessionId
                 row[deviceId] = session.deviceId
                 row[deviceName] = session.deviceName
@@ -97,13 +105,35 @@ class TokenDatabase() {
      */
     fun rotate(sessionId: String, oldToken: String, newToken: String): Boolean {
         return dbQuery(ROTATE_TAG) {
-            val swapped = TokenTable.update(where = { (TokenTable.sessionId eq sessionId) and (TokenTable.token eq oldToken) }) { row ->
-                row[token] = newToken
-                row[lastUsedAt] = Clock.System.now().toEpochMilliseconds()
+            val swapped = TokenTable.update(where = { (TokenTable.sessionId eq sessionId) and (TokenTable.token eq hashed(oldToken)) }) { row ->
+                val now = Clock.System.now().toEpochMilliseconds()
+                row[token] = hashed(newToken)
+                row[previousToken] = hashed(oldToken)
+                row[rotatedAt] = now
+                row[lastUsedAt] = now
             } > 0
 
             swapped
         } ?: false
+    }
+
+    /**
+     * Gives a session a new refresh token without moving the one it can be asked for from, or how long that lasts. For
+     * a token just swapped being asked again, when its reply was lost
+     */
+    fun replaceCurrent(sessionId: String, newToken: String): Boolean =
+        dbQuery(ROTATE_TAG) {
+            TokenTable.update(where = { TokenTable.sessionId eq sessionId }) { row -> row[token] = hashed(newToken) } > 0
+        } ?: false
+
+    /** Hashes the tokens of sessions saved before only hashes were kept. Run once, inside a transaction */
+    fun hashStoredTokens() {
+        TokenTable.selectAll().map { Triple(it[TokenTable.id], it[TokenTable.token], it[TokenTable.previousToken]) }.forEach { (id, token, previous) ->
+            TokenTable.update(where = { TokenTable.id eq id }) { row ->
+                row[TokenTable.token] = hashed(token)
+                row[previousToken] = previous?.let { hashed(it) }
+            }
+        }
     }
 
     /** Takes a session's idle limit off, for when an admin leaves kiosk mode and keeps using the device */
@@ -241,6 +271,10 @@ class TokenDatabase() {
         )
 
     companion object {
+        // Refresh tokens are long and random, so a plain hash is all that's needed to make a stored one useless
+        private fun hashed(token: String): String =
+            MessageDigest.getInstance("SHA-256").digest(token.toByteArray()).joinToString("") { "%02x".format(it) }
+
         /** Sessions kept per user for logins that sent no device id */
         const val MAX_UNNAMED_SESSIONS = 10
 

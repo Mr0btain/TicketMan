@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
+import org.mr0btain.ticketman.server.request.ChangePasswordRequest
 import org.mr0btain.ticketman.server.request.ApproveRequest
 import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.SetPinRequest
@@ -70,6 +71,21 @@ fun Route.userRoute(
             }
 
             call.respondAccount(accountService.completeSetup(identifier, call.receive<AccountSetupRequest>()))
+        }
+
+        // Your own password, also how someone an admin set one for gets past having to choose their own
+        post(UserPaths.ME_PASSWORD) {
+            val identifier = call.getIdentifierFromToken() ?: return@post call.respond(HttpStatusCode.Unauthorized)
+            val request = call.receive<ChangePasswordRequest>()
+
+            if (accountService.passwordChecksLimited(identifier)) {
+                call.respondText(TOO_MANY_WRONG_PASSWORDS, status = HttpStatusCode.TooManyRequests)
+                return@post
+            }
+
+            val result = accountService.changeOwnPassword(identifier, request)
+            if (result is AccountResult.Done) tokenDatabase.removeAllForUser(identifier.toString(), keepSessionId = call.getSessionIdFromToken())
+            call.respondAccount(result)
         }
 
         get(UserPaths.ME) {
@@ -137,6 +153,11 @@ fun Route.userRoute(
 
             if (identifier == null) {
                 call.respond(HttpStatusCode.Unauthorized)
+                return@post
+            }
+
+            if (accountService.passwordChecksLimited(identifier)) {
+                call.respondText(TOO_MANY_WRONG_PASSWORDS, status = HttpStatusCode.TooManyRequests)
                 return@post
             }
 
@@ -301,8 +322,9 @@ fun Route.userRoute(
                     call.respond(HttpStatusCode.BadRequest, "That location isn't one of the shop's")
                 }
 
-                // Users made by an admin are ready to go, working where the admin is unless they said
-                !database.add(user.copy(status = UserStatus.ACTIVE, homeLocation = user.homeLocation ?: call.workingLocation().identifier)) -> {
+                // Users made by an admin are ready to go once they choose a password the admin doesn't know, working
+                // where the admin is unless they said
+                !database.add(user.copy(status = UserStatus.ACTIVE, mustChangePassword = true, homeLocation = user.homeLocation ?: call.workingLocation().identifier)) -> {
                     call.respond(HttpStatusCode.InternalServerError, "The user couldn't be saved")
                 }
 
@@ -391,7 +413,8 @@ fun Route.userRoute(
         }
     }
 
-    // Reset a password, which also logs that user out everywhere
+    // Reset someone else's password, which also logs them out everywhere. They choose their own at their next login.
+    // Your own goes through ME_PASSWORD, so a borrowed admin session can't take over the account
     authenticate("admin") {
         post(UserPaths.PASSWORD) {
             val identifier = call.uuidParameter("identifier")
@@ -400,15 +423,18 @@ fun Route.userRoute(
             when {
                 identifier == null -> call.respond(HttpStatusCode.BadRequest)
 
+                identifier == call.getIdentifierFromToken() -> {
+                    call.respond(HttpStatusCode.Conflict, "Change your own password from Settings, it needs the one you have")
+                }
+
                 PasswordRules.problem(request.password) != null -> {
                     call.respond(HttpStatusCode.BadRequest, PasswordRules.problem(request.password)!!)
                 }
 
-                !database.updatePassword(identifier, request.password) -> call.respond(HttpStatusCode.NotFound)
+                !database.updatePassword(identifier, request.password, mustChange = true) -> call.respond(HttpStatusCode.NotFound)
 
                 else -> {
-                    // Log them out everywhere, except the session making the change if they changed their own
-                    tokenDatabase.removeAllForUser(identifier.toString(), keepSessionId = call.getSessionIdFromToken())
+                    tokenDatabase.removeAllForUser(identifier.toString())
 
                     call.audit(auditLog, AuditAction.PASSWORD_RESET, ENTITY_TYPE, identifier)
                     call.respond(HttpStatusCode.Accepted)
@@ -449,6 +475,8 @@ fun Route.userRoute(
     // Staff notes, like training or schedule. Only admins can see or write them
     noteRoute(database, database, auditLog, ENTITY_TYPE, readAuth = "admin", writeAuth = "admin")
 }
+
+private const val TOO_MANY_WRONG_PASSWORDS = "Too many wrong passwords, try again in a few minutes"
 
 /**
  * Sends back an account action's result. Reified so the body has a real type to serialize, Unit sends no body

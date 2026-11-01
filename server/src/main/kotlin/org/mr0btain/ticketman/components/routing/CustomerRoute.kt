@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.user.AccessLevel
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -195,10 +197,7 @@ fun Route.customerRoute(
                 return@post
             }
 
-            if (!database.update(received)) {
-                call.respond(HttpStatusCode.InternalServerError)
-                return@post
-            }
+            if (!call.answerIfNotSaved(database.save(received), "customer")) return@post
 
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Accepted)
@@ -212,6 +211,24 @@ fun Route.customerRoute(
             if (credit > 0) {
                 call.respondText("They still have store credit, take it off first", status = HttpStatusCode.Conflict)
                 return@delete
+            }
+
+            if (identifier != null && database.getById(identifier) != null) {
+                val tickets = counterDatabase.customerTickets(identifier).map { it.ticket }
+                val openTickets = tickets.count { it.status.status != TicketStatusType.PICKED_UP }
+
+                // The ticket would be left with nobody to hand it back to
+                if (openTickets > 0) {
+                    call.respondText("They still have $openTickets open ticket${if (openTickets == 1) "" else "s"}, finish or move ${if (openTickets == 1) "it" else "them"} first", status = HttpStatusCode.Conflict)
+                    return@delete
+                }
+
+                // Normal staff can clear up a customer made by mistake, not one with a history
+                val hasHistory = tickets.isNotEmpty() || invoiceDatabase.getByCustomer(identifier, 1).orEmpty().isNotEmpty()
+                if (hasHistory && call.getIdentifierFromToken()?.let { userDatabase.getById(it) }?.canAccess(AccessLevel.ADMIN) != true) {
+                    call.respondText("Only an admin can delete a customer with tickets or invoices", status = HttpStatusCode.Forbidden)
+                    return@delete
+                }
             }
 
             if (identifier == null || !database.remove(identifier)) {

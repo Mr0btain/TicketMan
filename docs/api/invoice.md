@@ -1,7 +1,7 @@
 # Invoices API
 
 `/api/invoice`, from [`InvoiceRoute.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/InvoiceRoute.kt).
-One invoice per ticket, plus counter sales, which have no ticket (`ticketIdentifier` null; made by
+One live invoice per ticket (a ticket still open gets a new one after its last was voided), plus counter sales, which have no ticket (`ticketIdentifier` null; made by
 [`POST /api/counter/sale`](counter.md#post-apicountersale)). Anyone logged in can look; Normal access changes an open invoice; only admins void, and
 delete one kept after its ticket was deleted. An invoice with money taken against it, or a void one, outlives its
 ticket: `ticketLabel` keeps the ticket's number and `ticketRemovedAt` says when it went.
@@ -130,13 +130,14 @@ Takes a payment, like a deposit, without closing anything.
 
 ### `DELETE /api/invoice/{identifier}/payments/{paymentIdentifier}`
 
-**Auth:** normal
+**Auth:** normal, admin for a payment taken through the [card processor](payment.md)
 
 Takes a payment back off, for one entered by mistake. Store credit or a gift card gets back what it paid. One taken
 through the [card processor](payment.md) is refunded onto its card first (what's left of it), then taken off with
 its charge marked `REFUNDED`.
 
-- **`200`** the updated `Invoice`. **`404`** no such invoice or payment. **`409`** the invoice is paid or void, it's
+- **`200`** the updated `Invoice`. **`403`** it went through the processor and the caller isn't an admin. **`404`** no
+  such invoice or payment. **`409`** the invoice is paid or void, it's
   a refund, or the processor didn't refund it (the payment stays).
 
 ### `POST /api/invoice/{identifier}/void`
@@ -144,19 +145,21 @@ its charge marked `REFUNDED`.
 **Auth:** admin
 
 Cancels an invoice. A paid one puts its parts back in stock, less any a refund already put back, and takes back
-the gift cards it loaded. The ticket keeps its status; a picked up ticket stays
-picked up.
+the gift cards it loaded; the money it took stays on it until it's [refunded](#post-apiinvoiceidentifierrefund). The
+ticket keeps its status; a picked up ticket stays picked up, and an open one gets a new invoice the next time
+`POST /api/invoice/ticket/{ticketIdentifier}` or a pickup needs one.
 
-- **`200`** the void `Invoice`. **`404`** no such invoice. **`409`** already void, or a gift card it sold has been
-  spent from (refund instead).
+- **`200`** the void `Invoice`. **`404`** no such invoice. **`409`** already void, an open invoice holding payments
+  (take them off first), or a gift card it sold has been spent from (refund instead).
 
 ### `POST /api/invoice/{identifier}/refund`
 
 **Auth:** admin
 
-Gives money back on a paid invoice, and puts returned parts back in stock, in one transaction. The refund is saved
+Gives money back on a paid invoice, or a void one still holding money, and puts returned parts back in stock (not on a
+void one, voiding already did), in one transaction. The refund is saved
 as a payment with a negative `amountCents`, the reason as its `note` and the parts as its `returns`; the invoice
-stays paid. `paidCents` leaves refunds out, `refundedCents` adds them up and `netPaidCents` is the difference.
+keeps its status. `paidCents` leaves refunds out, `refundedCents` adds them up and `netPaidCents` is the difference.
 Audited as `REFUND`.
 
 - **Body:** `RefundRequest { method, amountCents, reason, returns, reference, paymentIdentifier }`. `amountCents` is positive, or zero
@@ -171,7 +174,10 @@ Audited as `REFUND`.
   paid on INV-...`), store credit on an invoice with no customer, a part the invoice didn't sell, or more of one than it sold less what was already returned
   (`Only 1 of Cable can be returned on INV-...`), a `paymentIdentifier` that isn't a processor card payment on this
   invoice, or more than is left of it. **`404`** no such invoice. **`409`** the invoice is open (take the payment off
-  instead) or void, or the processor refused the refund (nothing is saved).
+  instead), void with nothing left to refund, another card refund is going through on it, a gift card it sold has been
+  spent so that much can't come back, or the processor refused the refund (nothing is saved).
+
+Once a refund is past what was paid for everything else on the invoice, the rest comes off the gift cards it sold.
 
 ### `DELETE /api/invoice/{identifier}`
 

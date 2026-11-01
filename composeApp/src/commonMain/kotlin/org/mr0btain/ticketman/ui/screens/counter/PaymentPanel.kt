@@ -42,6 +42,7 @@ import ticketman.composeapp.generated.resources.x
  * pickup and counter sales
  * @param taken Payments already saved on the invoice, like a deposit
  * @param onRemoveTaken Takes one of [taken] off, null when they can't be
+ * @param canRemoveTaken Whether this one of [taken] can be taken off, like one that would refund a card
  * @param pending Payments taken now, sent with [onFinish]
  * @param problem Shown over the buttons, like what went wrong saving
  * @param creditCents The customer's store credit, offered as a way to pay when there's some. Null with no customer
@@ -67,6 +68,7 @@ fun PaymentPanel(
     busy: Boolean,
     onFinish: () -> Unit,
     modifier: Modifier = Modifier,
+    canRemoveTaken: (Payment) -> Boolean = { true },
     creditCents: Long? = null,
     onLookupGiftCard: (suspend (String) -> GiftCard?)? = null,
     readers: List<CardReader> = emptyList(),
@@ -113,7 +115,7 @@ fun PaymentPanel(
                             payment.surchargeCents.takeIf { it != 0L }?.let { "${formatMoney(it)} surcharge" },
                             formatDateTime(payment.receivedAt)
                         ).joinToString(", "),
-                        onRemove = onRemoveTaken?.let { { it(payment) } }
+                        onRemove = onRemoveTaken?.takeIf { canRemoveTaken(payment) }?.let { { it(payment) } }
                     )
                 }
 

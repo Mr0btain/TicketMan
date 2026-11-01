@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.components.service.AccountingExport
 import org.mr0btain.ticketman.components.service.InvoiceDocuments
 import org.mr0btain.ticketman.data.invoice.ExportFormat
 import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.logging.AppLogger
 import java.time.LocalDate
 import org.mr0btain.ticketman.components.service.InvoiceService
@@ -22,7 +23,7 @@ import org.mr0btain.ticketman.server.request.RefundRequest
 
 /**
  * Invoice routes. Anyone logged in can look, NORMAL and up can change open invoices, only admins can void, refund
- * and export
+ * (taking a card payment off included) and export
  */
 fun Route.invoiceRoute(
     database: InvoiceDatabase,
@@ -128,7 +129,15 @@ fun Route.invoiceRoute(
                 return@delete
             }
 
-            call.respondAccount(service.removePayment(identifier, payment, call.getIdentifierFromToken()), HttpStatusCode.OK)
+            // Taking off one that went through the processor sends the money back to the card, which is a refund
+            val caller = call.getIdentifierFromToken()
+            val onCard = database.getById(identifier)?.payments?.firstOrNull { it.identifier == payment }?.processor != null
+            if (onCard && caller?.let { userDatabase.getById(it) }?.canAccess(AccessLevel.ADMIN) != true) {
+                call.respondText("Only an admin can take a card payment off, since it refunds the card", status = HttpStatusCode.Forbidden)
+                return@delete
+            }
+
+            call.respondAccount(service.removePayment(identifier, payment, caller), HttpStatusCode.OK)
         }
     }
 

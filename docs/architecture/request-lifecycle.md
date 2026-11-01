@@ -93,9 +93,8 @@ It has:
 - **JSON**: kotlinx.serialization with `ignoreUnknownKeys`, so a newer server can add fields without breaking older
   clients.
 
-If refreshing fails, `refreshTokens()` falls back to logging in with the saved username and password (unless
-`credentialFallback` is off, as it is on a kiosk). If that fails too it clears the session and emits
-`authExpired`, which brings up the login dialog.
+If the server turns the refresh token down, `refreshTokens()` clears the session and emits `authExpired`, which brings
+up the login dialog. Any other failure, like not reaching it, only fails that request.
 
 ## On the server
 

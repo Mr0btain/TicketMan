@@ -83,6 +83,13 @@ it, and new work belongs to it; without it the server uses the caller's home loc
   characters, not JSON) as the error's reason and shows it; anything else falls back to the status code's message.
 - Photo uploads are multipart and restore uploads are a raw zip; see [Photos](image.md) and [Admin](admin.md).
 
+## Revisions
+
+Tickets, customers and inventory items come with a `revision`, which goes up each time the server saves one. Send it
+back with `/update`: if someone saved the record since, the answer is `409` and nothing changes, so a save from an old
+copy can't undo what they did. Read it again and redo the change. Leaving it out (null) skips the check, which is what
+older clients do.
+
 ## Status codes
 
 The routes mostly use these:
@@ -98,7 +105,7 @@ The routes mostly use these:
 | `403 Forbidden` | Logged in, but not allowed: the access level is too low. Also an unknown or unapproved station, and seeding outside development mode |
 | `404 Not Found` | No such record, or an id in the path that isn't a UUID |
 | `409 Conflict` | The change clashes with the current state: a taken username, a picked up ticket, stock that changed |
-| `413`, `415`, `423`, `429`, `507` | Too big an upload, a photo type that can't be read, a locked PIN, too many tries, no disk space |
+| `413`, `415`, `423`, `429`, `507` | Too big a body (64 KB on routes that need no login, 1 MB for a webhook, 32 MB for an import, 5 MB otherwise; photos and restores have their own limits) or upload, a photo type that can't be read, a locked PIN, too many tries, no disk space |
 | `500 Internal Server Error` | The write didn't happen, a read failed (a list route answers this rather than an empty list), or the route threw. The body is just `Something went wrong on the server`; the exception is in the server's log |
 
 Routes that go through a service answer with `respondAccount` (in `UserRoute.kt`): `Done` → the route's success

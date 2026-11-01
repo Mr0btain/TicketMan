@@ -5,6 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.cors.routing.*
 import org.mr0btain.ticketman.server.API_VERSION_HEADER
 import org.mr0btain.ticketman.server.APP_VERSION_HEADER
+import org.mr0btain.ticketman.server.LOCATION_HEADER
 
 /**
  * Lets the web client's dev server (`wasmJsBrowserDevelopmentRun`, on its own port) call this server. Only in
@@ -24,6 +25,7 @@ fun Application.configureCors(hosts: String) {
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
         allowHeader(APP_VERSION_HEADER)
+        allowHeader(LOCATION_HEADER)
         allowNonSimpleContentTypes = true
 
         // Downloads read their file name from it

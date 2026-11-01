@@ -35,6 +35,7 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var abandonedAt by TicketTable.abandonedAt
     var numberPrefix by TicketTable.numberPrefix
     var location by TicketTable.location
+    val revision by TicketTable.revision
 
     // For notes
     var notes by NoteEntity via TicketNoteTable
@@ -60,7 +61,8 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             warrantyUntil = warrantyUntil,
             warrantyOf = warrantyOf,
             abandonedAt = abandonedAt,
-            locationIdentifier = location
+            locationIdentifier = location,
+            revision = revision
         )
     }
 }

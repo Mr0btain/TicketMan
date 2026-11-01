@@ -23,8 +23,11 @@ data class ProxySettings(
     }
 
     companion object {
-        /** Loopback and the private ranges, which covers any Docker network with nothing set */
-        val DEFAULT_TRUSTED = listOf("127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7")
+        /**
+         * This machine only. Trusting the private ranges by default would let any device on a shop's network say it's
+         * someone else whenever it can reach the server directly, and so dodge the login limits
+         */
+        val DEFAULT_TRUSTED = listOf("127.0.0.1", "::1")
 
         /** `TRUSTED_PROXIES=none`, for a server devices reach directly, so nobody can say they're someone else */
         const val NONE = "none"

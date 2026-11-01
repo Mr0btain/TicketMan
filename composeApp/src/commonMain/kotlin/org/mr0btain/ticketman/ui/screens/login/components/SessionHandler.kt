@@ -71,6 +71,11 @@ class SessionHandler(
     private val _accountSetup: MutableStateFlow<AccountSetup?> = MutableStateFlow(null)
     val accountSetup = _accountSetup.asStateFlow()
 
+    /** The logged in user has to choose their own password before doing anything else */
+    val mustChangePassword: StateFlow<Boolean> = _currentUser
+        .map { user -> user?.mustChangePassword == true }
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
     // Whether the server at the current url could be reached
     private val _serverConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val serverConnected = _serverConnected.asStateFlow()
@@ -133,7 +138,7 @@ class SessionHandler(
     private val _station: MutableStateFlow<Station?> = MutableStateFlow(null)
     val station = _station.asStateFlow()
 
-    /** Username saved from the last login, blank unless remember login is on */
+    /** Username saved from the last login, blank unless staying logged in is on */
     val savedUsername: String
         get() = localStorage.username
 
@@ -248,7 +253,7 @@ class SessionHandler(
         if (user?.needsSetup == true) _accountSetup.value = AccountSetup.Approved(user)
     }
 
-    /** Logs in with the given credentials. Credentials are only saved if remember login is on */
+    /** Logs in with the given username and password. Only the username is ever saved */
     fun login(user: String, pass: String) {
         if (user.isBlank() || pass.isBlank()) {
             _loginState.value = LoginState.FAILED
@@ -376,6 +381,27 @@ class SessionHandler(
         _accountSetup.value = null
 
         if (setup is AccountSetup.Approved) logout()
+    }
+
+    /**
+     * Changes your own password. Your other devices are logged out. When it was the one you had to change, everything
+     * that was waiting for that loads now
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun changePassword(currentPassword: String, newPassword: String, onResult: (String?) -> Unit) {
+        val required = mustChangePassword.value
+
+        scope.launch {
+            when (val result = remoteHandler.userRepo.changeOwnPassword(currentPassword, newPassword)) {
+                is TmResult.Success -> {
+                    reloadCurrentUser()
+                    if (required) onLoggedIn()
+                    onResult(null)
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
     }
 
     /**

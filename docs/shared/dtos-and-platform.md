@@ -20,6 +20,7 @@ it can't disagree on the shape.
 | `AccountSetupRequest` | `/api/user/setup` | First login setup for an approved request: details, password, PIN |
 | `InviteSetupRequest` | `/api/auth/setup/invite` | First login for an invite: the setup code, details, password, PIN |
 | `PasswordResetRequest` | `/api/user/password/{id}` (admin) | A new password |
+| `ChangePasswordRequest` | `/api/user/me/password` | Your current and new password |
 | `PinLoginRequest`, `SetPinRequest` | `/api/auth/pin`, `/api/user/me/pin` | PIN login with station credentials; setting your own PIN |
 | `StationRegistrationRequest` | `/api/station/register` | Device id and a name |
 | `CheckInRequest` | `/api/counter/check-in` | Ticket, customer, tech, deposit and signature, saved together |

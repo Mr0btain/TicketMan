@@ -7,6 +7,7 @@ import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.plus
 import org.jetbrains.exposed.v1.core.castTo
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
@@ -168,18 +169,19 @@ class TicketDatabase(
      * still be told apart. An open one with nothing paid goes with the ticket. Inside the ticket's delete
      */
     private fun keepOrDeleteInvoice(ticketIdentifier: Uuid, ticketLabel: String) {
-        val invoice = InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.firstOrNull() ?: return
-        val invoiceIdentifier = invoice[InvoiceTable.id]
-        val paid = !InvoicePaymentTable.selectAll().where { InvoicePaymentTable.invoice eq invoiceIdentifier }.empty()
+        InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.toList().forEach { invoice ->
+            val invoiceIdentifier = invoice[InvoiceTable.id]
+            val paid = !InvoicePaymentTable.selectAll().where { InvoicePaymentTable.invoice eq invoiceIdentifier }.empty()
 
-        if (paid || invoice[InvoiceTable.status] != InvoiceStatus.OPEN.name) {
-            InvoiceTable.update(where = { InvoiceTable.id eq invoiceIdentifier }) { row ->
-                row[InvoiceTable.ticketLabel] = ticketLabel
-                row[InvoiceTable.ticketRemovedAt] = Clock.System.now().toEpochMilliseconds()
+            if (paid || invoice[InvoiceTable.status] != InvoiceStatus.OPEN.name) {
+                InvoiceTable.update(where = { InvoiceTable.id eq invoiceIdentifier }) { row ->
+                    row[InvoiceTable.ticketLabel] = ticketLabel
+                    row[InvoiceTable.ticketRemovedAt] = Clock.System.now().toEpochMilliseconds()
+                }
+            } else {
+                // Its lines and payments go with it
+                InvoiceTable.deleteWhere { InvoiceTable.id eq invoiceIdentifier }
             }
-        } else {
-            // Its lines and payments go with it
-            InvoiceTable.deleteWhere { InvoiceTable.id eq invoiceIdentifier }
         }
     }
 
@@ -364,6 +366,7 @@ class TicketDatabase(
     /** @param warrantyUntil When its repair's warranty runs out, null for none */
     fun markPickedUp(identifier: Uuid, time: Long, warrantyUntil: Long? = null): Boolean =
         dbWrite(MARK_PICKED_UP_TAG) {
+            nextRevision(identifier)
             val ticket = TicketEntity.findById(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(MARK_PICKED_UP_TAG, TicketError.NOT_FOUND) }
 
@@ -408,6 +411,7 @@ class TicketDatabase(
     /** Sets the quoted price, like when the customer approves an estimate */
     fun setEstimate(identifier: Uuid, cents: Long?): Boolean =
         dbWrite(SET_ESTIMATE_TAG) {
+            nextRevision(identifier)
             val ticket = TicketEntity.findById(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(SET_ESTIMATE_TAG, TicketError.NOT_FOUND) }
 
@@ -458,10 +462,18 @@ class TicketDatabase(
                 }
         }
 
-    override fun update(data: Ticket): Boolean =
-        dbWrite(UPDATE_TAG) {
-            val item = TicketEntity.findById(data.identifier)
-                ?: return@dbWrite false.also { AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND) }
+    override fun update(data: Ticket): Boolean = save(data) == RecordSave.DONE
+
+    /** Saves [data], unless it has a revision and someone saved the ticket since. Null when it failed */
+    fun save(data: Ticket): RecordSave? =
+        dbQuery(UPDATE_TAG) {
+            if (!nextRevision(data.identifier, data.revision)) {
+                val exists = TicketEntity.findById(data.identifier) != null
+                if (!exists) AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND)
+                return@dbQuery if (exists) RecordSave.CHANGED_SINCE else RecordSave.NOT_FOUND
+            }
+
+            val item = TicketEntity.findById(data.identifier)!!
 
             // Number, status token and pick up time are owned by the server, so they aren't taken from the client. Nor a
             // picked up status: only pickup sets it, and once set it stays, even if the client sent an older status
@@ -479,8 +491,16 @@ class TicketDatabase(
             item.promisedAt = data.promisedAt
             item.checklist = data.checklist
 
-            true
+            RecordSave.DONE
         }
+
+    // Counts a save in one statement, so of two at once only one gets through. Only if it's still at [expected] when
+    // given. Anything the server changes that an update also sends goes through this too. Inside a transaction
+    private fun nextRevision(identifier: Uuid, expected: Long? = null): Boolean =
+        TicketTable.update(where = {
+            val ticket = TicketTable.id eq identifier
+            if (expected != null) ticket and (TicketTable.revision eq expected) else ticket
+        }) { row -> row[revision] = revision + 1 } > 0
 
     override val noteLinkColumn: Column<EntityID<Uuid>> = TicketNoteTable.note
 

@@ -312,6 +312,7 @@ fun CounterScreen(
                         onSearchParts = { counter.pickup.searchParts(it) },
                         onSave = { charges, discount, onResult -> counter.pickup.saveCharges(charges, discount, onResult) },
                         onRemovePayment = { counter.pickup.removePayment(it) },
+                        canRefundCards = isAdmin,
                         onLookupGiftCard = { counter.findGiftCard(it) },
                         onFindCode = { counter.findItem(it) },
                         onFinish = { charges, discount, payments, onResult -> counter.pickup.finish(charges, discount, payments, onResult) },
