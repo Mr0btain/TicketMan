@@ -238,7 +238,7 @@ snap connect ticketman:password-manager-service
 ticketman
 ```
 
-The version comes from the tarball's name. The snap is strictly confined, with the `gnome` extension (X11, GL,
+The version is `ticketman.version` in `gradle.properties`, and the tarball of that version has to be built. The snap is strictly confined, with the `gnome` extension (X11, GL,
 fonts, portals for file dialogs), `network`, `cups` for printing, `home`, and `password-manager-service` for KSafe's
 key in the keyring. That last one isn't connected on install unless the store grants it (ask on the
 [Snapcraft forum](https://forum.snapcraft.io/c/store-requests/19)), so until then users connect it themselves.

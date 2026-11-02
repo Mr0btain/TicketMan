@@ -65,13 +65,15 @@ parts:
         amd64) arch=x64 ;;
         *) arch="$CRAFT_ARCH_BUILD_FOR" ;;
       esac
-      tarball=$(ls TicketMan-Linux-*-"$arch".tar.gz 2>/dev/null | head -n 1)
-      if [ -z "$tarball" ]; then
-        echo "No TicketMan-Linux-*-$arch.tar.gz: run ./gradlew :composeApp:packageTarball on $CRAFT_ARCH_BUILD_FOR first" >&2
+      # By name from this checkout's version: snapcraft's copy of the source folder keeps every tarball it has seen,
+      # so older versions are still lying next to it
+      version=$(sed -n 's/^ticketman\.version=//p' "$CRAFT_PROJECT_DIR/gradle.properties")
+      tarball="TicketMan-Linux-$version-$arch.tar.gz"
+      if [ ! -f "$tarball" ]; then
+        echo "No $tarball: run ./gradlew :composeApp:packageTarball on $CRAFT_ARCH_BUILD_FOR first" >&2
         exit 1
       fi
-      version=${tarball#TicketMan-Linux-}
-      craftctl set version="${version%-$arch.tar.gz}"
+      craftctl set version="$version"
       mkdir -p "$CRAFT_PART_INSTALL/opt"
       tar xzf "$tarball" -C "$CRAFT_PART_INSTALL/opt"
       mv "$CRAFT_PART_INSTALL/opt/TicketMan" "$CRAFT_PART_INSTALL/opt/ticketman"
