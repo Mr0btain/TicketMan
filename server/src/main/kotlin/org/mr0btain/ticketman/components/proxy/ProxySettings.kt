@@ -16,6 +16,21 @@ data class ProxySettings(
     /** Whether forwarded headers are read at all */
     val usesForwardedHeaders: Boolean get() = trusted.isNotEmpty()
 
+    /**
+     * The last address that sent forwarded headers without being trusted, most likely a proxy nobody told us about.
+     * Its devices all count as one for every limit per address, so the admin overview says so until a restart
+     */
+    @Volatile
+    var ignoredProxy: String? = null
+        private set
+
+    /** Notes [address] as [ignoredProxy], true if it's the first since the server started */
+    fun noteIgnored(address: String): Boolean {
+        val first = ignoredProxy == null
+        ignoredProxy = address
+        return first
+    }
+
     /** Whether a request whose connection came from [remoteAddress] may say who the client really is */
     fun trusts(remoteAddress: String): Boolean {
         val address = ipLiteral(remoteAddress) ?: return false

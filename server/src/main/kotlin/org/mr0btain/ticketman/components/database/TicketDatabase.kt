@@ -467,11 +467,7 @@ class TicketDatabase(
     /** Saves [data], unless it has a revision and someone saved the ticket since. Null when it failed */
     fun save(data: Ticket): RecordSave? =
         dbQuery(UPDATE_TAG) {
-            if (!nextRevision(data.identifier, data.revision)) {
-                val exists = TicketEntity.findById(data.identifier) != null
-                if (!exists) AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND)
-                return@dbQuery if (exists) RecordSave.CHANGED_SINCE else RecordSave.NOT_FOUND
-            }
+            TicketTable.saveRefused(data.identifier, TicketTable.revision, data.revision, UPDATE_TAG, TicketError.NOT_FOUND)?.let { return@dbQuery it }
 
             val item = TicketEntity.findById(data.identifier)!!
 
@@ -494,13 +490,8 @@ class TicketDatabase(
             RecordSave.DONE
         }
 
-    // Counts a save in one statement, so of two at once only one gets through. Only if it's still at [expected] when
-    // given. Anything the server changes that an update also sends goes through this too. Inside a transaction
-    private fun nextRevision(identifier: Uuid, expected: Long? = null): Boolean =
-        TicketTable.update(where = {
-            val ticket = TicketTable.id eq identifier
-            if (expected != null) ticket and (TicketTable.revision eq expected) else ticket
-        }) { row -> row[revision] = revision + 1 } > 0
+    // Anything the server changes that an update also sends raises the revision too. Inside a transaction
+    private fun nextRevision(identifier: Uuid): Boolean = TicketTable.nextRevision(identifier, TicketTable.revision)
 
     override val noteLinkColumn: Column<EntityID<Uuid>> = TicketNoteTable.note
 

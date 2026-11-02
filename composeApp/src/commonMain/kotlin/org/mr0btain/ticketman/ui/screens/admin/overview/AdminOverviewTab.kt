@@ -31,6 +31,8 @@ import org.mr0btain.ticketman.ui.kit.data.TmStatTile
 import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.feedback.tone
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.components.label
@@ -78,6 +80,16 @@ fun AdminOverviewTab(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(spacing.md)
     ) {
+        stats.ignoredProxy?.let { address ->
+            TmNotice(
+                kind = TmNoticeKind.WARNING,
+                title = "A proxy may need adding to TRUSTED_PROXIES",
+                text = "$address sent a forwarded address but isn't trusted, so it was ignored. If that's your reverse proxy, every " +
+                    "device behind it counts as one, and a few wrong passwords can lock the whole shop out of logging in. Add it to " +
+                    "TRUSTED_PROXIES and restart the server."
+            )
+        }
+
         // ------------------------------------------ Headline numbers ------------------------------------------
         TileRow {
             TmStatTile(modifier = Modifier.width(TILE_WIDTH), label = "Open tickets", value = stats.openTickets.toString(), icon = Res.drawable.tag, caption = "${stats.totalTickets} total")

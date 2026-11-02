@@ -105,12 +105,15 @@ data class TimeOffDecision(val reason: String = "")
  * Someone's yearly allowance
  * @param carryOverMaxHours Most unused hours that can be brought into the next year. Null when setting leaves it as it is
  * @param floatingHours Floating holidays, extra hours each year. Null when setting leaves it as it is
+ * @param carryOverFromYear The first year whose unused hours carry, the one the cap was set in. Kept by the server,
+ * what's sent is ignored
  */
 @Serializable
 data class TimeOffAllowance(
     val hours: Double,
     val carryOverMaxHours: Double? = null,
-    val floatingHours: Double? = null
+    val floatingHours: Double? = null,
+    val carryOverFromYear: Int? = null
 )
 
 object TimeOffRules {
@@ -126,15 +129,17 @@ object TimeOffRules {
     /**
      * Hours brought into [year]. Each year's time off comes out of what was carried in and floating holidays first,
      * since those would go or are capped, so what's left of the allowance is what carries, up to the cap. Unused
-     * floating holidays and carried hours don't carry again
+     * floating holidays and carried hours don't carry again. Years before [TimeOffAllowance.carryOverFromYear] don't
+     * count: with nothing taken in them, someone new would otherwise start with the whole cap
      * @param taken Hours of time off in a year
      */
     fun carriedOver(year: Int, allowance: TimeOffAllowance, taken: (Int) -> Double): Double {
         val cap = allowance.carryOverMaxHours ?: 0.0
         if (cap <= 0) return 0.0
+        val from = allowance.carryOverFromYear ?: return 0.0
 
         var carried = 0.0
-        for (past in (year - CARRY_OVER_YEARS) until year) {
+        for (past in maxOf(from, year - CARRY_OVER_YEARS) until year) {
             val fromAllowance = (taken(past) - carried - (allowance.floatingHours ?: 0.0)).coerceAtLeast(0.0)
             carried = (allowance.hours - fromAllowance).coerceIn(0.0, cap)
         }

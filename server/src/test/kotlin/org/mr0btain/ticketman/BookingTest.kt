@@ -5,6 +5,10 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.AppointmentDatabase
 import org.mr0btain.ticketman.components.database.ScheduleDatabase
@@ -102,6 +106,21 @@ class BookingTest {
         // Off that day takes their shift away
         ScheduleDatabase().add(listOf(ScheduleEntry(userIdentifier = clerk.identifier, kind = ScheduleKind.TIME_OFF, allDay = true, startsAt = at(0), endsAt = at(0, day = tomorrow.plusDays(1)))))
         assertEquals(listOf("09:00", "09:30", "10:30"), times(page()))
+    }
+
+    @Test
+    fun bookingsSentTogetherStopAtTheLimit() = testApplication {
+        setup()
+        ScheduleDatabase().add(listOf(shift(tech, 9, 17)))
+
+        // More free times than the limit, so only the limit can stop them
+        coroutineScope {
+            (0 until BookingService.BOOKINGS_PER_ADDRESS + 5).map { n ->
+                async(Dispatchers.Default) { book(at(9 + n / 2, n % 2 * 30)) }
+            }.awaitAll()
+        }
+
+        assertEquals(BookingService.BOOKINGS_PER_ADDRESS, AppointmentDatabase().between(at(0), at(23)).orEmpty().size)
     }
 
     @Test

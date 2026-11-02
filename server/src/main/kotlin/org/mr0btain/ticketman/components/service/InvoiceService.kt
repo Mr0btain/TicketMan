@@ -89,8 +89,8 @@ class InvoiceService(
         if (invoice.status != InvoiceStatus.OPEN || invoice.storageWaived) return invoice
         val terms = shop.get().storage
         val days = Storage.feeDays(ticket, terms, Clock.System.now().toEpochMilliseconds())
-        val line = Storage.lineIdentifier(ticket.identifier)
-        val existing = invoice.charges.firstOrNull { it.identifier == line }
+        val existing = invoice.charges.firstOrNull { Storage.isLine(it.identifier, invoice.identifier, ticket.identifier) }
+        val line = existing?.identifier ?: Storage.lineIdentifier(invoice.identifier)
 
         val charges = when {
             days == 0 && existing == null -> return invoice
@@ -124,7 +124,7 @@ class InvoiceService(
 
         // Taking the storage line off waives it, so it isn't put back
         invoice.ticketIdentifier?.let { ticket ->
-            if (request.removed.any { it.identifier == Storage.lineIdentifier(ticket) }) invoices.setStorageWaived(identifier)
+            if (request.removed.any { Storage.isLine(it.identifier, identifier, ticket) }) invoices.setStorageWaived(identifier)
         }
 
         val saved = invoices.setCharges(identifier, charges, discount, invoice.taxRateBasisPoints, rates)

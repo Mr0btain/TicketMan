@@ -11,7 +11,8 @@ backup and restore, test data and the audit log. Everything is admin only except
 **Auth:** admin
 
 The overview's numbers: ticket counts by status and priority, customers, users by access, low stock, active
-sessions, the oldest open ticket and recent tickets.
+sessions, the oldest open ticket and recent tickets. `ignoredProxy` is the last address that sent `X-Forwarded-For`
+without being in `TRUSTED_PROXIES` since the server started, null if none, shown as a warning on the overview.
 
 - **Query:** `lowStock` (threshold, default 5), `recent` (how many recent tickets, default 10, at most 200).
 - **`200`** `AdminStatsResponse`. **`500`** if it couldn't be built.

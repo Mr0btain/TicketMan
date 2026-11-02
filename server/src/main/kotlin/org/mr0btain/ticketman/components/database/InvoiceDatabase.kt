@@ -80,7 +80,8 @@ class InvoiceDatabase(
     fun <T> whileNumbering(block: () -> T): T = synchronized(NUMBER_LOCK, block)
 
     /**
-     * The ticket's invoice, made empty and OPEN at the ticket's location if it has none yet or only void ones
+     * The ticket's invoice, made empty and OPEN at the ticket's location if it has none yet or only void ones. A storage
+     * fee waived on one of those stays waived on the new one
      */
     fun getOrCreate(ticketIdentifier: Uuid, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate> = emptyList()): Invoice? =
         // Numbers are handed out one at a time like ticket numbers
@@ -91,7 +92,8 @@ class InvoiceDatabase(
                 }
 
                 val location = TicketTable.select(TicketTable.location).where { TicketTable.id eq ticketIdentifier }.firstOrNull()?.get(TicketTable.location)
-                insert(ticketIdentifier, customerIdentifier, taxRateBasisPoints, taxRates, location)
+                val waived = !InvoiceTable.selectAll().where { (InvoiceTable.ticket eq ticketIdentifier) and (InvoiceTable.storageWaived eq true) }.empty()
+                insert(ticketIdentifier, customerIdentifier, taxRateBasisPoints, taxRates, location, waived)
             }
         }
 
@@ -102,7 +104,7 @@ class InvoiceDatabase(
         }
 
     // Must be called inside a transaction, holding the numbering lock. Numbered at its location
-    private fun insert(ticketIdentifier: Uuid?, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate>, location: Uuid?): Invoice {
+    private fun insert(ticketIdentifier: Uuid?, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate>, location: Uuid?, storageWaived: Boolean = false): Invoice {
         val year = currentYear()
         val prefix = numberPrefix(location)
         val max = InvoiceTable.numberSequence.max()
@@ -120,6 +122,7 @@ class InvoiceDatabase(
             row[InvoiceTable.status] = InvoiceStatus.OPEN.name
             row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
             row[InvoiceTable.taxRates] = taxRates
+            row[InvoiceTable.storageWaived] = storageWaived
             row[InvoiceTable.createdAt] = Clock.System.now().toEpochMilliseconds()
         }
 

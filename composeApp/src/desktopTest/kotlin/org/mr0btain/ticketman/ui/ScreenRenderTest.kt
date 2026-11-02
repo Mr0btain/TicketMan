@@ -1025,6 +1025,19 @@ class ScreenRenderTest {
     }
 
     @Test
+    fun adminOverviewIgnoredProxy() = screen("admin-overview-ignored-proxy", rail = "Admin") {
+        AdminOverviewTab(
+            stats = AdminStatsResponse(totalTickets = 214, openTickets = 18, ignoredProxy = "172.18.0.3"),
+            dailyReport = null,
+            defaultPaper = PaperSize.RECEIPT_80MM,
+            onMoveReport = {},
+            onPrintReport = { _, _ -> },
+            onTicketClick = {},
+            onLowStockClick = {}
+        )
+    }
+
+    @Test
     fun adminReports() = screen("admin-reports", height = 1300, rail = "Admin") {
         AdminReportsTab(
             report = PeriodReport(

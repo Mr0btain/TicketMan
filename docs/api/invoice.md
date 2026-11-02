@@ -11,9 +11,9 @@ Totals are always worked out by the server with `InvoiceMath`, the tax rate the 
 See [Counter: check-in, invoices and pickup](../server/counter.md#invoices) for the rules.
 
 Opening a ticket's invoice (`POST /api/invoice/ticket/{id}`) and picking it up bring its storage fee up to date: one
-untaxed `OTHER` line, `Storage, 2 days`, whose id is made from the ticket's (`Storage.lineIdentifier`), a day's fee
+untaxed `OTHER` line, `Storage, 2 days`, whose id is made from the invoice's (`Storage.lineIdentifier`), a day's fee
 for each day the ticket has been ready past the shop's free days. Taking that line off in an update waives it for
-good (`storageWaived`).
+good (`storageWaived`), including on an invoice that replaces this one after a void.
 
 All the changing routes run under `InvoiceService`'s lock, one change at a time.
 

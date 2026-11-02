@@ -260,6 +260,7 @@ class LocalDatabase (
         runOnce("stock-per-location") { inventoryDatabase.moveStockTo(main.identifier) }
         assignMainLocation(main.identifier)
         removeDetachedNotes()
+        timeOffDatabase.fillCarryOverFrom(java.time.Year.now().value)
     }
 
     /**

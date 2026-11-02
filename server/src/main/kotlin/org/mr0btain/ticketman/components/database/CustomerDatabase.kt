@@ -155,17 +155,7 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
     /** Saves [data], unless it has a revision and someone saved the customer since. Null when it failed */
     fun save(data: Customer): RecordSave? =
         dbQuery(UPDATE_TAG) {
-            // In one statement, so of two saves at once only one gets through
-            val counted = CustomerTable.update(where = {
-                val customer = CustomerTable.id eq data.identifier
-                if (data.revision != null) customer and (CustomerTable.revision eq data.revision!!) else customer
-            }) { row -> row[CustomerTable.revision] = CustomerTable.revision + 1 } > 0
-
-            if (!counted) {
-                val exists = CustomerEntity.findById(data.identifier) != null
-                if (!exists) AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND)
-                return@dbQuery if (exists) RecordSave.CHANGED_SINCE else RecordSave.NOT_FOUND
-            }
+            CustomerTable.saveRefused(data.identifier, CustomerTable.revision, data.revision, UPDATE_TAG, CustomerError.NOT_FOUND)?.let { return@dbQuery it }
 
             val customerEntity = CustomerEntity.findById(data.identifier)!!
 

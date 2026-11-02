@@ -44,6 +44,15 @@ class RequestLimiter(
         attempts.getOrPut(key) { mutableListOf() }.add(now())
     }
 
+    /** Takes back one attempt, for callers that count before they know whether it should count */
+    @Synchronized
+    fun forgive(key: String) {
+        val recent = attempts[key] ?: return
+
+        recent.removeLastOrNull()
+        if (recent.isEmpty()) attempts.remove(key)
+    }
+
     private fun prune() {
         val since = since()
 

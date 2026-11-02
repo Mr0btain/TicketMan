@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.LoginRequest
+import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import java.time.ZoneId
@@ -217,5 +218,40 @@ class ProxyTest {
         } finally {
             cleanupTestDataDir(dataDir)
         }
+    }
+
+    @Test
+    fun aProxyNotInTheListShowsOnTheOverview() = testApplication {
+        val dataDir = createTestDataDir()
+
+        try {
+            configureTestServer(dataDir, extraConfig = mapOf("env.trustedProxies" to "172.20.0.2"))
+            startApplication()
+            val admin = User(username = "boss", password = "boss_pass", accessLevel = AccessLevel.ADMIN)
+            UserDatabase().add(admin)
+            val json = Json { ignoreUnknownKeys = true }
+            val token = json.decodeFromString<AuthResponse>(client.post("/api/auth") {
+                contentType(ContentType.Application.Json)
+                setBody(json.encodeToString(LoginRequest(admin.username, admin.password)))
+            }.bodyAsText()).accessToken!!
+
+            suspend fun ignored() = json.decodeFromString<AdminStatsResponse>(client.get("/api/admin/stats") { bearerAuth(token) }.bodyAsText()).ignoredProxy
+
+            assertNull(ignored())
+            requestFrom("203.0.113.1", 1)
+            assertNotNull(ignored())
+        } finally {
+            cleanupTestDataDir(dataDir)
+        }
+    }
+
+    @Test
+    fun onlyTheFirstIgnoredProxyIsLogged() {
+        val settings = ProxySettings.from(config())
+
+        assertNull(settings.ignoredProxy)
+        assertTrue(settings.noteIgnored("172.18.0.3"), "the first is logged")
+        assertFalse(settings.noteIgnored("172.18.0.4"), "only the first")
+        assertEquals("172.18.0.4", settings.ignoredProxy)
     }
 }

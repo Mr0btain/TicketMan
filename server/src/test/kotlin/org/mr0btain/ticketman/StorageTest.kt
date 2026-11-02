@@ -94,7 +94,7 @@ class StorageTest {
         val ticket = readyFor(5)
         val invoice = open(ticket)
         val line = invoice.charges.single()
-        assertEquals(Storage.lineIdentifier(ticket.identifier), line.identifier)
+        assertEquals(Storage.lineIdentifier(invoice.identifier), line.identifier)
         assertEquals("Storage, 2 days", line.description)
         assertEquals(400, invoice.totalCents)
         assertFalse(line.taxable)
@@ -115,6 +115,59 @@ class StorageTest {
         val waived = post("/api/invoice/${invoice.identifier}/update", json.encodeToString(InvoiceChanges.between(invoice.charges, 0, emptyList(), 0)))
         assertTrue(json.decodeFromString<Invoice>(waived.bodyAsText()).storageWaived)
         assertTrue(open(ticket).charges.isEmpty(), "it isn't put back")
+    }
+
+    @Test
+    fun aWaivedFeeStaysWaivedAfterAVoid() = testApplication {
+        setup()
+        val ticket = readyFor(10)
+        val invoice = open(ticket)
+        post("/api/invoice/${invoice.identifier}/update", json.encodeToString(InvoiceChanges.between(invoice.charges, 0, emptyList(), 0)))
+
+        // Through more than one replacement
+        var last = invoice
+        repeat(2) {
+            assertEquals(HttpStatusCode.OK, post("/api/invoice/${last.identifier}/void", "", adminToken).status)
+            val replacement = open(ticket)
+            assertNotEquals(last.identifier, replacement.identifier)
+            assertTrue(replacement.storageWaived)
+            assertTrue(replacement.charges.isEmpty(), "it isn't put back")
+            last = replacement
+        }
+    }
+
+    @Test
+    fun theInvoiceReplacingAVoidOneStillChargesTheFee() = testApplication {
+        setup()
+        val ticket = readyFor(5)
+        val voided = open(ticket)
+        assertEquals(HttpStatusCode.OK, post("/api/invoice/${voided.identifier}/void", "", adminToken).status)
+
+        val replacement = open(ticket)
+        assertNotEquals(voided.identifier, replacement.identifier)
+        assertEquals("Storage, 2 days", replacement.charges.single().description)
+        assertEquals(400, replacement.totalCents)
+
+        // The void one keeps its line
+        assertEquals(1, InvoiceDatabase().getById(voided.identifier)!!.charges.size)
+    }
+
+    @Test
+    fun aLineFromBeforeEachInvoiceHadItsOwnIdIsStillTheStorageLine() = testApplication {
+        setup()
+        val ticket = readyFor(5)
+        val invoice = open(ticket)
+
+        // What a line saved by an older version looks like: its id comes from the ticket's the way the invoice's does now
+        val old = Storage.lineIdentifier(ticket.identifier)
+        val line = invoice.charges.single().copy(identifier = old)
+        InvoiceDatabase().setCharges(invoice.identifier, listOf(line), 0, invoice.taxRateBasisPoints)
+
+        assertEquals(old, open(ticket).charges.single().identifier, "it isn't added again")
+
+        val reopened = open(ticket)
+        val waived = post("/api/invoice/${invoice.identifier}/update", json.encodeToString(InvoiceChanges.between(reopened.charges, 0, emptyList(), 0)))
+        assertTrue(json.decodeFromString<Invoice>(waived.bodyAsText()).storageWaived)
     }
 
     @Test

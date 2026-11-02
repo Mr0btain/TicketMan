@@ -50,13 +50,17 @@ class AccountService(
     // Wrong passwords from someone already logged in, per user: a borrowed session shouldn't get to keep guessing
     private val wrongPasswords = RequestLimiter(MAX_WRONG_PASSWORDS, 15.minutes)
 
-    /** Whether [identifier] has guessed wrong too often to have their password checked for now */
-    fun passwordChecksLimited(identifier: Uuid): Boolean = wrongPasswords.isLimited(identifier.toString())
+    /**
+     * Counts a try at [identifier]'s password, false when they've guessed wrong too often for it to be checked for now.
+     * Counted before the slow check, so guesses sent together don't all get through; a right one is taken back after
+     */
+    fun startPasswordCheck(identifier: Uuid): Boolean = wrongPasswords.tryAcquire(identifier.toString())
 
     private fun passwordIsRight(user: User, password: String): Boolean =
         PasswordHasher.verify(password, user.password).also { right ->
-            if (!right) {
-                wrongPasswords.record(user.identifier.toString())
+            if (right) {
+                wrongPasswords.forgive(user.identifier.toString())
+            } else {
                 auditLog.log(user.identifier, AuditAction.LOGIN_FAILED, "user", user.identifier.toString(), "Wrong password confirming a change")
             }
         }

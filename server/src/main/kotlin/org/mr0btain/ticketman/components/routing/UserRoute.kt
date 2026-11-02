@@ -78,7 +78,7 @@ fun Route.userRoute(
             val identifier = call.getIdentifierFromToken() ?: return@post call.respond(HttpStatusCode.Unauthorized)
             val request = call.receive<ChangePasswordRequest>()
 
-            if (accountService.passwordChecksLimited(identifier)) {
+            if (!accountService.startPasswordCheck(identifier)) {
                 call.respondText(TOO_MANY_WRONG_PASSWORDS, status = HttpStatusCode.TooManyRequests)
                 return@post
             }
@@ -156,12 +156,14 @@ fun Route.userRoute(
                 return@post
             }
 
-            if (accountService.passwordChecksLimited(identifier)) {
+            val request = call.receive<SetPinRequest>()
+
+            if (!accountService.startPasswordCheck(identifier)) {
                 call.respondText(TOO_MANY_WRONG_PASSWORDS, status = HttpStatusCode.TooManyRequests)
                 return@post
             }
 
-            call.respondAccount(accountService.setOwnPin(identifier, call.receive<SetPinRequest>()))
+            call.respondAccount(accountService.setOwnPin(identifier, request))
         }
     }
 

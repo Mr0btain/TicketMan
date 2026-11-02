@@ -6,6 +6,8 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.less
@@ -46,19 +48,37 @@ class TimeOffDatabase {
         } ?: NO_ALLOWANCE
 
     private fun ResultRow.toAllowance() =
-        TimeOffAllowance(this[TimeOffAllowanceTable.hours], this[TimeOffAllowanceTable.carryOverMax], this[TimeOffAllowanceTable.floating])
+        TimeOffAllowance(this[TimeOffAllowanceTable.hours], this[TimeOffAllowanceTable.carryOverMax], this[TimeOffAllowanceTable.floating], this[TimeOffAllowanceTable.carryOverFrom])
 
-    /** Sets someone's allowance. A null carry over or floating holidays leaves what's saved */
-    fun setAllowance(user: Uuid, allowance: TimeOffAllowance): Boolean =
+    /**
+     * Sets someone's allowance. A null carry over or floating holidays leaves what's saved. Turning carry over on
+     * makes [thisYear] the first year that carries, and it stays while there's a cap
+     */
+    fun setAllowance(user: Uuid, allowance: TimeOffAllowance, thisYear: Int): Boolean =
         dbWrite(WRITE_TAG) {
+            val saved = TimeOffAllowanceTable.selectAll().where { TimeOffAllowanceTable.user eq user }.firstOrNull()
+            val cap = allowance.carryOverMaxHours ?: saved?.get(TimeOffAllowanceTable.carryOverMax) ?: 0.0
+            val from = if (cap > 0) saved?.get(TimeOffAllowanceTable.carryOverFrom) ?: thisYear else null
+
             TimeOffAllowanceTable.upsert { row ->
                 row[TimeOffAllowanceTable.user] = user
                 row[hours] = allowance.hours
                 allowance.carryOverMaxHours?.let { row[carryOverMax] = it }
                 allowance.floatingHours?.let { row[floating] = it }
+                row[carryOverFrom] = from
             }
             true
         }
+
+    /** Caps saved before the first year that carries was kept start from [thisYear], rather than never carrying */
+    fun fillCarryOverFrom(thisYear: Int) {
+        dbWrite(WRITE_TAG) {
+            TimeOffAllowanceTable.update(where = { (TimeOffAllowanceTable.carryOverMax greater 0.0) and TimeOffAllowanceTable.carryOverFrom.isNull() }) { row ->
+                row[carryOverFrom] = thisYear
+            }
+            true
+        }
+    }
 
     /** Hours of time off on the schedule starting from [fromMillis] up to [toMillis], by person */
     fun takenHours(fromMillis: Long, toMillis: Long, users: List<Uuid>? = null): Map<Uuid, Double> =

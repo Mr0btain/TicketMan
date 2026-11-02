@@ -179,6 +179,20 @@ class TimeOffTest {
     }
 
     @Test
+    fun aNewCapBringsNothingFromYearsBeforeIt() = testApplication {
+        setup()
+        post("/api/timeoff/allowance/${tech.identifier}", json.encodeToString(TimeOffAllowance(80.0, carryOverMaxHours = 40.0)), adminToken)
+
+        // Set this year, so nothing's carried into it, whatever the years before look like
+        val now: MyTimeOff = json.decodeFromString(client.get("/api/timeoff/me?year=${year - 1}") { bearerAuth(techToken) }.bodyAsText())
+        assertEquals(0.0, now.balance.carriedOverHours)
+        assertEquals(80.0, now.balance.totalHours)
+
+        // This year's unused hours do carry into next year
+        assertEquals(40.0, mine().balance.carriedOverHours)
+    }
+
+    @Test
     fun unusedHoursCarryOverUpToTheCapAndFloatingHolidaysAddToTheYear() = testApplication {
         setup()
         post("/api/timeoff/allowance/${tech.identifier}", json.encodeToString(TimeOffAllowance(80.0, carryOverMaxHours = 24.0, floatingHours = 8.0)), adminToken)

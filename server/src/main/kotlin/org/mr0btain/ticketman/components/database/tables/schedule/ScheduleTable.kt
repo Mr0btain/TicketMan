@@ -30,6 +30,9 @@ object TimeOffAllowanceTable : org.jetbrains.exposed.v1.core.Table("time_off_all
     val carryOverMax = double("carry_over_max").default(0.0)
     val floating = double("floating").default(0.0)
 
+    /** The year the cap was set in, the first whose unused hours carry. Null with no cap */
+    val carryOverFrom = integer("carry_over_from").nullable()
+
     override val primaryKey = PrimaryKey(user)
 }
 

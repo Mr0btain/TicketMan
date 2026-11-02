@@ -186,7 +186,7 @@ class TimeOffService(
         if (!allowance.hours.isValidHours()) return AccountResult.Invalid("An allowance is 0 to ${TimeOffRules.MAX_ALLOWANCE_HOURS.toInt()} hours a year")
         if (allowance.carryOverMaxHours?.isValidHours() == false) return AccountResult.Invalid("Carry over is 0 to ${TimeOffRules.MAX_ALLOWANCE_HOURS.toInt()} hours")
         if (allowance.floatingHours?.isValidHours() == false) return AccountResult.Invalid("Floating holidays are 0 to ${TimeOffRules.MAX_ALLOWANCE_HOURS.toInt()} hours a year")
-        if (!timeOff.setAllowance(userIdentifier, allowance)) return AccountResult.Invalid("Couldn't save the allowance")
+        if (!timeOff.setAllowance(userIdentifier, allowance, thisYear())) return AccountResult.Invalid("Couldn't save the allowance")
 
         val details = listOfNotNull(
             allowance.carryOverMaxHours?.let { "carrying over up to ${ScheduleRules.hoursText(it)}" },

@@ -8,7 +8,7 @@ Staff ask for time off against a yearly allowance in hours that admins set; admi
 starts over on 1 January. Each person can also have floating holidays (`floatingHours`, extra hours every year that
 never carry over) and a carry over cap (`carryOverMaxHours`, 0 by default): a year's time off comes out of carried and
 floating hours first, and what's left of the allowance comes into the next year as `carriedOverHours`, up to the cap.
-It's worked out from the schedule when asked for, over the last 5 years, using today's allowance. A `TimeOffBalance { allowanceHours, takenHours, pendingHours }`
+It's worked out from the schedule when asked for, over the last 5 years, using today's allowance, and starts with the year the cap was set (`carryOverFromYear`, kept by the server, so a new cap brings nothing from before it). A `TimeOffBalance { allowanceHours, takenHours, pendingHours }`
 for a year counts the time off entries on the schedule starting in it (their `timeOffHours`, so time off an admin
 writes straight onto the schedule counts too) and the requests still waiting; `leftHours` is `totalHours` (allowance, carried over and floating) less both.
 A request counts in the year its first day is in.

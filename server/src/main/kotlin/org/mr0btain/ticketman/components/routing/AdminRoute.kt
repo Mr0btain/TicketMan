@@ -86,7 +86,7 @@ fun Route.adminRoute(
             )
 
             if (result != null) {
-                call.respond(HttpStatusCode.OK, result)
+                call.respond(HttpStatusCode.OK, result.copy(ignoredProxy = adminService.ignoredProxy))
             } else {
                 call.respond(HttpStatusCode.InternalServerError)
                 AppLogger.i(STATS_TAG, "Couldn't build stats")

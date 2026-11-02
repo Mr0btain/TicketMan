@@ -29,6 +29,9 @@ class AdminService(
 ) {
     private val TAG = "AdminService"
 
+    /** See [ProxySettings.ignoredProxy] */
+    val ignoredProxy: String? get() = proxy.ignoredProxy
+
     private val startedAt = Clock.System.now().toEpochMilliseconds()
 
     /** Logged in devices, most recently used first */

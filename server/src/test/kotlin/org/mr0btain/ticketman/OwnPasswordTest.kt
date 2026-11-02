@@ -4,6 +4,10 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -91,6 +95,31 @@ class OwnPasswordTest {
         assertEquals(HttpStatusCode.TooManyRequests, change(token, "tech_pass", "new_password").status)
         val pin = post("/api/user/me/pin", json.encodeToString(SetPinRequest("tech_pass", "246813")), token)
         assertEquals(HttpStatusCode.TooManyRequests, pin.status)
+    }
+
+    @Test
+    fun guessesSentTogetherAreLimitedToo() = testApplication {
+        setup()
+        val token = login("tech", "tech_pass").accessToken!!
+
+        val statuses = coroutineScope {
+            (1..12).map { n -> async(Dispatchers.Default) { change(token, "guess_$n", "new_password").status } }.awaitAll()
+        }
+
+        assertEquals(5, statuses.count { it == HttpStatusCode.BadRequest }, statuses.toString())
+        assertEquals(7, statuses.count { it == HttpStatusCode.TooManyRequests }, statuses.toString())
+    }
+
+    @Test
+    fun theRightPasswordDoesntUseUpTheLimit() = testApplication {
+        setup()
+        val token = login("tech", "tech_pass").accessToken!!
+
+        // Right each time, the new one just isn't allowed
+        repeat(7) { assertEquals(HttpStatusCode.BadRequest, change(token, "tech_pass", "short").status) }
+
+        repeat(4) { assertEquals(HttpStatusCode.BadRequest, change(token, "guess_$it", "new_password").status) }
+        assertEquals(HttpStatusCode.Accepted, change(token, "tech_pass", "new_password").status)
     }
 
     @Test

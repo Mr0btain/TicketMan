@@ -6,7 +6,6 @@ import io.ktor.server.plugins.*
 import io.ktor.util.*
 import org.mr0btain.ticketman.components.proxy.ProxySettings
 import org.mr0btain.ticketman.logging.AppLogger
-import java.util.concurrent.atomic.AtomicBoolean
 
 /** Set on a call whose client address came from a trusted proxy's forwarded headers */
 val ForwardedByProxy = AttributeKey<Boolean>("ForwardedByProxy")
@@ -32,7 +31,7 @@ fun Application.configureProxy(settings: ProxySettings) {
 internal fun ApplicationCall.useForwardedHeaders(settings: ProxySettings) {
     if (!settings.trusts(request.local.remoteAddress)) {
         // Most likely a proxy nobody told us about, whose devices then all count as one for the login limits
-        if (request.headers["X-Forwarded-For"] != null && warnedUntrusted.compareAndSet(false, true)) {
+        if (request.headers["X-Forwarded-For"] != null && settings.noteIgnored(request.local.remoteAddress)) {
             AppLogger.i("SERVER:Proxy", "${request.local.remoteAddress} sent X-Forwarded-For but isn't in TRUSTED_PROXIES, so it's ignored. If that's your proxy, add it")
         }
         return
@@ -46,7 +45,5 @@ internal fun ApplicationCall.useForwardedHeaders(settings: ProxySettings) {
     request.headers["X-Forwarded-Proto"].lastValue()?.lowercase()?.let { origin.scheme = it }
     attributes.put(ForwardedByProxy, true)
 }
-
-private val warnedUntrusted = AtomicBoolean(false)
 
 private fun String?.lastValue(): String? = this?.split(',')?.map { it.trim() }?.lastOrNull { it.isNotEmpty() }

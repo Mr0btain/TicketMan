@@ -53,9 +53,15 @@ object Storage {
         readySince(ticket)?.takeIf { terms.chargesFee }?.let { it + terms.feeAfterDays * DAY_MILLIS }
 
     /**
-     * The storage line's id on a ticket's invoice, made from the ticket's so syncing it again finds the same line
+     * The storage line's id on an invoice, made from the invoice's so syncing it again finds the same line. A line's id
+     * is unique across all invoices and a void invoice keeps its lines, so the one replacing it can't use the same id
      */
-    fun lineIdentifier(ticket: Uuid): Uuid = ticket.toLongs { most, least -> Uuid.fromLongs(most xor LINE_SALT, least) }
+    fun lineIdentifier(invoice: Uuid): Uuid = salted(invoice)
+
+    /** Whether [charge] is the storage line on [invoice]. Lines from before each invoice had its own id used the ticket's */
+    fun isLine(charge: Uuid, invoice: Uuid, ticket: Uuid): Boolean = charge == lineIdentifier(invoice) || charge == salted(ticket)
+
+    private fun salted(identifier: Uuid): Uuid = identifier.toLongs { most, least -> Uuid.fromLongs(most xor LINE_SALT, least) }
 
     /** The terms in words, for the claim slip and the status page. Null when there are none */
     fun termsText(terms: StorageTerms, currencySymbol: String): String? {

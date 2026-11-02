@@ -4,7 +4,21 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class TimeOffRulesTest {
-    private fun carried(allowance: TimeOffAllowance, taken: (Int) -> Double = { 0.0 }) = TimeOffRules.carriedOver(2026, allowance, taken)
+    // Carrying over since long enough ago that the start year doesn't matter, unless it says
+    private fun carried(allowance: TimeOffAllowance, taken: (Int) -> Double = { 0.0 }) =
+        TimeOffRules.carriedOver(2026, if (allowance.carryOverFromYear == null) allowance.copy(carryOverFromYear = 2000) else allowance, taken)
+
+    @Test
+    fun nothingCarriesFromBeforeTheCapWasSet() {
+        // Set this year: no year has ended under it, so a new hire starts with none of the cap
+        assertEquals(0.0, carried(TimeOffAllowance(80.0, carryOverMaxHours = 40.0, carryOverFromYear = 2026)))
+        // Set next year, for a year being looked at from before then
+        assertEquals(0.0, carried(TimeOffAllowance(80.0, carryOverMaxHours = 40.0, carryOverFromYear = 2027)))
+        // Set last year: only what's unused from it carries
+        assertEquals(10.0, carried(TimeOffAllowance(80.0, carryOverMaxHours = 40.0, carryOverFromYear = 2025)) { if (it == 2025) 70.0 else 0.0 })
+        // No start year saved carries nothing
+        assertEquals(0.0, TimeOffRules.carriedOver(2026, TimeOffAllowance(80.0, carryOverMaxHours = 40.0)) { 0.0 })
+    }
 
     @Test
     fun noCapStartsOverEachYear() {

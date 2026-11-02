@@ -12,7 +12,7 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 | Setting | Env var | Default | What it does |
 |---------|---------|---------|--------------|
 | `ktor.deployment.port` | `PORT` | `8080` | Port for plain HTTP, on all interfaces. for HTTPS, see [HTTPS](#https) |
-| `env.trustedProxies` | `TRUSTED_PROXIES` | this machine | Addresses and CIDR ranges whose `X-Forwarded-For` is believed, comma separated. ex: example.com. Blank means loopback and the private ranges, `none` ignores the header |
+| `env.trustedProxies` | `TRUSTED_PROXIES` | this machine | Addresses and CIDR ranges whose `X-Forwarded-For` is believed, comma separated. Blank means this machine only, `none` ignores the header |
 | `cors.hosts` | `CORS_HOSTS` | blank | Development mode only: hosts allowed to call the server from a browser, like `localhost:8080`. Blank allows any |
 | `jwt.secret` | `SECRET` | blank | Signs every access and refresh token. Blank means the server makes one and keeps it |
 | `jwt.audience` | - | `my-audience` | Put in tokens and checked on every request |
@@ -59,8 +59,10 @@ and `X-Forwarded-Proto` for the scheme. From any other address the headers are i
 
 Left blank it's this machine only (`127.0.0.1`, `::1`). A proxy anywhere else has to be named, like
 `TRUSTED_PROXIES=172.20.0.2` or a range, which [`docker/docker-compose.yml`](../docker/docker-compose.yml) does for its
-own network. Until it is, its devices all count as one for the login limits, the admin Server tab shows requests as not
-forwarded, and the log says so once. Trusting every private range would let any device on the shop's network that can
+own network. Until it is, its devices all count as one for every limit per address, so a few wrong passwords or one bot
+can lock the whole shop out. The admin Overview shows a warning naming the address, the Server tab shows requests as not
+forwarded, and the log says so once. **Upgrading from before 1.0:** the blank default used to include the private
+ranges, so a proxy on another machine or Docker network now has to be added. Trusting every private range would let any device on the shop's network that can
 reach the server directly pick its own address. Entries that aren't an address or range are logged and ignored. Names
 aren't looked up.
 

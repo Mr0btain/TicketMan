@@ -27,5 +27,7 @@ data class AdminStatsResponse(
     val usersByAccessLevel: Map<AccessLevel, Long> = emptyMap(),
     val pendingUsers: Long = 0,
     val deactivatedUsers: Long = 0,
-    val activeSessions: Long = 0
+    val activeSessions: Long = 0,
+    /** An address that sent `X-Forwarded-For` but isn't in `TRUSTED_PROXIES`, most likely a proxy that needs adding */
+    val ignoredProxy: String? = null
 )

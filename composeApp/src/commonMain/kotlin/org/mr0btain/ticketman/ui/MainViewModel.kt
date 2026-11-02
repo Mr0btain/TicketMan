@@ -70,6 +70,7 @@ class MainViewModel(
             settings.load()
             tickets.load()
             _selectedRecordsTab.value = localStorage.defaultRecordsTab
+            _selectedAdminTab.value = localStorage.defaultAdminTab
 
             // Set url in all our handlers and log in with any stored credentials. With nothing saved, the web
             // client tries the server it was loaded from (a desktop debug build, a development server on this

@@ -105,6 +105,9 @@ class BookingService(
 
         val minutes = shop.get().booking.minutes
         return synchronized(LOCK) {
+            // Again now it's this one's turn, since bookings are only counted once made, or a burst would all pass the first check
+            if (bookingsByAddress.isLimited(address)) return@synchronized Booked.Limited
+
             // Still free, with the latest bookings
             val free = choices.days.any { startsAt in it.times } &&
                 startsAt in openTimes(choices.location, startsAt, startsAt + 1, minutes)

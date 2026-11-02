@@ -280,17 +280,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
      */
     fun save(data: Inventory, location: Uuid?): RecordSave? =
         dbQuery(UPDATE_TAG) {
-            // In one statement, so of two saves at once only one gets through
-            val counted = InventoryTable.update(where = {
-                val item = InventoryTable.id eq data.identifier
-                if (data.revision != null) item and (InventoryTable.revision eq data.revision!!) else item
-            }) { row -> row[InventoryTable.revision] = InventoryTable.revision + 1 } > 0
-
-            if (!counted) {
-                val exists = InventoryEntity.findById(data.identifier) != null
-                if (!exists) AppLogger.i(UPDATE_TAG, InventoryError.NOT_FOUND)
-                return@dbQuery if (exists) RecordSave.CHANGED_SINCE else RecordSave.NOT_FOUND
-            }
+            InventoryTable.saveRefused(data.identifier, InventoryTable.revision, data.revision, UPDATE_TAG, InventoryError.NOT_FOUND)?.let { return@dbQuery it }
 
             val inventoryEntity = InventoryEntity.findById(data.identifier)!!
 
