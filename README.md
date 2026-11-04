@@ -1,12 +1,15 @@
 # TicketMan
 
-A ticket tracking app for shop that run their work through tickets. Staff check devices in at
-the counter, track the repair, take payment at pickup and keep customer, inventory and photo records
+A ticket tracking app for shop that runs their work through tickets. This project was started when I had some intrest in
+starting up a repair shop and needed a solution for tracking tickets and customers and such. I couldnt find any I liked so
+I went on to start and make my own. While I never ended up starting that shop I still kept working here and there on this project.
+One day I hope to get it to a good solid state that startups could use and have agency over their data and not have to sell your soul
+and add another subscription.
+
+Staff check devices in at the counter, track the repair, take payment at pickup and keep customer, inventory and photo records
 along the way.
 
-It's a Kotlin Multiplatform project: a Compose Multiplatform client with a Ktor server with an H2 database.
-
-There will most likely be breaking changes often!
+It's a Kotlin Compose Multiplatform client with a Ktor server that uses an H2 database, utilizing Exposed.
 
 ![The counter screen showing a ticket, its invoice and the queue](docs/images/counter.png)
 
@@ -77,8 +80,8 @@ Then open `http://localhost:8080` and log in as `admin` with whatever you set th
 ## Caveats
 
 If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0.
-At the moment there will be breaking changes all throughout, but when we hit stable a 1.0.0 release then we can
-stick to this break between majors.
+At the moment there will be breaking changes often, but when we hit stable a 1.0.0 release then we can
+stick to this break between majors only concept.
 
 On high DPI monitors the app can show small GUI. This is intermittent for me.
 
@@ -86,7 +89,7 @@ On high DPI monitors the app can show small GUI. This is intermittent for me.
 
 Developer docs are in [`docs/`](docs/README.md): how the code is organized, how a request travels from the UI to the
 database, configuration, running a server and more. Pretty much all of this is AI generated. I haven't looked through 
-it yet so it may or may not be accurate.
+it yet so it may or may not be accurate. I have no desire to write Documentation.
 
 ## License
 
