@@ -230,6 +230,18 @@ object AdminPaths {
 
     /** A page of the audit log, `?offset=&limit=` */
     const val AUDIT = "/audit/fetch"
+
+    /** The server's log files and how they're kept, a `LogOverview` */
+    const val LOGS = "/logs"
+
+    /** `POST` a `LogSettings`: how many files are kept, how big they get together, and when a new one starts */
+    const val LOG_SETTINGS = "/logs/settings"
+
+    /** Lines logged after `?after=` (a sequence number, 0 for the newest), at most `?limit=`, a `LogTail` */
+    const val LOG_TAIL = "/logs/tail"
+
+    /** The log as text, `?from=&to=` in epoch milliseconds (both optional, both included) */
+    const val LOG_DOWNLOAD = "/logs/download"
 }
 
 object CounterPaths {

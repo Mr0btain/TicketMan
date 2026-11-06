@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.ui.screens.settings.components.LogsHandler
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.locations.components.LocationsHandler
 import androidx.compose.material3.SnackbarHostState
@@ -218,6 +219,17 @@ class MainViewModel(
 
     /** The signed in user's own time clock */
     val timeClock: TimeClockHandler = TimeClockHandler(remoteHandler, viewModelScope, snackBarHost)
+
+    /** ----------------------------------------------LOGS------------------------------------------------------------------- */
+
+    /** The logs viewer on Settings, this device's and for admins the server's */
+    val logs: LogsHandler = LogsHandler(
+        remoteHandler = remoteHandler,
+        localStorage = localStorage,
+        scope = viewModelScope,
+        snackBarHost = snackBarHost,
+        isAdmin = { session.isAdminNow() }
+    )
 
     /** ----------------------------------------------APPOINTMENTS------------------------------------------------------------------- */
 

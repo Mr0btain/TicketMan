@@ -28,7 +28,11 @@ import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
+import java.time.Instant
 import java.time.LocalDate
+import org.mr0btain.ticketman.components.service.ServerLogs
+import org.mr0btain.ticketman.logging.LogBook
+import org.mr0btain.ticketman.logging.LogSettings
 import kotlin.time.Clock
 
 /**
@@ -39,7 +43,8 @@ fun Route.adminRoute(
     adminService: AdminService,
     backupService: BackupService,
     restoreService: RestoreService,
-    loginLimiter: LoginLimiter = LoginLimiter()
+    loginLimiter: LoginLimiter = LoginLimiter(),
+    serverLogs: ServerLogs = ServerLogs(null)
 ) {
     val TAG = "AdminRoute"
     val STATS_TAG = "$TAG:Stats"
@@ -424,6 +429,61 @@ fun Route.adminRoute(
                 AppLogger.i(AUDIT_TAG, "Couldn't get audit log")
             }
         }
+
+        // The server's log files and how they're kept
+        get(AdminPaths.LOGS) {
+            call.respond(HttpStatusCode.OK, serverLogs.overview())
+        }
+
+        post(AdminPaths.LOG_SETTINGS) {
+            val saved = serverLogs.update(call.receive<LogSettings>())
+            if (saved == null) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@post
+            }
+
+            call.audit(
+                auditLog, AuditAction.SETTINGS_UPDATE, "logs",
+                details = "Keep ${saved.keepFiles} log files up to ${saved.maxTotalMb} MB, new one at ${saved.rolloverText}"
+            )
+            call.respond(HttpStatusCode.OK, serverLogs.overview())
+        }
+
+        // Lines logged since the reader last asked, from memory, for the live view
+        get(AdminPaths.LOG_TAIL) {
+            val after = call.queryParameters["after"]?.let { it.toLongOrNull() ?: return@get call.respondBadQuery() } ?: 0
+            val limit = (call.queryParameters["limit"]?.toIntOrNull() ?: MAX_TAIL).coerceIn(1, MAX_TAIL)
+            call.respond(HttpStatusCode.OK, LogBook.since(after, limit))
+        }
+
+        // The log as text, streamed from the files. Downloading it is audited, it can hold names and addresses
+        get(AdminPaths.LOG_DOWNLOAD) {
+            val from = call.queryParameters["from"]?.let { it.toLongOrNull() ?: return@get call.respondBadQuery() }
+            val to = call.queryParameters["to"]?.let { it.toLongOrNull() ?: return@get call.respondBadQuery() }
+            if (from != null && to != null && from > to) return@get call.respondBadQuery()
+
+            // No action of its own, older clients reading the audit log would fail on a new one
+            call.audit(auditLog, AuditAction.BACKUP, "logs", details = logRangeText(from, to))
+            call.response.header(
+                HttpHeaders.ContentDisposition,
+                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, "ticketman-server.log").toString()
+            )
+            call.response.header(HttpHeaders.CacheControl, "no-store")
+            call.respondOutputStream(ContentType.Text.Plain.withCharset(Charsets.UTF_8), HttpStatusCode.OK) {
+                serverLogs.export(from, to, this)
+            }
+        }
+    }
+}
+
+// The range a log download asked for, for the audit log
+private fun logRangeText(from: Long?, to: Long?): String {
+    fun text(time: Long) = Instant.ofEpochMilli(time).toString()
+    return when {
+        from == null && to == null -> "Downloaded the whole log"
+        to == null -> "Downloaded the log from ${text(from!!)}"
+        from == null -> "Downloaded the log up to ${text(to)}"
+        else -> "Downloaded the log from ${text(from)} to ${text(to)}"
     }
 }
 
@@ -431,3 +491,6 @@ private const val DEFAULT_LOW_STOCK_THRESHOLD = 5
 private const val DEFAULT_RECENT_LIMIT = 10
 private const val MAX_LIMIT = 200
 private const val MAX_SEED = 5000
+
+// Lines the live view gets at once
+private const val MAX_TAIL = 1000

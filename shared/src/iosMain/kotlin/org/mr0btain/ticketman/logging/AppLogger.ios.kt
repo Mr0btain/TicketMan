@@ -2,25 +2,34 @@ package org.mr0btain.ticketman.logging
 
 import platform.Foundation.NSLog
 
-/** Writes to the system log, read in Xcode's console or Console.app with the device connected */
+/**
+ * Writes to the system log, read in Xcode's console or Console.app with the device connected, and keeps each line
+ * in [LogBook]
+ */
 actual object AppLogger {
     actual var debug: Boolean = false
 
     actual fun e(tag: String, message: String, throwable: Throwable?) {
         log("ERROR: [$tag] $message${throwable?.let { "\n${it.stackTraceToString()}" }.orEmpty()}")
+        LogBook.record(LogLevel.ERROR, tag, message, throwable)
     }
 
     actual fun e(tag: String, message: LogMessage, throwable: Throwable?) = e(tag, message.message, throwable)
 
     actual fun d(tag: String, message: String) {
-        if (debug) log("DEBUG: [$tag] $message")
+        if (!debug) return
+        log("DEBUG: [$tag] $message")
+        LogBook.record(LogLevel.DEBUG, tag, message)
     }
 
-    actual fun i(tag: String, message: String) = log("[$tag] $message")
+    actual fun i(tag: String, message: String) {
+        log("[$tag] $message")
+        LogBook.record(LogLevel.INFO, tag, message)
+    }
 
     actual fun i(tag: String, message: LogMessage) = i(tag, message.message)
 
-    actual fun m(tag: String, message: String) = log("[$tag] $message")
+    actual fun m(tag: String, message: String) = i(tag, message)
 
     actual fun m(tag: String, message: LogMessage) = m(tag, message.message)
 

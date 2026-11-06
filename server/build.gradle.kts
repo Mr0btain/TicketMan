@@ -46,6 +46,9 @@ dependencies {
 
     // Customer emails over the shop's SMTP server
     implementation(libs.angus.mail)
+
+    // Log files are written through shared's LogFileStore, on kotlinx-io
+    implementation(libs.kotlinx.io)
 }
 // -PwithWeb builds the web client into the server, which then serves it at /. Off by default because the Wasm
 // build is slow. The big files get a gzipped copy next to them, which the server sends to browsers that accept it

@@ -37,6 +37,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Photos](server/photos.md): upload, processing, linking, serving, the sweep
 - [Backup and restore](server/backup-restore.md): building, downloading, staging and applying
 - [Audit log](server/audit-log.md): what's logged and how to log something new
+- [Logs](server/logs.md): log files on the server and each device, how they roll over and are trimmed, the viewer
 
 ## Client
 

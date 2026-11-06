@@ -4,6 +4,7 @@ import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.nio.file.Path
+import org.mr0btain.ticketman.logging.LogBook
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.deleteRecursively
@@ -55,6 +56,9 @@ fun cleanupTestDataDir(dataDir: Path) {
     } catch (_: Exception) {
         // No database was opened
     }
+
+    // The log file is held open while a server is attached, which Windows won't delete
+    LogBook.detach()
 
     dataDir.deleteRecursively()
     assertFalse(dataDir.exists(), "Temp data directory was not removed: $dataDir")

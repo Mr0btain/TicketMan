@@ -4,8 +4,11 @@
             <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+    <!-- Into LogBook, the server's log files and the live view on the Settings screen -->
+    <appender name="LOGBOOK" class="org.mr0btain.ticketman.components.logging.LogBookAppender"/>
     <root level="info">
         <appender-ref ref="STDOUT"/>
+        <appender-ref ref="LOGBOOK"/>
     </root>
     <logger name="org.eclipse.jetty" level="INFO"/>
     <logger name="io.netty" level="INFO"/>

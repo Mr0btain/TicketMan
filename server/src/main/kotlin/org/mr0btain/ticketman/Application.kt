@@ -38,6 +38,7 @@ import org.mr0btain.ticketman.components.routing.waitText
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.server.response.LoginLockKind
 import org.mr0btain.ticketman.components.service.ServerRestart
+import org.mr0btain.ticketman.components.service.ServerLogs
 import org.mr0btain.ticketman.components.service.PasscodeVault
 import org.mr0btain.ticketman.components.service.SealedSecrets
 import org.mr0btain.ticketman.components.service.ServerSecret
@@ -77,6 +78,10 @@ fun Application.module() {
     if (dataPath.isBlank()) {
         AppLogger.e("SERVER", "No DATA_PATH set and no app data folder found, so there's nowhere to keep data")
     } else {
+        // First, so the database opening is in the files too. What was logged before is written when it starts
+        val serverLogs = ServerLogs(ServerLogs.folderFor(dataPath))
+        serverLogs.start()
+        monitor.subscribe(ApplicationStopped) { serverLogs.stop() }
         AppLogger.m("SERVER", "Path for Files: $dataPath")
         val database = configureDatabase(dataPath)
         // Ktor stops on SIGTERM (docker stop) and on a restart, after the last requests are answered
@@ -223,7 +228,8 @@ fun Application.module() {
         configureRouting(
             userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
             restoreService, notificationService, estimateService, database, loginLimiter, passcodeVault,
-            paymentService = paymentService
+            paymentService = paymentService,
+            serverLogs = serverLogs
         )
 
         // Follows up card charges that are waiting: a reader nobody is watching, a link the customer paid and closed

@@ -121,7 +121,7 @@ Grouped as the folders are. Each has KDoc on its function; this is the map.
 | `search/` | `TmSearchField`, `TmSearchBar` (results under it as you type, waits `TM_SEARCH_DEBOUNCE` = 350 ms), `highlightMatch` | Looking things up |
 | `containers/` | `TmPanel`, `TmPaneHeader`, `TmStickyHeader`, `TmPageHeader`, `TmSectionLabel`, `TmListRow`, `TmSwitchRow`, `TmTabs`, `TmLazyColumn`, `TmScrollColumn`, `TmDialog`, `TmConfirmDialog`, `TmConfirmDeleteDialog`, `TmTextEditDialog`, `TmAdjustBalanceDialog`, `TmFullScreenDialog` | Layout and dialogs |
 | `feedback/` | `TmBadge`, `TmStatusBadge`, `TmPriorityBadge`, `TmAccessBadge`, `TmUserStatusBadge`, `TmDot`, `TmNotice`, `TmSnackbarHost`, `TmEmptyState`, `TmLoading`, `TmProgressBar` | Telling people what happened. Messages say what happened and what to do, and don't apologize |
-| `data/` | `TmStatTile`, `TmCountBar`, `TmMoneyText`, `TmTicketIdText`, `TmKeyValueRow`, `TmTableHeader`, `TmTableRow`, `TmColumn` | Showing numbers and records |
+| `data/` | `TmStatTile`, `TmCountBar`, `TmMoneyText`, `TmTicketIdText`, `TmKeyValueRow`, `TmTableHeader`, `TmTableRow`, `TmColumn`, `TmLogTerminal` | Showing numbers and records; a log like a terminal, on the palette's dark colors (`TmTheme.terminal`) |
 | `images/` | `TmImage`, `TmImagePager`, `TmImageView`, `TmPhotoEditor`, `TmAvatar` (a round profile photo, or initials) | Photos. See [Transfers and photos](../client/transfers-and-photos.md) |
 | `notes/` | `TmNoteBlock`, `TmEditNoteDialog` | Notes on a record, newest first, with their photos |
 | `navigation/` | `TmNavRail`, `TmBottomNav`, `TmTopBar`, `TmPanelTopBar`, `TmStepper` | Moving around. `TmPanelTopBar` is the records toolbar |

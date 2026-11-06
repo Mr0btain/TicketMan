@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.logging.LogSettings
 
 class LocalStorage(private val store: KeyValueStore) {
     private var _username: String = ""
@@ -31,6 +32,7 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _deviceName: String = ""
     private var _workingLocation: String = ""
     private var _calendarView: String = ""
+    private var _logSettings: LogSettings = LogSettings(maxTotalMb = DEFAULT_LOG_MAX_MB)
 
     var username: String
         get() = _username
@@ -226,6 +228,14 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(CALENDAR_VIEW_KEY, value)
         }
 
+    /** How this device keeps its log files, see ClientLogs */
+    var logSettings: LogSettings
+        get() = _logSettings
+        set(value) {
+            _logSettings = value.normalized()
+            store.putString(LOG_SETTINGS_KEY, Json.encodeToString(LogSettings.serializer(), _logSettings))
+        }
+
     // Initialize by pulling stored values
     init {
         _accessToken = store.getString(ACCESS_TOKEN_KEY, "")
@@ -259,6 +269,9 @@ class LocalStorage(private val store: KeyValueStore) {
         _deviceName = store.getString(DEVICE_NAME_KEY, "").ifBlank { defaultDeviceName() }
         _workingLocation = store.getString(WORKING_LOCATION_KEY, "")
         _calendarView = store.getString(CALENDAR_VIEW_KEY, "")
+        _logSettings = store.getString(LOG_SETTINGS_KEY, "").takeIf { it.isNotBlank() }
+            ?.let { runCatching { Json.decodeFromString(LogSettings.serializer(), it).normalized() }.getOrNull() }
+            ?: _logSettings
     }
 
     private fun defaultDeviceName(): String = getPlatform().name
@@ -302,6 +315,9 @@ class LocalStorage(private val store: KeyValueStore) {
         const val DEFAULT_SEARCH_LIMIT = 20
         const val DEFAULT_CACHE_SIZE = 20
 
+        /** A device's logs are smaller than the server's, and a phone has less room */
+        const val DEFAULT_LOG_MAX_MB = 20
+
         private const val ACCESS_TOKEN_KEY = "access_token"
         private const val REFRESH_TOKEN_KEY = "refresh_token"
         private const val USERNAME_KEY = "username"
@@ -324,6 +340,7 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val DEVICE_ID_KEY = "device_id"
         private const val WORKING_LOCATION_KEY = "working_location"
         private const val CALENDAR_VIEW_KEY = "calendar_view"
+        private const val LOG_SETTINGS_KEY = "log_settings"
         private const val DEVICE_NAME_KEY = "device_name"
         private const val STATION_ID_KEY = "station_id"
         private const val STATION_SECRET_KEY = "station_secret"

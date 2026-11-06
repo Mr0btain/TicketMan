@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.components.service.ServerLogs
 import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.API_VERSION_HEADER
 import org.mr0btain.ticketman.server.APP_VERSION
@@ -90,6 +91,8 @@ fun Application.configureRouting(
         shop = localDatabase.shopDatabase,
         auditLog = localDatabase.auditLogDatabase
     )
+,
+    serverLogs: ServerLogs = ServerLogs(null)
 ) {
     install(StatusPages) {
         // A body that isn't valid JSON, has a field this server doesn't know, or is missing one. The details stay
@@ -249,7 +252,8 @@ fun Application.configureRouting(
                 adminService = adminService,
                 backupService = backupService,
                 restoreService = restoreService,
-                loginLimiter = loginLimiter
+                loginLimiter = loginLimiter,
+                serverLogs = serverLogs
             )
         }
 

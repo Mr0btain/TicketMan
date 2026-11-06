@@ -24,8 +24,8 @@ logged and how to log something new.
 | `LOGIN`, `LOGIN_FAILED` | Password and PIN logins, wrong passwords, wrong or locked PINs, bad setup codes |
 | `PASSWORD_RESET` | An admin setting someone's password |
 | `SESSION_REVOKE` | An admin ending sessions |
-| `SETTINGS_UPDATE` | The shop profile, kiosk settings |
-| `BACKUP` | Making a backup, staging or cancelling a restore |
+| `SETTINGS_UPDATE` | The shop profile, kiosk settings, how the server keeps its logs |
+| `BACKUP` | Making a backup, staging or cancelling a restore, downloading the server's log (on `logs`) |
 | `SEED` | Test data |
 
 Reads aren't logged.

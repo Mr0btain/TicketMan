@@ -49,6 +49,9 @@ import org.mr0btain.ticketman.server.request.LoginUnlockRequest
 import org.mr0btain.ticketman.server.response.SessionResponse
 import org.mr0btain.ticketman.server.response.StationRegistrationResponse
 import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.logging.LogOverview
+import org.mr0btain.ticketman.logging.LogSettings
+import org.mr0btain.ticketman.logging.LogTail
 
 /**
  * Client for the admin screen's routes under /api/admin, plus the shop profile under /api/shop
@@ -74,6 +77,9 @@ class AdminRemoteRepository(
     private val UPDATE_SHOP_TAG = "$TAG:UpdateShop"
     private val STATIONS_TAG = "$TAG:Stations"
     private val DAILY_REPORT_TAG = "$TAG:DailyReport"
+    private val LOGS_TAG = "$TAG:Logs"
+    private val LOG_TAIL_TAG = "$TAG:LogTail"
+    private val LOG_DOWNLOAD_TAG = "$TAG:LogDownload"
 
     private var baseUrl = ""
 
@@ -409,6 +415,58 @@ class AdminRemoteRepository(
         }
 
         return handleActionHttpResponse(UPDATE_SHOP_TAG, response)
+    }
+
+    /** The server's log files and how they're kept */
+    suspend fun getLogs(): TmResult<LogOverview, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleDataHttpResponse(LOGS_TAG, networkRequest(LOGS_TAG) { client.get { url("$adminUrl${AdminPaths.LOGS}") } })
+    }
+
+    /** Saves how the server keeps its logs, answers with the files as they are after */
+    suspend fun updateLogSettings(settings: LogSettings): TmResult<LogOverview, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkRequest(LOGS_TAG) {
+            client.post {
+                url("$adminUrl${AdminPaths.LOG_SETTINGS}")
+                contentType(ContentType.Application.Json)
+                setBody(settings)
+            }
+        }
+
+        return handleDataHttpResponse(LOGS_TAG, response)
+    }
+
+    /** Lines the server logged after [after], 0 for its newest */
+    suspend fun tailLogs(after: Long, limit: Int): TmResult<LogTail, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleDataHttpResponse(LOG_TAIL_TAG, networkRequest(LOG_TAIL_TAG) {
+            client.get {
+                url("$adminUrl${AdminPaths.LOG_TAIL}")
+                parameter("after", after)
+                parameter("limit", limit)
+            }
+        })
+    }
+
+    /**
+     * The server's log between [from] and [to] (epoch milliseconds, null for no limit) as text. Read whole, since it
+     * needs the login header a browser download wouldn't send
+     */
+    suspend fun downloadLogs(from: Long?, to: Long?): TmResult<ByteArray, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleDataHttpResponse(LOG_DOWNLOAD_TAG, networkRequest(LOG_DOWNLOAD_TAG) {
+            client.get {
+                url("$adminUrl${AdminPaths.LOG_DOWNLOAD}")
+                from?.let { parameter("from", it) }
+                to?.let { parameter("to", it) }
+                transferTimeout()
+            }
+        })
     }
 
     private suspend inline fun <reified T> getJson(tag: String, requestUrl: String): T? {

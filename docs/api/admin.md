@@ -282,9 +282,58 @@ A page of the audit log, newest first.
 - **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
 - **`200`** a list of `AuditEntry`.
 
+## Logs
+
+Everything the server logs (its own `AppLogger` lines, and Ktor, Netty and Exposed through logback) goes through
+`LogBook`, which keeps the newest lines in memory and writes each to a file in `<dataPath>/server/logs/`. See
+[Logs](../server/logs.md).
+
+### `GET /api/admin/logs`
+
+**Auth:** admin
+
+The log files and how they're kept.
+
+- **`200`** a `LogOverview`: `settings` (`LogSettings`), `files` (each `LogFileInfo`: `name`, `startedAt`, `sizeBytes`,
+  `current`), oldest first, and `storing` (false when the server has no folder to write to).
+
+### `POST /api/admin/logs/settings`
+
+**Auth:** admin
+
+Saves how logs are kept. Applied straight away: files past the new limits are deleted, and the file changes if the time
+moved. Audited as `SETTINGS_UPDATE`.
+
+- **Body:** a `LogSettings`: `keepFiles` (1-365), `maxTotalMb` (1-10000) and `rolloverMinute` (minutes after
+  midnight, server time, when a new file starts). Values out of range are clamped.
+- **`200`** the `LogOverview` after. **`500`** if the settings file couldn't be written.
+
+### `GET /api/admin/logs/tail`
+
+**Auth:** admin
+
+Lines logged after a sequence number, from memory, for following the log live.
+
+- **Query:** `after` (a `LogLine.sequence`, default 0 for the newest), `limit` (default and at most 1000). **`400`** if
+  `after` isn't a whole number.
+- **`200`** a `LogTail`: `run` (changes when the server restarts, so a reader starts over from 0), `lines` and `last`
+  (the newest sequence, what to ask after next).
+
+### `GET /api/admin/logs/download`
+
+**Auth:** admin
+
+The log as plain text, streamed from the files, as an attachment `ticketman-server.log`. Audited (as `BACKUP` on
+`logs`), since it can hold names and addresses.
+
+- **Query:** `from` and `to`, epoch milliseconds, both optional and both included. **`400`** if either isn't a whole
+  number or `from` is after `to`.
+- **`200`** the lines logged then, with an error's stack trace kept with its line. Empty when nothing was.
+
 ## See also
 
 - [Admin screen](../ui/screens/admin.md)
 - [Backup and restore](../server/backup-restore.md)
 - [PINs and stations](../server/pins-and-stations.md)
 - [Audit log](../server/audit-log.md)
+- [Logs](../server/logs.md)

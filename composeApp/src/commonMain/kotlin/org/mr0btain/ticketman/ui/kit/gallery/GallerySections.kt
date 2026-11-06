@@ -122,6 +122,9 @@ import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
 import org.mr0btain.ticketman.ui.kit.notes.TmEditNoteDialog
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
 import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.logging.LogLevel
+import org.mr0btain.ticketman.logging.LogLine
+import org.mr0btain.ticketman.ui.kit.data.TmLogTerminal
 
 /** The gallery's sections in order. Two column layouts alternate them left and right */
 internal fun gallerySections(): List<@Composable () -> Unit> = listOf(
@@ -135,6 +138,7 @@ internal fun gallerySections(): List<@Composable () -> Unit> = listOf(
     { TablesSection() },
     { FeedbackSection() },
     { DataSection() },
+    { LogsSection() },
     { PhotosSection() },
     { NotesSection() },
     { DialogSection() },
@@ -695,6 +699,38 @@ private fun DataSection() {
             TmScheduleBlock(title = "Time off", subtitle = "Vacation", tone = TmTheme.colors.warning, modifier = Modifier.weight(2f), continuesAfter = true)
             TmScheduleBlock(title = "Training", tone = TmTheme.colors.success, modifier = Modifier.weight(1f), continuesBefore = true)
         }
+    }
+}
+
+// --------------------------------------- Logs ---------------------------------------
+
+// A minute of a server's log, made up
+private val sampleLogLines = run {
+    val start = 1_793_980_800_000L
+    listOf(
+        Triple(LogLevel.INFO, "SERVER", "Server initialized!"),
+        Triple(LogLevel.INFO, "Application", "Responding at http://0.0.0.0:8080"),
+        Triple(LogLevel.DEBUG, "TicketDatabase:Save", "Saved 26-00000042, revision 4"),
+        Triple(LogLevel.WARN, "Proxy", "X-Forwarded-For from 10.0.0.9, which isn't a trusted proxy"),
+        Triple(LogLevel.INFO, "NotificationService", "Sent READY to Dana Whitfield by text"),
+        Triple(LogLevel.ERROR, "SmtpEmailSender", "Couldn't reach smtp.example.com\njava.net.ConnectException: Connection refused\n\tat java.base/sun.nio.ch.Net.connect0(Native Method)"),
+        Triple(LogLevel.INFO, "Housekeeping", "Removed 3 expired sessions")
+    ).mapIndexed { index, (level, tag, message) ->
+        LogLine(sequence = index + 1L, time = start + index * 7_300L, level = level, tag = tag, message = message)
+    }
+}
+
+@Composable
+private fun LogsSection() {
+    GallerySection(title = "Log terminal", description = "A log as it's written, always on the palette's dark colors") {
+        TmLogTerminal(
+            lines = sampleLogLines,
+            title = "ticketman — server",
+            status = "Live",
+            highlight = "smtp",
+            modifier = Modifier.fillMaxWidth().height(220.dp)
+        )
+        TmLogTerminal(lines = emptyList(), title = "ticketman — this device", status = "Paused", live = false, modifier = Modifier.fillMaxWidth().height(90.dp))
     }
 }
 

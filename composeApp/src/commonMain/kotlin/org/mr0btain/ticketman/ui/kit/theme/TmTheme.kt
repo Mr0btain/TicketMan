@@ -19,6 +19,9 @@ import dev.chrisbanes.haze.HazeState
 data class TmGlass(val reduceTransparency: Boolean = false)
 
 val LocalTmColors = staticCompositionLocalOf { TmPalettes.default.dark }
+
+/** The palette's dark colors whatever the mode, for things drawn like a terminal (TmLogTerminal) */
+val LocalTmTerminalColors = staticCompositionLocalOf { TmPalettes.default.dark }
 val LocalTmTypography = staticCompositionLocalOf<TmTypography> { error("TmTypography is provided by TmTheme") }
 val LocalTmShapes = staticCompositionLocalOf { TmShapes() }
 val LocalTmSpacing = staticCompositionLocalOf { TmSpacing() }
@@ -51,6 +54,7 @@ fun TmTheme(
 
     CompositionLocalProvider(
         LocalTmColors provides colors,
+        LocalTmTerminalColors provides palette.dark,
         LocalTmTypography provides typography,
         LocalTmShapes provides shapes,
         LocalTmSpacing provides TmSpacing(),
@@ -82,4 +86,8 @@ object TmTheme {
 
     val glass: TmGlass
         @Composable @ReadOnlyComposable get() = LocalTmGlass.current
+
+    /** The palette's dark colors in light mode too, for a terminal's look */
+    val terminal: TmColors
+        @Composable @ReadOnlyComposable get() = LocalTmTerminalColors.current
 }

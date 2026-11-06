@@ -41,6 +41,9 @@ import org.mr0btain.ticketman.components.data.local.UpdateInterval
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
+import org.mr0btain.ticketman.ui.screens.settings.components.LogSource
+import org.mr0btain.ticketman.ui.screens.settings.components.LogsDialog
+import org.mr0btain.ticketman.logging.LogSettings
 
 /**
  * This device's settings and the logged in account. Saved as soon as they're changed, see [SettingsHandler]
@@ -75,6 +78,20 @@ fun SettingsScreen(
     val weekScheduled = viewModel.timeClock.weekScheduled.collectAsState()
     LaunchedEffect(Unit) { viewModel.timeClock.refresh() }
     var showStation by remember { mutableStateOf(false) }
+    var showLogs by remember { mutableStateOf<LogSource?>(null) }
+    val deviceLogSettings = viewModel.logs.deviceSettings.collectAsState()
+    val serverLogs = viewModel.logs.serverOverview.collectAsState()
+    // The file lists and the server's log settings, for the rows below
+    LaunchedEffect(isAdmin.value) { viewModel.logs.refreshFiles() }
+
+    showLogs?.let { source ->
+        LogsDialog(
+            logs = viewModel.logs,
+            canSeeServer = isAdmin.value,
+            initialSource = source,
+            onDismiss = { showLogs = null }
+        )
+    }
 
     ChangePasswordDialog(
         isVisible = showChangePassword,
@@ -119,7 +136,18 @@ fun SettingsScreen(
                                 viewModel.settings.setDefaultAdminTab(selected)
                             }
                         }
+                    ),
+                    SettingItem.Action(
+                        icon = painterResource(Res.drawable.terminal),
+                        label = "Server logs",
+                        description = "Follow the server's log as it's written, and download it",
+                        onClick = { showLogs = LogSource.SERVER }
                     )
+                ) + logSettingItems(
+                    settings = serverLogs.value?.settings,
+                    server = true,
+                    unavailable = "Loading the server's log settings",
+                    onChange = viewModel.logs::setServerSettings
                 )
             )
         )
@@ -217,6 +245,23 @@ fun SettingsScreen(
                         range = SettingsHandler.CACHE_SIZE_RANGE,
                         onChange = viewModel.settings::setCacheSize
                     )
+                )
+            ),
+            SettingItemGroup(
+                label = "Logs",
+                icon = Res.drawable.terminal,
+                items = listOf(
+                    SettingItem.Action(
+                        icon = painterResource(Res.drawable.terminal),
+                        label = "View logs",
+                        description = "Follow this device's log as it's written, and download all of it or a range of days or times",
+                        onClick = { showLogs = LogSource.DEVICE }
+                    )
+                ) + logSettingItems(
+                    settings = deviceLogSettings.value.takeIf { viewModel.logs.savesFiles },
+                    server = false,
+                    unavailable = "This browser doesn't save log files",
+                    onChange = viewModel.logs::setDeviceSettings
                 )
             ),
             SettingItemGroup(
@@ -334,6 +379,61 @@ private fun numberSetting(
     value = value.toString(),
     onChange = { text -> text.trim().toIntOrNull()?.takeIf { it in range }?.let { onChange(it); true } ?: false }
 )
+
+/**
+ * The rows for how a log keeps its files: how many, how big together, and when a new one starts
+ * @param settings Null greys the rows out and shows [unavailable]
+ * @param server The server's, which its labels say
+ */
+@Composable
+private fun logSettingItems(
+    settings: LogSettings?,
+    server: Boolean,
+    unavailable: String,
+    onChange: (LogSettings) -> Unit
+): List<SettingItem> {
+    val current = settings ?: LogSettings()
+    val enabled = settings != null
+    fun describe(text: String) = if (enabled) text else unavailable
+    fun label(text: String) = if (server) "Server ${text.replaceFirstChar { it.lowercase() }}" else text
+
+    return listOf(
+        SettingItem.Text(
+            icon = painterResource(Res.drawable.file_text),
+            label = label("Log files kept"),
+            description = describe("Each day's log is its own file, older ones past this many are deleted " +
+                "(${LogSettings.KEEP_FILES_RANGE.first}-${LogSettings.KEEP_FILES_RANGE.last})"),
+            value = if (enabled) current.keepFiles.toString() else "",
+            enabled = enabled,
+            onChange = { text ->
+                text.trim().toIntOrNull()?.takeIf { it in LogSettings.KEEP_FILES_RANGE }
+                    ?.let { onChange(current.copy(keepFiles = it)); true } ?: false
+            }
+        ),
+        SettingItem.Text(
+            icon = painterResource(Res.drawable.hard_drive),
+            label = label("Log storage limit (MB)"),
+            description = describe("The most the files can take together, the oldest go first " +
+                "(${LogSettings.MAX_TOTAL_MB_RANGE.first}-${LogSettings.MAX_TOTAL_MB_RANGE.last} MB)"),
+            value = if (enabled) current.maxTotalMb.toString() else "",
+            enabled = enabled,
+            onChange = { text ->
+                text.trim().toIntOrNull()?.takeIf { it in LogSettings.MAX_TOTAL_MB_RANGE }
+                    ?.let { onChange(current.copy(maxTotalMb = it)); true } ?: false
+            }
+        ),
+        SettingItem.Text(
+            icon = painterResource(Res.drawable.clock),
+            label = label("New log file at"),
+            description = describe("Time of day a new file starts, like 00:00 or 06:30"),
+            value = if (enabled) current.rolloverText else "",
+            enabled = enabled,
+            onChange = { text ->
+                LogSettings.parseMinuteOfDay(text)?.let { onChange(current.copy(rolloverMinute = it)); true } ?: false
+            }
+        )
+    )
+}
 
 /** Wider than this, settings sit in two columns */
 private val TWO_COLUMN_WIDTH = 1000.dp
