@@ -26,14 +26,16 @@ or none of them. The ticket gets its number here.
   that earlier ticket, which has to be the customer's and still under warranty. `appointmentIdentifier` is the
   booked [appointment](appointment.md) this visit is: it's marked `ARRIVED` with the first ticket (and linked to the
   customer when it had none) in the same transaction. A deposit taken on a card reader names its
-  [charge](payment.md) in `chargeIdentifier`.
-- **`201`** `CheckInResponse { ticket, invoice, linked }`, with the numbered ticket, the invoice if a deposit made
+  [charge](payment.md) in `chargeIdentifier`. `repairs` (and each item's) are `RepairOffer` ids from the
+  [repair menu](catalog.md): each goes on that ticket's invoice as a line, made then, and fills in the ticket's
+  `problem` (their names) and `estimateCents` (their total) when those were left empty.
+- **`201`** `CheckInResponse { ticket, invoice, linked }`, with the numbered ticket, the invoice if a deposit or repairs made
   one, and the other tickets made with it.
 - **`400`** with the reason: a ticket id isn't a version 7 UUID or is used twice, a picked device isn't the
   customer's, more than 10 devices, no such customer, no make or model, no problem,
   an appointment that doesn't exist, isn't booked or is another customer's, a status other than in progress or on hold (or one of the shop's own counting as them; an unknown or retired one is refused too), a negative estimate, a warranty return of a ticket that isn't the customer's or whose warranty ran out, a technician without Normal
   access, a deposit
-  of zero or less, or a missing or bad signature. **`409`** a ticket with that id already exists, or the appointment was checked in
+  of zero or less, a repair that isn't on the menu any more or whose part or tax class has gone, or a missing or bad signature. **`409`** a ticket with that id already exists, or the appointment was checked in
   at the same moment somewhere else.
 
 ### `POST /api/counter/pickup`

@@ -179,6 +179,15 @@ fun Application.configureRouting(
             )
         }
 
+        route(ApiRoutes.CATALOG) {
+            catalogRoute(
+                database = localDatabase.catalogDatabase,
+                inventory = localDatabase.inventoryDatabase,
+                shop = localDatabase.shopDatabase,
+                auditLog = localDatabase.auditLogDatabase
+            )
+        }
+
         route(ApiRoutes.LOCATION) {
             locationRoute(
                 database = localDatabase.locationDatabase,

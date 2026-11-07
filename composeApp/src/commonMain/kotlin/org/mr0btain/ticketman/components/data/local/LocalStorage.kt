@@ -21,7 +21,7 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _ticketScope: String = ""
     private var _serverUrl: String = ""
     private var _rememberLogin: Boolean = DEFAULT_REMEMBER_LOGIN
-    private var _defaultAdminTab: Int = DEFAULT_ADMIN_TAB
+    private var _defaultAdminTab: AdminTab = AdminTab.entries[DEFAULT_ADMIN_TAB]
     private var _defaultRecordsTab: Int = DEFAULT_RECORDS_TAB
     private var _lowStockThreshold: Int = DEFAULT_LOW_STOCK_THRESHOLD
     private var _pageSize: Int = DEFAULT_PAGE_SIZE
@@ -124,12 +124,12 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(REMEMBER_LOGIN_KEY, value.toString())
         }
 
-    /** Records screen tab to start on */
+    /** Admin screen tab to start on, saved by name so adding tabs doesn't move it */
     var defaultAdminTab: AdminTab
-        get() = AdminTab.entries[_defaultAdminTab]
+        get() = _defaultAdminTab
         set(value) {
-            _defaultAdminTab = value.ordinal
-            store.putString(DEFAULT_ADMIN_TAB_KEY, value.ordinal.toString())
+            _defaultAdminTab = value
+            store.putString(DEFAULT_ADMIN_TAB_KEY, value.name)
         }
 
     /** Records screen tab to start on */
@@ -257,7 +257,7 @@ class LocalStorage(private val store: KeyValueStore) {
             accessToken = ""
             refreshToken = ""
         }
-        _defaultAdminTab = getInt(DEFAULT_ADMIN_TAB_KEY, DEFAULT_ADMIN_TAB)
+        _defaultAdminTab = adminTabOf(store.getString(DEFAULT_ADMIN_TAB_KEY, ""))
         _defaultRecordsTab = getInt(DEFAULT_RECORDS_TAB_KEY, DEFAULT_RECORDS_TAB)
         _lowStockThreshold = getInt(LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD)
         _pageSize = getInt(PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE)
@@ -278,6 +278,12 @@ class LocalStorage(private val store: KeyValueStore) {
 
     private fun getBoolean(key: String, defaultValue: Boolean): Boolean =
         store.getString(key, "").toBooleanStrictOrNull() ?: defaultValue
+
+    // A tab saved by name, or by its place in the list before tabs were saved by name
+    private fun adminTabOf(saved: String): AdminTab =
+        AdminTab.entries.firstOrNull { it.name == saved }
+            ?: saved.toIntOrNull()?.let { LEGACY_ADMIN_TABS.getOrNull(it) }?.let { name -> AdminTab.entries.firstOrNull { it.name == name } }
+            ?: AdminTab.entries[DEFAULT_ADMIN_TAB]
 
     private fun getInt(key: String, defaultValue: Int): Int =
         store.getString(key, "").toIntOrNull() ?: defaultValue
@@ -331,6 +337,12 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val TRUSTED_AUTHORITIES_KEY = "trusted_authorities"
         private const val REMEMBER_LOGIN_KEY = "remember_login"
         private const val DEFAULT_ADMIN_TAB_KEY = "admin_tab"
+
+        // The admin tabs in order when they were saved by their place, before the repair menu's was added
+        private val LEGACY_ADMIN_TABS = listOf(
+            "OVERVIEW", "USERS", "SESSIONS", "STATIONS", "LOCATIONS", "LOW_STOCK", "INVOICES", "REPORTS",
+            "TIMESHEETS", "TIME_OFF", "MESSAGES", "PAYMENTS", "SERVER", "AUDIT"
+        )
         private const val DEFAULT_RECORDS_TAB_KEY = "records_tab"
         private const val LOW_STOCK_THRESHOLD_KEY = "low_stock_threshold"
         private const val PAGE_SIZE_KEY = "page_size"

@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman.components.service
 
+import org.mr0btain.ticketman.data.catalog.PickedRepair
+import org.mr0btain.ticketman.data.catalog.RepairCatalog
+import org.mr0btain.ticketman.data.invoice.Charge
+import org.mr0btain.ticketman.components.database.CatalogDatabase
+import org.mr0btain.ticketman.components.database.InventoryDatabase
 import org.mr0btain.ticketman.components.database.PaymentDatabase
 import org.mr0btain.ticketman.components.database.LocationDatabase
 import org.mr0btain.ticketman.components.payments.CardPayments
@@ -48,7 +53,9 @@ class CheckInService(
     private val vault: PasscodeVault? = null,
     private val appointments: AppointmentDatabase = AppointmentDatabase(),
     private val cards: CardPayments = CardPayments(PaymentDatabase()),
-    private val locations: LocationDatabase = LocationDatabase()
+    private val locations: LocationDatabase = LocationDatabase(),
+    private val catalog: CatalogDatabase = CatalogDatabase(),
+    private val inventory: InventoryDatabase = InventoryDatabase()
 ) {
     private val storedValue = StoredValuePayments(values) { Money.format(it, shop.get().currencySymbol) }
 
@@ -63,8 +70,28 @@ class CheckInService(
         val shopProfile = shop.at(at)
         if (customers.getById(received.customerIdentifier) == null) return AccountResult.Invalid("Pick a customer")
 
+        // The repair menu, only read when something was picked from it
+        val menu = if ((listOf(received.repairs) + received.more.map { it.repairs }).any { it.isNotEmpty() }) {
+            catalog.all() ?: return AccountResult.Invalid("Couldn't read the repair menu")
+        } else {
+            emptyList()
+        }
+        // Each ticket's lines from the menu, by its id
+        val repairLines = mutableMapOf<Uuid, List<Charge>>()
+
         // Each device's ticket, checked the same way
-        val items = (listOf(CheckInItem(received.ticket, received.deviceIdentifier, received.passcode)) + received.more).map { item ->
+        val items = (listOf(CheckInItem(received.ticket, received.deviceIdentifier, received.passcode, received.repairs)) + received.more).map { picked ->
+            val repairs = RepairCatalog.find(menu, picked.repairs) ?: return AccountResult.Invalid("A repair picked isn't on the menu any more, pick again")
+            repairsProblem(repairs, shopProfile)?.let { return AccountResult.Invalid(it) }
+            // The menu fills in what wasn't typed
+            val item = if (repairs.isEmpty()) picked else picked.copy(
+                ticket = picked.ticket.copy(
+                    problem = picked.ticket.problem.ifBlank { RepairCatalog.problemText(repairs) },
+                    estimateCents = picked.ticket.estimateCents ?: RepairCatalog.totalCents(repairs)
+                )
+            )
+            if (repairs.isNotEmpty()) repairLines[item.ticket.identifier] = repairs.map { RepairCatalog.charge(it) }
+
             // A custom status is saved with the built-in one it acts as, which is then checked like any other
             val status = when (val resolved = CustomStatusRules.resolve(item.ticket.status, shopProfile.statuses)) {
                 is CustomStatusRules.Resolved.Ok -> resolved.status
@@ -124,7 +151,7 @@ class CheckInService(
                     // Under the lock, so the same ticket sent twice at once is only made once
                     if (items.any { tickets.getById(it.ticket.identifier) != null }) return@whileNumbering false
 
-                    saveCheckIn(request, items, takenBy, actor, shopProfile)
+                    saveCheckIn(request, items, repairLines, takenBy, actor, shopProfile)
                     true
                 }
             }
@@ -145,7 +172,7 @@ class CheckInService(
     }
 
     // Everything checked in goes in together or not at all
-    private fun saveCheckIn(request: CheckInRequest, items: List<CheckInItem>, takenBy: String, actor: Uuid?, shopProfile: ShopProfile) {
+    private fun saveCheckIn(request: CheckInRequest, items: List<CheckInItem>, repairLines: Map<Uuid, List<Charge>>, takenBy: String, actor: Uuid?, shopProfile: ShopProfile) {
         val now = Clock.System.now().toEpochMilliseconds()
         // Linked when more than one came in, by the first ticket's id
         val group = if (items.size > 1) items.first().ticket.identifier else null
@@ -161,6 +188,14 @@ class CheckInService(
                 request.technicianIdentifier?.let { tickets.setUser(ticket.identifier, it) }
                 item.passcode.trim().takeIf { it.isNotEmpty() }?.let { passcode ->
                     if (!passcodes.set(ticket.identifier, vault!!.seal(passcode), now, takenBy)) throw IllegalStateException("Passcode not saved")
+                }
+
+                // Repairs from the menu go on the ticket's invoice, made for them
+                repairLines[ticket.identifier]?.let { lines ->
+                    val invoice = invoices.getOrCreate(ticket.identifier, request.customerIdentifier, shopProfile.taxBasisPoints, shopProfile.taxRates)
+                        ?: throw IllegalStateException("Invoice not made")
+                    invoices.setCharges(invoice.identifier, invoice.charges + lines, invoice.discountCents, invoice.taxRateBasisPoints)
+                        ?: throw IllegalStateException("Repairs not added")
                 }
 
                 request.deposit?.takeIf { index == 0 }?.let { deposit ->
@@ -227,6 +262,19 @@ class CheckInService(
         val made = CustomerDevice(customerIdentifier = customer, device = typed, createdAt = now)
         if (!devices.add(made)) throw IllegalStateException("Device not saved")
         return made.identifier
+    }
+
+    // Repairs from the menu whose part or tax class has gone since the menu was saved
+    private fun repairsProblem(repairs: List<PickedRepair>, shopProfile: ShopProfile): String? {
+        repairs.forEach { (model, offer) ->
+            if (offer.taxClass != null && shopProfile.taxRates.none { it.identifier == offer.taxClass }) {
+                return "\"${offer.name}\" on ${model.label} has a tax class the shop doesn't have any more, fix it on the repair menu"
+            }
+            if (offer.inventoryIdentifier != null && inventory.getById(offer.inventoryIdentifier!!) == null) {
+                return "The part for \"${offer.name}\" on ${model.label} isn't in inventory any more, fix it on the repair menu"
+            }
+        }
+        return null
     }
 
     // A warranty return has to be of one of the customer's tickets that's still covered

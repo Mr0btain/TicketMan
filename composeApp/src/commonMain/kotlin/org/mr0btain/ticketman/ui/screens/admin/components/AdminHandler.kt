@@ -73,6 +73,9 @@ class AdminHandler(
     /** Payments tab */
     val payments = AdminPayments(remoteHandler, support, onSaved = onPaymentsChanged)
 
+    /** Repair menu tab */
+    val catalog = AdminCatalog(remoteHandler, support)
+
     /** Timesheets tab */
     val timesheets = AdminTimesheets(remoteHandler, support)
 
@@ -131,6 +134,11 @@ class AdminHandler(
                     AdminTab.USERS, AdminTab.INVOICES -> Unit
                     // For the tax classes a location can charge its own rates for
                     AdminTab.LOCATIONS -> server.reloadShopProfile()
+                    AdminTab.CATALOG -> {
+                        catalog.reload()
+                        // For the tax classes a repair can be charged at
+                        server.reloadShopProfile()
+                    }
                     AdminTab.TIME_OFF -> timeOff.reload()
                     AdminTab.SESSIONS -> devices.reloadSessions()
                     AdminTab.STATIONS -> devices.reloadStations()
@@ -180,7 +188,7 @@ class AdminHandler(
                 AdminTab.TIMESHEETS -> timesheets.load()
                 AdminTab.REPORTS -> reports.reloadReport()
                 AdminTab.AUDIT -> addNewAudit()
-                AdminTab.USERS, AdminTab.INVOICES, AdminTab.LOCATIONS -> Unit
+                AdminTab.USERS, AdminTab.INVOICES, AdminTab.LOCATIONS, AdminTab.CATALOG -> Unit
                 AdminTab.TIME_OFF -> timeOff.reload()
             }
         }

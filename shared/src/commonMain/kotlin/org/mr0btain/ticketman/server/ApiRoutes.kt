@@ -46,6 +46,7 @@ object ApiRoutes {
     const val TIME_CLOCK = "/api/timeclock"
     const val PAYMENT = "/api/payment"
     const val LOCATION = "/api/location"
+    const val CATALOG = "/api/catalog"
     const val SCHEDULE = "/api/schedule"
     const val TIME_OFF = "/api/timeoff"
 
@@ -453,6 +454,18 @@ object StatusPaths {
 
     /** The card processor telling the server a payment changed, `stripe` or `square`. Here so it's reachable from outside */
     const val PAYMENT_WEBHOOK = "/payments/{provider}/webhook"
+}
+
+/** The repair menu itself is a GET of [ApiRoutes.CATALOG], for anyone logged in */
+object CatalogPaths {
+    /** Admin only, body a `CatalogModel` */
+    const val ADD = "/add"
+
+    /** Admin only, body a `CatalogModel`, its repairs replacing the ones it had */
+    const val UPDATE = "/update"
+
+    /** Admin only */
+    const val REMOVE = "/remove/{identifier}"
 }
 
 /** The list itself is a GET of [ApiRoutes.LOCATION], for anyone logged in */

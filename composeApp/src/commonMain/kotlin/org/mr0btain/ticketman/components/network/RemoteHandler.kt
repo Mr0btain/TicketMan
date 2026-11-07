@@ -90,12 +90,13 @@ class RemoteHandler(
     val timeClockRepo = TimeClockRemoteRepository(httpClient)
     val paymentRepo = PaymentRemoteRepository(httpClient)
     val locationRepo = LocationRemoteRepository(httpClient)
+    val catalogRepo = CatalogRemoteRepository(httpClient)
     val scheduleRepo = ScheduleRemoteRepository(httpClient)
     val timeOffRepo = TimeOffRemoteRepository(httpClient)
 
     /** Every repository, so [setUrl] points all of them at the server. A new one goes here too */
     private val repositories: List<ServerRepository> =
-        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo, paymentRepo, locationRepo, scheduleRepo, timeOffRepo)
+        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo, paymentRepo, locationRepo, scheduleRepo, timeOffRepo, catalogRepo)
 
     // Base url once a server has been reached, used for routes outside the repositories
     private var serverUrl = ""

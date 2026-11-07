@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.components.database.tables.customer.CustomerTicket
 import org.mr0btain.ticketman.components.database.tables.image.ImageTable
 import org.mr0btain.ticketman.components.database.tables.location.InventoryStockTable
 import org.mr0btain.ticketman.components.database.tables.location.StockTransferTable
+import org.mr0btain.ticketman.components.database.tables.catalog.CatalogTable
 import org.mr0btain.ticketman.components.database.tables.location.LocationTable
 import org.mr0btain.ticketman.components.database.tables.schedule.ScheduleTable
 import org.mr0btain.ticketman.components.database.tables.schedule.TimeOffAllowanceTable
@@ -120,6 +121,7 @@ class LocalDatabase (
     val appointmentDatabase = AppointmentDatabase()
     val timeClockDatabase = TimeClockDatabase()
     val locationDatabase = LocationDatabase()
+    val catalogDatabase = CatalogDatabase()
     val scheduleDatabase = ScheduleDatabase()
     val timeOffDatabase = TimeOffDatabase()
     val paymentDatabase = PaymentDatabase()
@@ -178,6 +180,7 @@ class LocalDatabase (
         ScheduleTable,
         TimeOffAllowanceTable,
         TimeOffRequestTable,
+        CatalogTable,
         DataFixTable
     )
 

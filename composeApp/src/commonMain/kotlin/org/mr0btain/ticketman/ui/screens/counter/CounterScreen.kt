@@ -50,6 +50,7 @@ fun CounterScreen(
     val queue by counter.queue.collectAsState()
     val ticket by counter.ticket.collectAsState()
     val customer by counter.customer.collectAsState()
+    val repairMenu by counter.checkIn.menu.collectAsState()
     val priceResults by counter.priceResults.collectAsState()
     val shop by counter.shop.collectAsState()
     val checkInCustomer by counter.checkIn.customer.collectAsState()
@@ -285,7 +286,8 @@ fun CounterScreen(
                     surchargePercent = cardOptions.surchargePercent,
                     onReaderCharge = if (cardOptions.readers.isEmpty()) null else { reader, amount, onPaid ->
                         counter.cards.charge(reader, amount, 0, null, onPaid)
-                    }
+                    },
+                    menu = repairMenu
                 )
 
                 CounterView.CHECKED_IN -> lastCheckIn?.let { result ->

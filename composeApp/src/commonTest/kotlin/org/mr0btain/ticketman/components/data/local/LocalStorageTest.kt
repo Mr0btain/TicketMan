@@ -101,6 +101,17 @@ class LocalStorageTest {
     }
 
     @Test
+    fun theAdminTabIsSavedByNameAndAnOldPlaceStillReads() {
+        localStorage.defaultAdminTab = AdminTab.CATALOG
+        assertEquals("CATALOG", store.getString("admin_tab", ""))
+        assertEquals(AdminTab.CATALOG, LocalStorage(store).defaultAdminTab)
+
+        // Saved by an older version as its place: 5 was low stock, before the repair menu's tab came ahead of it
+        store.putString("admin_tab", "5")
+        assertEquals(AdminTab.LOW_STOCK, LocalStorage(store).defaultAdminTab)
+    }
+
+    @Test
     fun settingsDefaultWhenMissing() {
         assertEquals(LocalStorage.DEFAULT_REMEMBER_LOGIN, localStorage.rememberLogin)
         assertEquals(LocalStorage.DEFAULT_ADMIN_TAB, localStorage.defaultAdminTab.ordinal)

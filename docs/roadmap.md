@@ -37,9 +37,10 @@ Order: C1 → A1 → A2 → B1 → A3 → A5, A4 → A6, A7, then the rest.
 
 ### Add
 
-- **A1. Repair price menu** (brand → model → repair → price, part and warranty days). Options: a catalog table of
-  model × repair cells that check-in picks from, filling the estimate and reserving the parts; a `service` flag and
-  model tags on inventory items; later a supplier CSV price list to fill it.
+- **A1. Repair price menu.** Done as a catalog table ([Repair menu API](api/catalog.md)): models with their
+  repairs, edited on the admin Repair menu tab and ticked on check-in's Repair step onto the invoice. Next: a CSV
+  import of the menu (a supplier's price list), warning at check-in when a repair's part is out of stock at the
+  location, offering the menu when adding lines to an open ticket's invoice, and per-location prices if a shop asks.
 - **A2. Two-way texts.** Options: inbound Twilio texts through a webhook under `/status/`, kept per customer and
   ticket, with a conversation panel and unread badge on the ticket card; email replies from an IMAP mailbox later; or
   only a Reply-To header to the shop's address.

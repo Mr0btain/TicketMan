@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.ui.screens.admin
 
 import org.mr0btain.ticketman.components.data.LocalFormMemory
 import org.mr0btain.ticketman.ui.screens.admin.timeoff.AdminTimeOffTab
+import org.mr0btain.ticketman.ui.screens.admin.catalog.AdminCatalogTab
 import org.mr0btain.ticketman.ui.screens.admin.locations.AdminLocationsTab
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -101,6 +102,7 @@ private fun AdminContent(
     val outbox by admin.messages.outbox.collectAsState()
     val outboxEnd by admin.messages.outboxEnd.collectAsState()
     val paymentSettings by admin.payments.settings.collectAsState()
+    val repairMenu by admin.catalog.menu.collectAsState()
     val allLocations by viewModel.locations.all.collectAsState()
     val timeOffRequests by admin.timeOff.requests.collectAsState()
     val timeOffBalances by admin.timeOff.balances.collectAsState()
@@ -352,6 +354,15 @@ private fun AdminContent(
                 onApprove = { admin.timeOff.approve(it) },
                 onDecline = { request, reason -> admin.timeOff.decline(request, reason) },
                 onAllowance = { balance, hours -> admin.timeOff.setAllowance(balance, hours) }
+            )
+
+            AdminTab.CATALOG -> AdminCatalogTab(
+                menu = repairMenu,
+                taxClasses = shopProfile?.taxClasses.orEmpty(),
+                onSave = { model, isNew, onResult -> admin.catalog.save(model, isNew, onResult) },
+                onRemove = { admin.catalog.remove(it) },
+                onSearchParts = { admin.catalog.searchParts(it) },
+                onPartNames = { admin.catalog.partNames(it) }
             )
 
             AdminTab.LOCATIONS -> AdminLocationsTab(

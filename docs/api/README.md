@@ -27,6 +27,7 @@ changes here are made to both sides together.
 | [Time clock](timeclock.md) | `/api/timeclock` | `TimeClockRoute.kt` |
 | [Payments](payment.md) | `/api/payment` | `PaymentRoute.kt` |
 | [Locations](location.md) | `/api/location` | `LocationRoute.kt` |
+| [Repair menu](catalog.md) | `/api/catalog` | `CatalogRoute.kt` |
 | [Staff schedule](schedule.md) | `/api/schedule` | `ScheduleRoute.kt` |
 | [Time off](timeoff.md) | `/api/timeoff` | `TimeOffRoute.kt` |
 | [Status page](status.md) | `/status` | `StatusRoute.kt` |

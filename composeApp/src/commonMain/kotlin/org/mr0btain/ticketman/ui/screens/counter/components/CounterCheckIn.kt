@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
+import org.mr0btain.ticketman.data.catalog.CatalogModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -33,6 +34,10 @@ class CounterCheckIn(
     private val _appointment = MutableStateFlow<Appointment?>(null)
     val appointment = _appointment.asStateFlow()
 
+    private val _menu = MutableStateFlow<List<CatalogModel>>(emptyList())
+    /** The repair menu, read each time the wizard opens. Only offered, so a failed read keeps the last one */
+    val menu = _menu.asStateFlow()
+
     private val _last = MutableStateFlow<CheckInResponse?>(null)
     /** The last check in, for the done screen */
     val last = _last.asStateFlow()
@@ -43,6 +48,7 @@ class CounterCheckIn(
 
         _customer.value = customer
         _appointment.value = null
+        loadMenu()
         support.show(CounterView.CHECK_IN)
     }
 
@@ -52,7 +58,12 @@ class CounterCheckIn(
 
         _customer.value = customer
         _appointment.value = appointment
+        loadMenu()
         support.show(CounterView.CHECK_IN)
+    }
+
+    private fun loadMenu() {
+        scope.launch { _menu.value = remoteHandler.catalogRepo.all().getOrDefault(_menu.value) }
     }
 
     /** Opens the quick add customer screen */

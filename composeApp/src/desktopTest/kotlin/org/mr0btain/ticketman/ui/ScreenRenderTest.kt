@@ -6,6 +6,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import org.mr0btain.ticketman.ui.screens.counter.RepairStep
+import org.mr0btain.ticketman.ui.screens.counter.RepairMenuPanel
+import org.mr0btain.ticketman.ui.screens.admin.catalog.AdminCatalogTab
+import org.mr0btain.ticketman.data.catalog.CatalogModel
+import org.mr0btain.ticketman.data.catalog.PickedRepair
+import org.mr0btain.ticketman.data.catalog.RepairOffer
 import org.mr0btain.ticketman.ui.screens.counter.CheckInForm
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.StockTransferDialog
 import org.mr0btain.ticketman.data.inventory.LocationStock
@@ -602,6 +607,40 @@ class ScreenRenderTest {
     @Test
     fun adminLocations() = screen("admin-locations", rail = "Admin") {
         AdminLocationsTab(locations = listOf(mainStreet, downtown, northside), taxClasses = listOf(TaxClass("food", "Food", "2")), onSave = { _, _, _ -> })
+    }
+
+    private val iphoneScreen = RepairOffer(name = "Screen replacement", priceCents = 18_900, inventoryIdentifier = kotlin.uuid.Uuid.random(), warrantyDays = 90)
+    private val repairMenu = listOf(
+        CatalogModel(kind = DeviceKind.PHONE, manufacturer = "Apple", model = "iPhone 14 Pro", repairs = listOf(
+            iphoneScreen,
+            RepairOffer(name = "Battery", priceCents = 7_900, inventoryIdentifier = kotlin.uuid.Uuid.random(), warrantyDays = 90),
+            RepairOffer(name = "Charge port", priceCents = 9_900, warrantyDays = 30),
+            RepairOffer(name = "Diagnosis", priceCents = 2_500)
+        )),
+        CatalogModel(kind = DeviceKind.PHONE, manufacturer = "Apple", model = "iPhone 14", repairs = listOf(RepairOffer(name = "Screen replacement", priceCents = 14_900))),
+        CatalogModel(kind = DeviceKind.LAPTOP, manufacturer = "Lenovo", model = "ThinkPad T14"),
+    )
+
+    /** The repair menu with a few models, one with no repairs yet */
+    @Test
+    fun adminCatalog() = screen("admin-catalog", rail = "Admin") {
+        AdminCatalogTab(menu = repairMenu, taxClasses = emptyList(), onSave = { _, _, _ -> }, onRemove = {}, onSearchParts = { emptyList() }, onPartNames = { emptyMap() })
+    }
+
+    /** Check-in's repair step for a device on the menu, two models matching what was typed and one repair ticked */
+    @Test
+    fun checkInRepairMenu() = screen("check-in-repair-menu", height = 1300, rail = "Counter") {
+        val form = remember {
+            CheckInForm(dana, emptyList()).apply {
+                manufacturer = "Apple"
+                model = "iPhone 14"
+                toggle(PickedRepair(repairMenu.first(), iphoneScreen))
+            }
+        }
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            RepairMenuPanel(form, repairMenu)
+            RepairStep(form, { emptyList() })
+        }
     }
 
     /** Moving screens from Main Street to Downtown, with the moves before */

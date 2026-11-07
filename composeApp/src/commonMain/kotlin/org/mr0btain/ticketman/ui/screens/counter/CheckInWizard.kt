@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.catalog.CatalogModel
+import org.mr0btain.ticketman.data.catalog.PickedRepair
+import org.mr0btain.ticketman.data.catalog.RepairCatalog
+import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
 import org.mr0btain.ticketman.components.data.rememberKept
 import org.mr0btain.ticketman.data.payment.CardExtras
 import org.mr0btain.ticketman.data.payment.CardReader
@@ -114,6 +118,23 @@ internal class CheckInForm(customer: Customer?, private val checklists: List<Int
     /** The device's passcode or pattern, blank when they didn't give one */
     var passcode by mutableStateOf("")
 
+    /** Repairs ticked on the repair menu for this device. Their total is the estimate, their names the problem when none is typed */
+    val repairs = mutableStateListOf<PickedRepair>()
+
+    /** Ticks or unticks a repair from the menu, keeping the estimate at their total */
+    fun toggle(repair: PickedRepair) {
+        val picked = repairs.indexOfFirst { it.offer.identifier == repair.offer.identifier }
+        if (picked >= 0) repairs.removeAt(picked) else repairs += repair
+        estimateCents = RepairCatalog.totalCents(repairs)
+    }
+
+    /** Unticks every repair, when another model is picked */
+    fun clearRepairs() {
+        if (repairs.isEmpty()) return
+        repairs.clear()
+        estimateCents = 0
+    }
+
     /** The earlier repair this is a warranty return of, picked from the repeat warning */
     var warrantyOf by mutableStateOf<TicketSummary?>(null)
 
@@ -150,8 +171,9 @@ internal class CheckInForm(customer: Customer?, private val checklists: List<Int
 
     /** Keeps the device being typed for this visit and starts on another, keeping the customer, tech and deposit */
     fun addAnother() {
-        extra += CheckInItem(ticket(), deviceIdentifier, passcode.trim())
+        extra += CheckInItem(ticket(), deviceIdentifier, passcode.trim(), repairs.map { it.offer.identifier })
         ticketIdentifier = Uuid.generateV7()
+        repairs.clear()
         pick(null)
         checks.clear()
         passcode = ""
@@ -183,7 +205,7 @@ internal class CheckInForm(customer: Customer?, private val checklists: List<Int
         CheckInStep.CUSTOMER -> if (customer == null) "Pick or add a customer" else null
         CheckInStep.DEVICE -> if (manufacturer.isBlank() && model.isBlank()) "Enter the make or model" else null
         CheckInStep.REPAIR -> when {
-            problem.isBlank() -> "Describe what's wrong"
+            problem.isBlank() && repairs.isEmpty() -> "Describe what's wrong, or pick a repair"
             else -> null
         }
         CheckInStep.SIGN -> when {
@@ -206,7 +228,8 @@ internal class CheckInForm(customer: Customer?, private val checklists: List<Int
             deviceIdentifier = deviceIdentifier,
             more = extra.toList(),
             passcode = passcode.trim(),
-            appointmentIdentifier = appointment?.identifier
+            appointmentIdentifier = appointment?.identifier,
+            repairs = repairs.map { it.offer.identifier }
         )
 }
 
@@ -231,7 +254,8 @@ fun CheckInWizard(
     onLoadDevices: suspend (Uuid) -> List<CustomerDevice> = { emptyList() },
     readers: List<CardReader> = emptyList(),
     surchargePercent: String = "",
-    onReaderCharge: ((CardReader, Long, (CardCharge) -> Unit) -> Unit)? = null
+    onReaderCharge: ((CardReader, Long, (CardCharge) -> Unit) -> Unit)? = null,
+    menu: List<CatalogModel> = emptyList()
 ) {
     val form = rememberKept("check-in", startingCustomer, checklists, appointment) { CheckInForm(startingCustomer, checklists, appointment) }
     val needsSignature = terms.isNotBlank()
@@ -274,7 +298,10 @@ fun CheckInWizard(
             when (step) {
                 CheckInStep.CUSTOMER -> CustomerStep(form, onSearchCustomers, onAddCustomer)
                 CheckInStep.DEVICE -> DeviceStep(form, devices, onRepeatCheck, onOpenTicket)
-                CheckInStep.REPAIR -> RepairStep(form, onSearchTechnicians, readers, surchargePercent, onReaderCharge)
+                CheckInStep.REPAIR -> {
+                    RepairMenuPanel(form, menu)
+                    RepairStep(form, onSearchTechnicians, readers, surchargePercent, onReaderCharge)
+                }
                 CheckInStep.SIGN -> SignStep(form, terms)
                 CheckInStep.REVIEW -> ReviewStep(form, needsSignature)
             }
@@ -560,6 +587,67 @@ private fun DeviceStep(
     }
 }
 
+/**
+ * The repair menu's entries for the device typed, to tick what's being done at set prices. Shows nothing when the
+ * device isn't on the menu
+ */
+@Composable
+internal fun RepairMenuPanel(form: CheckInForm, menu: List<CatalogModel>) {
+    val matches = remember(menu, form.manufacturer, form.model) { RepairCatalog.matches(menu, form.device) }
+    if (matches.isEmpty()) return
+
+    val colors = TmTheme.colors
+    var chosen by remember(matches) {
+        mutableStateOf(matches.firstOrNull { model -> form.repairs.any { it.model.identifier == model.identifier } } ?: matches.first())
+    }
+
+    TmPanel(
+        title = "Repair menu",
+        subtitle = "Tick what they're having done. Each goes on the invoice at its price",
+        icon = Res.drawable.tool
+    ) {
+        if (matches.size > 1) {
+            TmDropdown(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Model",
+                options = matches,
+                selected = chosen,
+                onSelect = { model ->
+                    if (model.identifier != chosen.identifier) {
+                        form.clearRepairs()
+                        chosen = model
+                    }
+                },
+                optionLabel = { it.label }
+            )
+        }
+
+        if (chosen.repairs.isEmpty()) {
+            Text(text = "No repairs on the menu for ${chosen.label} yet", style = TmTheme.typography.caption, color = colors.textMuted)
+        }
+
+        chosen.repairs.forEach { offer ->
+            val repair = PickedRepair(chosen, offer)
+            val picked = form.repairs.any { it.offer.identifier == offer.identifier }
+            TmListRow(
+                title = offer.name,
+                subtitle = listOfNotNull(
+                    offer.warrantyDays?.let { "$it day warranty" },
+                    if (offer.inventoryIdentifier != null) "Part from stock" else null
+                ).joinToString(" · ").ifBlank { null },
+                leading = { TmCheckbox(checked = picked, onCheckedChange = { form.toggle(repair) }) },
+                trailing = { Text(text = formatMoney(offer.priceCents), style = TmTheme.typography.numeric, color = colors.text) },
+                selected = picked,
+                onClick = { form.toggle(repair) }
+            )
+        }
+
+        if (form.repairs.isNotEmpty()) {
+            TmKeyValueRow(label = "Repairs picked", value = formatMoney(RepairCatalog.totalCents(form.repairs)), numeric = true)
+        }
+    }
+}
+
 @Composable
 internal fun RepairStep(
     form: CheckInForm,
@@ -583,6 +671,7 @@ internal fun RepairStep(
             value = form.problem,
             onValueChange = { form.problem = it },
             label = "What's wrong, in the customer's words",
+            supportingText = if (form.repairs.isNotEmpty() && form.problem.isBlank()) "Left blank, it's the repairs picked: ${RepairCatalog.problemText(form.repairs)}" else null,
             singleLine = false,
             minLines = 3
         )

@@ -150,7 +150,9 @@ fun Application.module() {
             passcodes = database.passcodeDatabase,
             vault = passcodeVault,
             appointments = database.appointmentDatabase,
-            cards = cardPayments
+            cards = cardPayments,
+            catalog = database.catalogDatabase,
+            inventory = database.inventoryDatabase
         )
 
         val imageService = ImageService(database.imageDatabase, database.imageStore)

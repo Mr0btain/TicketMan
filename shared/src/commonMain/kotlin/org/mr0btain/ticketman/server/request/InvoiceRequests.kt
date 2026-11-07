@@ -58,6 +58,8 @@ data class PaymentRequest(
  * technician and signature. The deposit goes on the first
  * @param passcode The device's passcode or pattern, blank for none. Kept encrypted, shown only to staff who can edit
  * @param appointmentIdentifier The booked appointment this visit is, marked checked in with the first ticket
+ * @param repairs Repairs picked from the repair menu for [ticket], by their `RepairOffer` ids. Each goes on its invoice
+ * as a line, and their total is the estimate when none was typed
  */
 @Serializable
 data class CheckInRequest(
@@ -69,7 +71,8 @@ data class CheckInRequest(
     val deviceIdentifier: Uuid? = null,
     val more: List<CheckInItem> = emptyList(),
     val passcode: String = "",
-    val appointmentIdentifier: Uuid? = null
+    val appointmentIdentifier: Uuid? = null,
+    val repairs: List<Uuid> = emptyList()
 )
 
 /** Another device at the same check in */
@@ -77,7 +80,8 @@ data class CheckInRequest(
 data class CheckInItem(
     val ticket: Ticket,
     val deviceIdentifier: Uuid? = null,
-    val passcode: String = ""
+    val passcode: String = "",
+    val repairs: List<Uuid> = emptyList()
 )
 
 /** A device's passcode, being set or shown */
