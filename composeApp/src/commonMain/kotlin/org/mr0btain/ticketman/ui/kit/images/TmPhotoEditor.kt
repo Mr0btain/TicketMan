@@ -13,13 +13,13 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.error.TmResult
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.feedback.TmProgressBar
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.feedback.TmProgressBar
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.image
 

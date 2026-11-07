@@ -14,7 +14,7 @@ import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.logging.SimpleResult
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
 
 inline fun <reified T> safeCastList(value: Any?): List<T>? {

@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.components.proxy.ProxySettings
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.time.ZoneId
 import java.time.ZoneOffset
 

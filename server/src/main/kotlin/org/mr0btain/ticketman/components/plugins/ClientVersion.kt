@@ -4,7 +4,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.APP_VERSION_HEADER
 import org.mr0btain.ticketman.server.AppVersion
 import org.mr0btain.ticketman.server.VersionComparison

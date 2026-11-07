@@ -13,16 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.stringResource
 import org.mr0btain.ticketman.server.request.AccountRequest
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.feedback.TmLoading
 import org.mr0btain.ticketman.ui.screens.login.components.LoginDialogState
 import org.mr0btain.ticketman.ui.screens.login.components.LoginField
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.login.components.RequestAccountForm
 import org.mr0btain.ticketman.ui.screens.login.components.ServerAddressField
 import org.mr0btain.ticketman.ui.MainViewModel
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.login_text
 

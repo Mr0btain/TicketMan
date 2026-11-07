@@ -2,9 +2,9 @@ package org.mr0btain.ticketman.components.logging
 
 import kotlinx.io.files.Path
 import org.mr0btain.ticketman.components.data.local.LocalStorage
-import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.logging.LogBook
-import org.mr0btain.ticketman.logging.LogFileStore
+import org.mr0btain.applogger.AppLogger
+import org.mr0btain.applogger.LogBook
+import org.mr0btain.applogger.LogFileStore
 import org.mr0btain.ticketman.util.AppDir
 
 /**
@@ -23,7 +23,7 @@ object ClientLogs {
     fun start(appDir: AppDir, localStorage: LocalStorage) {
         val folder = appDir.path?.let { Path(it, FOLDER) } ?: return
         try {
-            val store = LogFileStore(folder, localStorage.logSettings)
+            val store = LogFileStore(folder, "ticketman", localStorage.logSettings)
             if (!store.usable) return
             LogBook.attach(store)
             savesFiles = true

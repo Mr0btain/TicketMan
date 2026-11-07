@@ -6,14 +6,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.components.data.note.NoteSeed
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDeleteDialog
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmConfirmDeleteDialog
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
-import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
+import org.mr0btain.uikit.selection.TmCheckbox
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.trash_2
 

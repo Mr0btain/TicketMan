@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.InventoryPaths
 import org.mr0btain.ticketman.server.RecordPaths
 import org.mr0btain.ticketman.server.request.StockChangeRequest

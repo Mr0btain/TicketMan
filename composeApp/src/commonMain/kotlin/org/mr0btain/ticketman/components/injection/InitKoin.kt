@@ -3,7 +3,7 @@ package org.mr0btain.ticketman.components.injection
 import org.koin.core.context.startKoin
 import org.koin.dsl.KoinAppDeclaration
 import org.mr0btain.ticketman.components.debug.BuildConfigImpl
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.logging.ClientLogs
 import org.mr0btain.ticketman.util.AppDir

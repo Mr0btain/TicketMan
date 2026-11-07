@@ -11,10 +11,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import org.jetbrains.compose.resources.stringResource
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.server
 import ticketman.composeapp.generated.resources.server_address_string

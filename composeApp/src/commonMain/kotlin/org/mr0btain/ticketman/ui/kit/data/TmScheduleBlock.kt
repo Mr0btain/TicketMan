@@ -11,9 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.mr0btain.ticketman.ui.kit.foundation.tmClickable
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import org.mr0btain.ticketman.ui.kit.theme.TmTone
+import org.mr0btain.uikit.foundation.tmClickable
+import org.mr0btain.uikit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTone
 
 /**
  * Something on a calendar that runs from one day or time to another, like a shift or time off: a solid block in

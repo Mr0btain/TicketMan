@@ -13,15 +13,16 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.backhandler.BackHandler
 import androidx.navigation.compose.currentBackStackEntryAsState
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.arrow_left
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import org.mr0btain.ticketman.ui.kit.gallery.KitGallery
+import org.mr0btain.uikit.gallery.KitGallery
+import org.mr0btain.ticketman.ui.kit.gallery.appGallerySections
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
 import org.mr0btain.ticketman.ui.screens.records.RecordsScreen
@@ -119,7 +120,8 @@ fun NavigationHost(
                 darkTheme = darkMode.value,
                 onDarkThemeChange = { dark -> if (dark != darkMode.value) mainViewModel.settings.toggleDarkMode() },
                 reduceTransparency = mainViewModel.settings.reduceTransparency.collectAsState().value,
-                onReduceTransparencyChange = { mainViewModel.settings.toggleReduceTransparency() }
+                onReduceTransparencyChange = { mainViewModel.settings.toggleReduceTransparency() },
+                extraSections = appGallerySections()
             )
         }
     }

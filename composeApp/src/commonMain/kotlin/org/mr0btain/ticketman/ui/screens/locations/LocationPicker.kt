@@ -5,7 +5,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.data.location.Location
-import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
+import org.mr0btain.uikit.selection.TmDropdown
 import org.mr0btain.ticketman.ui.screens.locations.components.LocationsHandler
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.map_pin

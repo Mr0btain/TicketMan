@@ -9,7 +9,7 @@ import android.webkit.WebViewClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.mr0btain.ticketman.data.shop.PaperSize
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import java.lang.ref.WeakReference
 

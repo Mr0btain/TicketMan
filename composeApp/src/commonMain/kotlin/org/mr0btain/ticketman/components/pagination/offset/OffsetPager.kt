@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.logging.SimpleResult
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 
 /**
  * Custom offset pager. We needed more control over the pager state so we can handle jumping to items that may

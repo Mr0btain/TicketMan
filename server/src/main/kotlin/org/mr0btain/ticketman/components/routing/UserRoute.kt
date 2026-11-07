@@ -22,7 +22,7 @@ import org.mr0btain.ticketman.server.request.ChangePasswordRequest
 import org.mr0btain.ticketman.server.request.ApproveRequest
 import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.SetPinRequest
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.RecordPaths
 import org.mr0btain.ticketman.server.UserPaths

@@ -17,11 +17,11 @@ import org.mr0btain.ticketman.components.data.saveFile
 import org.mr0btain.ticketman.components.logging.ClientLogs
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.error.TmResult
-import org.mr0btain.ticketman.logging.LogBook
-import org.mr0btain.ticketman.logging.LogFileInfo
-import org.mr0btain.ticketman.logging.LogLine
-import org.mr0btain.ticketman.logging.LogOverview
-import org.mr0btain.ticketman.logging.LogSettings
+import org.mr0btain.applogger.LogBook
+import org.mr0btain.applogger.LogFileInfo
+import org.mr0btain.applogger.LogLine
+import org.mr0btain.applogger.LogOverview
+import org.mr0btain.applogger.LogSettings
 
 /** Whose log the logs viewer shows */
 enum class LogSource(val label: String) {

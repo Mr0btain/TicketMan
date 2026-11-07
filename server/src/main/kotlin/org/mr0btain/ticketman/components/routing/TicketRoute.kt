@@ -25,7 +25,7 @@ import org.mr0btain.ticketman.data.ticket.CustomStatusRules
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.ticket.TicketNumber
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.RecordPaths
 import org.mr0btain.ticketman.server.TicketPaths
 import kotlin.uuid.Uuid

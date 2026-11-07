@@ -17,7 +17,7 @@ import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import org.mr0btain.ticketman.components.print.AndroidPrintHost
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.ui.AppWindow
 
 class MainActivity : ComponentActivity() {

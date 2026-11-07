@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.payment.PaymentProvider
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.RefundRequest
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.invoices.RefundDialog
 import org.mr0btain.ticketman.ui.screens.counter.PaymentPanel
 import kotlin.test.Test

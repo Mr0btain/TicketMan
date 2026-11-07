@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.admin.stations
 
 import org.mr0btain.ticketman.data.location.Location
-import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
+import org.mr0btain.uikit.selection.TmDropdown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -15,17 +15,17 @@ import org.mr0btain.ticketman.components.utils.formatTimeAgo
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
-import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
-import org.mr0btain.ticketman.ui.kit.foundation.TmSurfaceLevel
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmSwitch
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmPanel
+import org.mr0btain.uikit.feedback.TmBadge
+import org.mr0btain.uikit.feedback.TmEmptyState
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.foundation.TmSurface
+import org.mr0btain.uikit.foundation.TmSurfaceLevel
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.selection.TmSwitch
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.monitor
 

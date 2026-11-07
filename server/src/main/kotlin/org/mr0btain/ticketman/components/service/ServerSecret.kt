@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import java.security.MessageDigest
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.io.File
 import java.security.SecureRandom
 import java.util.Base64

@@ -38,7 +38,7 @@ import org.mr0btain.ticketman.ui.screens.navigation.Destination
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationItem
 import org.mr0btain.ticketman.ui.screens.navigation.alwaysWide
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.file_text

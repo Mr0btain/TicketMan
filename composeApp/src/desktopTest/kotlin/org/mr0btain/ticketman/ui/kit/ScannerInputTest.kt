@@ -2,8 +2,8 @@ package org.mr0btain.ticketman.ui.kit
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
-import org.mr0btain.ticketman.ui.kit.search.TmSearchField
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.search.TmSearchField
+import org.mr0btain.uikit.theme.TmTheme
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

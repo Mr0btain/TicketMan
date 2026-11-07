@@ -3,7 +3,7 @@ package org.mr0btain.ticketman.components.service
 import org.mr0btain.ticketman.BuildInfo
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.proxy.ProxySettings
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
 import java.time.ZoneId

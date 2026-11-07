@@ -9,20 +9,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.use
 import org.jetbrains.skia.EncodedImageFormat
-import org.mr0btain.ticketman.ui.kit.foundation.TmBackdrop
-import org.mr0btain.ticketman.ui.kit.gallery.KitGallery
-import org.mr0btain.ticketman.ui.kit.theme.TmFont
-import org.mr0btain.ticketman.ui.kit.theme.TmFonts
-import org.mr0btain.ticketman.ui.kit.theme.TmPalette
-import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.foundation.TmBackdrop
+import org.mr0btain.uikit.gallery.KitGallery
+import org.mr0btain.ticketman.ui.kit.gallery.appGallerySections
+import org.mr0btain.uikit.theme.TmFont
+import org.mr0btain.uikit.theme.TmFonts
+import org.mr0btain.uikit.theme.TmPalette
+import org.mr0btain.uikit.theme.TmPalettes
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Draws the component gallery to PNGs in build/kit-gallery, one per theme, mode and font,
+ * Draws the component gallery (the shared kit's sections, then TicketMan's) to PNGs in build/kit-gallery, one per theme, mode and font,
  * so changes to the kit can be looked over without running the app
  */
 class KitGalleryRenderTest {
@@ -45,7 +46,8 @@ class KitGalleryRenderTest {
                     darkTheme = dark,
                     onDarkThemeChange = {},
                     reduceTransparency = reduceTransparency,
-                    onReduceTransparencyChange = {}
+                    onReduceTransparencyChange = {},
+                    extraSections = appGallerySections()
                 )
             }
         }
@@ -117,7 +119,7 @@ class KitGalleryRenderTest {
     companion object {
         private const val WIDTH = 1440
         private const val NARROW_WIDTH = 720
-        private const val HEIGHT = 3900
+        private const val HEIGHT = 6400
         private const val FRAMES = 8
         private const val FRAME_WAIT_MS = 60L
         private const val FRAME_NANOS = 16_000_000L

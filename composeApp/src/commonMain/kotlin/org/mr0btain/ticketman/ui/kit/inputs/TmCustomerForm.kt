@@ -1,17 +1,19 @@
 package org.mr0btain.ticketman.ui.kit.inputs
 
+import org.mr0btain.uikit.inputs.TmFieldPair
+import org.mr0btain.uikit.inputs.TmTextField
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.containers.TmPanel
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.user_plus
 

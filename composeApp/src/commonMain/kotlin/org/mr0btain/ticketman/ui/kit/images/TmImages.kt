@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.ui.kit.images
 
-import org.mr0btain.ticketman.ui.kit.containers.TmFullScreenDialog
+import org.mr0btain.uikit.containers.TmFullScreenDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.SnapPosition
@@ -35,12 +35,12 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.foundation.tmClickable
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.buttons.TmIconButton
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.foundation.tmClickable
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.alert_circle
 import ticketman.composeapp.generated.resources.chevron_left

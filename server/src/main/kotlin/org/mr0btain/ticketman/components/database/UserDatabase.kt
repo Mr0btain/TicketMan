@@ -39,7 +39,7 @@ import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.UserError
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.security.SecureRandom
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

@@ -43,7 +43,7 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.timeclock.TimeEntry
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.request.PurchaseOrderRequest
 import org.mr0btain.ticketman.server.request.ReceiveRequest
 import org.mr0btain.ticketman.server.request.ReceivedLine

@@ -9,11 +9,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import org.mr0btain.ticketman.data.shop.Storage
 import org.mr0btain.ticketman.data.shop.StorageTerms
 import org.mr0btain.ticketman.ui.kit.data.LocalCurrencySymbol
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * What happens to devices left after they're ready: a daily storage fee after some days, and abandoned after more.

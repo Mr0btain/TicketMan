@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.image
 
 import org.mr0btain.ticketman.data.image.ImageVariant
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import java.io.File
 import kotlin.uuid.ExperimentalUuidApi

@@ -26,7 +26,7 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.ticket.customerChoice
 import org.mr0btain.ticketman.data.ticket.customerLabel
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.request.TestMessageRequest
 import org.mr0btain.ticketman.server.request.SendLinkRequest
 import org.mr0btain.ticketman.data.payment.CardCharge

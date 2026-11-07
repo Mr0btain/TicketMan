@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.data.ticket.StatusLink
 import androidx.compose.foundation.layout.*
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,11 +19,11 @@ import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterView
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.MainViewModel
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.search.TmSearchField
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.feedback.TmEmptyState
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.search.TmSearchField
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.dollar_sign
 import ticketman.composeapp.generated.resources.lock

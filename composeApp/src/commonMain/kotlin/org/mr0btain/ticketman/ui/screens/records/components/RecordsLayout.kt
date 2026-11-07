@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.records.components
 
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.feedback.TmNotice
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -19,16 +19,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import org.jetbrains.compose.resources.DrawableResource
 import org.mr0btain.ticketman.components.data.RecordSelection
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmLazyColumn
-import org.mr0btain.ticketman.ui.kit.containers.TmPaneHeader
-import org.mr0btain.ticketman.ui.kit.data.TmColumn
-import org.mr0btain.ticketman.ui.kit.data.TmTableHeader
-import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
-import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
-import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmLazyColumn
+import org.mr0btain.uikit.containers.TmPaneHeader
+import org.mr0btain.uikit.data.TmColumn
+import org.mr0btain.uikit.data.TmTableHeader
+import org.mr0btain.uikit.feedback.TmEmptyState
+import org.mr0btain.uikit.foundation.TmDivider
+import org.mr0btain.uikit.foundation.TmSurface
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit_2
 import kotlin.uuid.Uuid

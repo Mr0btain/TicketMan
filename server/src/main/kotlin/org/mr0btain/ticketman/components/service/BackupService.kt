@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.image.ImageStore
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.image.ImageVariant
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.server.AdminPaths
 import org.mr0btain.ticketman.server.ApiRoutes

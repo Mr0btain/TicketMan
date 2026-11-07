@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import kotlin.uuid.Uuid
-import org.mr0btain.ticketman.logging.LogSettings
+import org.mr0btain.applogger.LogSettings
 
 class LocalStorage(private val store: KeyValueStore) {
     private var _username: String = ""

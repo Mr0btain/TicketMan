@@ -9,10 +9,10 @@ import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.ServerLogs
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.logging.LogOverview
-import org.mr0btain.ticketman.logging.LogSettings
-import org.mr0btain.ticketman.logging.LogTail
+import org.mr0btain.applogger.AppLogger
+import org.mr0btain.applogger.LogOverview
+import org.mr0btain.applogger.LogSettings
+import org.mr0btain.applogger.LogTail
 import org.mr0btain.ticketman.server.AdminPaths
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.request.LoginRequest

@@ -5,7 +5,7 @@ import io.ktor.server.application.hooks.*
 import io.ktor.server.plugins.*
 import io.ktor.util.*
 import org.mr0btain.ticketman.components.proxy.ProxySettings
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 
 /** Set on a call whose client address came from a trusted proxy's forwarded headers */
 val ForwardedByProxy = AttributeKey<Boolean>("ForwardedByProxy")

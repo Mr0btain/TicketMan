@@ -4,8 +4,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
-import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
-import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.uikit.buttons.TmIconButton
+import org.mr0btain.uikit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import ticketman.composeapp.generated.resources.edit_2
 import androidx.compose.material3.Text
@@ -13,17 +13,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatDate
 import org.mr0btain.ticketman.data.giftcard.GiftCard
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmAdjustBalanceDialog
-import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.data.TmColumn
+import org.mr0btain.uikit.containers.TmPanel
+import org.mr0btain.uikit.data.TmColumn
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
-import org.mr0btain.ticketman.ui.kit.data.TmTableHeader
-import org.mr0btain.ticketman.ui.kit.data.TmTableRow
-import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.data.TmTableHeader
+import org.mr0btain.uikit.data.TmTableRow
+import org.mr0btain.uikit.feedback.TmEmptyState
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.gift
 

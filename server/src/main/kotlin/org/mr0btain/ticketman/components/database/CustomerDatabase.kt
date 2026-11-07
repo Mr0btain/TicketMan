@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.CustomerError
 import org.mr0btain.ticketman.error.TicketError
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerNoteTable

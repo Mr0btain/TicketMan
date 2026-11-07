@@ -8,11 +8,11 @@ import androidx.compose.runtime.Composable
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.uikit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.records.components.DetailSection
 import org.mr0btain.ticketman.ui.screens.records.components.RecordDetail
 import ticketman.composeapp.generated.resources.Res

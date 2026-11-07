@@ -25,6 +25,9 @@ ksafe = "3.3.0"
 kotlinx-datetime = "0.7.1"
 zxing = "3.5.3"
 haze = "2.0.1"
+# Our shared libraries (Tm-AppLogger, Tm-UI-Kit), built from source, see settings.gradle.kts
+tm-applogger = "0.1.0"
+tm-uikit = "0.1.0"
 thumbnailator = "0.4.20"
 pdfbox = "3.0.8"
 pdfbox-graphics2d = "3.0.5"
@@ -32,6 +35,9 @@ angus-mail = "2.0.3"
 coil = "3.6.2"
 
 [libraries]
+tm-applogger = { module = "org.mr0btain:tm-applogger", version.ref = "tm-applogger" }
+tm-ui-kit = { module = "org.mr0btain:tm-ui-kit", version.ref = "tm-uikit" }
+tm-ui-kit-rules = { module = "org.mr0btain:tm-ui-kit-rules", version.ref = "tm-uikit" }
 components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "componentsResources" }
 foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "foundation" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }

@@ -7,7 +7,7 @@ import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.nio.file.Path
-import org.mr0btain.ticketman.logging.LogBook
+import org.mr0btain.applogger.LogBook
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.deleteRecursively

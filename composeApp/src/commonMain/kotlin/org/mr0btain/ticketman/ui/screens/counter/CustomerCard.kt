@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
-import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
+import org.mr0btain.uikit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -10,16 +10,16 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatDate
 import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.components.utils.formatEnumName
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmAdjustBalanceDialog
-import org.mr0btain.ticketman.ui.kit.containers.TmListRow
-import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.uikit.containers.TmListRow
+import org.mr0btain.uikit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
-import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.data.TmKeyValueRow
+import org.mr0btain.uikit.feedback.TmEmptyState
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.counter.components.CustomerDetail
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketRow
 import org.mr0btain.ticketman.ui.screens.counter.components.isClosed

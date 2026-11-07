@@ -53,7 +53,7 @@ import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.error.CustomerError
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.UserError
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.security.SecureRandom
 import java.time.Instant
 import java.time.Year

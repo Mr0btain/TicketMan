@@ -10,18 +10,18 @@ import org.mr0btain.ticketman.data.estimate.Estimate
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.InvoiceMath
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
-import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
-import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.selection.TmCheckbox
+import org.mr0btain.uikit.selection.TmDropdown
+import org.mr0btain.uikit.selection.TmSegmented
+import org.mr0btain.uikit.theme.TmTheme
 
 /** Narrower than this, estimate lines take two rows */
 private val ESTIMATE_MIN_WIDTH = 560.dp

@@ -4,11 +4,11 @@ import kotlinx.io.asSink
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.logging.LogBook
-import org.mr0btain.ticketman.logging.LogFileStore
-import org.mr0btain.ticketman.logging.LogOverview
-import org.mr0btain.ticketman.logging.LogSettings
+import org.mr0btain.applogger.AppLogger
+import org.mr0btain.applogger.LogBook
+import org.mr0btain.applogger.LogFileStore
+import org.mr0btain.applogger.LogOverview
+import org.mr0btain.applogger.LogSettings
 import java.io.File
 import java.io.OutputStream
 import java.nio.file.Files
@@ -30,7 +30,7 @@ class ServerLogs(private val folder: File?) {
     fun start() {
         val folder = folder ?: return
         val settings = readSettings()
-        LogBook.attach(LogFileStore(Path(folder.path), settings))
+        LogBook.attach(LogFileStore(Path(folder.path), "ticketman", settings))
         AppLogger.i(TAG, "Saving logs in ${folder.path}, keeping ${settings.keepFiles} files up to ${settings.maxTotalMb} MB, a new one each day at ${settings.rolloverText}")
     }
 

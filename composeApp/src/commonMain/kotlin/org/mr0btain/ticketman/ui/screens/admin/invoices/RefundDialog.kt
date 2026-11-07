@@ -12,18 +12,18 @@ import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.invoice.ReturnedPart
 import org.mr0btain.ticketman.server.request.RefundRequest
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.selection.TmSegmented
+import org.mr0btain.uikit.theme.TmTheme
 import kotlin.uuid.Uuid
 
 /**

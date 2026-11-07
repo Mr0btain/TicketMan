@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.kit.selection
 
+import org.mr0btain.uikit.selection.TmDropdown
+import org.mr0btain.uikit.selection.TmSegmented
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.data.ticket.StatusChoice
@@ -7,7 +9,7 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.ticket.label
 import org.mr0btain.ticketman.data.ticket.selectable
 import org.mr0btain.ticketman.ui.kit.feedback.LocalTicketStatuses
-import org.mr0btain.ticketman.ui.kit.feedback.TmDot
+import org.mr0btain.uikit.feedback.TmDot
 import org.mr0btain.ticketman.ui.kit.feedback.statusTone
 
 /**

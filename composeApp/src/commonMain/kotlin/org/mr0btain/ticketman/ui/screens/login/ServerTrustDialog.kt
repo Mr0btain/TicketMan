@@ -6,12 +6,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.network.UntrustedCertificate
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * Asks whether to trust a server whose certificate no public authority vouches for: a reverse proxy with a private

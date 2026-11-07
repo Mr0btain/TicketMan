@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.data.notify.Inbox
 import org.mr0btain.ticketman.data.notify.InboxResponse
 import org.mr0btain.ticketman.data.notify.NotificationChannel
 import org.mr0btain.ticketman.data.notify.PhoneNumbers
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.security.MessageDigest
 import java.util.Base64
 import javax.crypto.Mac

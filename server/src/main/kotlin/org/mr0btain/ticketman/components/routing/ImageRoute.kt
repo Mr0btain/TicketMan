@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.error.ImageError
 import org.mr0btain.ticketman.error.TmResult
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.io.File
 import kotlin.uuid.ExperimentalUuidApi
 

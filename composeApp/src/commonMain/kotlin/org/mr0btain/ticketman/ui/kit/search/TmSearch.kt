@@ -1,13 +1,13 @@
 package org.mr0btain.ticketman.ui.kit.search
 
+import org.mr0btain.uikit.search.TM_SEARCH_DEBOUNCE
+import org.mr0btain.uikit.search.TmSearchField
+import org.mr0btain.uikit.search.highlightMatch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -16,74 +16,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.mr0btain.ticketman.data.search.TmSearchResult
-import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmMenu
-import org.mr0btain.ticketman.ui.kit.selection.TmMenuItem
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import ticketman.composeapp.generated.resources.Res
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.selection.TmMenu
+import org.mr0btain.uikit.selection.TmMenuItem
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.search
-import ticketman.composeapp.generated.resources.x
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
-
-/** How long typing has to pause before a search runs */
-val TM_SEARCH_DEBOUNCE: Duration = 350.milliseconds
-
-/**
- * Text field with a search icon and a clear button
- * @param onSearch Called when enter is pressed
- * @param loading Shows a spinner in place of the clear button
- */
-@Composable
-fun TmSearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String = "Search",
-    label: String? = null,
-    enabled: Boolean = true,
-    loading: Boolean = false,
-    size: TmControlSize = TmControlSize.MEDIUM,
-    onSearch: (String) -> Unit = {}
-) {
-    TmTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier,
-        label = label,
-        placeholder = placeholder,
-        enabled = enabled,
-        size = size,
-        leadingIcon = Res.drawable.search,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { onSearch(query) }),
-        trailing = {
-            when {
-                loading -> CircularProgressIndicator(
-                    modifier = Modifier.size(size.iconSize),
-                    color = TmTheme.colors.accent.color,
-                    strokeWidth = 2.dp
-                )
-
-                query.isNotEmpty() -> TmIconButton(
-                    icon = Res.drawable.x,
-                    contentDescription = "Clear search",
-                    onClick = { onQueryChange("") },
-                    size = TmControlSize.SMALL
-                )
-            }
-        }
-    )
-}
 
 /**
  * Search field that looks things up as you type and lists matches under it

@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.components.database.Database
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.NotePaths
 
 /**

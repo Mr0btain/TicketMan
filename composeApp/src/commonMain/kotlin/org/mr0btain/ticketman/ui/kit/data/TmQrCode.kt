@@ -18,7 +18,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.print.QrCode
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * [text] as a QR code for a phone to scan, like a payment link. Always dark on white with a quiet zone, whatever the

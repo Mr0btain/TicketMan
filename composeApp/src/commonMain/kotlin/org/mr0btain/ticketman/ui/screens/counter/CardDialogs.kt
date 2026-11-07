@@ -12,17 +12,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.data.payment.CardCharge
 import org.mr0btain.ticketman.data.payment.CardChargeStatus
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import org.mr0btain.ticketman.ui.kit.data.TmQrCode
 import org.mr0btain.ticketman.ui.kit.data.qrFits
-import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.feedback.TmLoading
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * An amount sent to a card reader: waiting for the card with a way to call it off, or why it didn't go through.

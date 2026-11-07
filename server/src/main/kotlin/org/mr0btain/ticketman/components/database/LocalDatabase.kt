@@ -62,7 +62,7 @@ import org.mr0btain.ticketman.components.database.tables.user.InviteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
 import org.mr0btain.ticketman.components.image.ImageStore
 import org.mr0btain.ticketman.data.user.UserStatus
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import java.io.File
 

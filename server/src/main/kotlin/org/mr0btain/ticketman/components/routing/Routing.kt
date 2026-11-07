@@ -36,7 +36,7 @@ import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.components.payments.CardPayments
 import org.mr0btain.ticketman.components.payments.PaymentService
 import org.mr0btain.ticketman.components.service.UserService
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.components.service.PasscodeVault
 import org.mr0btain.ticketman.components.service.PurchaseService
 import org.mr0btain.ticketman.components.service.StoredValueService

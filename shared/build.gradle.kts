@@ -80,6 +80,9 @@ kotlin {
             // FileOps
             //implementation(libs.bundles.fileOps)
             implementation(libs.kotlinx.io)
+
+            // AppLogger, LogBook and log files, shared with Tuners Toolkit
+            api(libs.tm.applogger)
         }
 
         androidMain.dependencies {

@@ -5,8 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.selection.TmCheckbox
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * Whether a customer agreed to hear about their repairs by email and by text. Each box only works once there's an

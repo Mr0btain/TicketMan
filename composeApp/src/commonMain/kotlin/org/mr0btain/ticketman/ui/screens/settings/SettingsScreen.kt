@@ -25,8 +25,8 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.station.StationStatus
-import org.mr0btain.ticketman.ui.kit.containers.TmScrollColumn
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.containers.TmScrollColumn
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.AccountPanel
 import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
@@ -43,7 +43,7 @@ import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 import org.mr0btain.ticketman.ui.screens.settings.components.LogSource
 import org.mr0btain.ticketman.ui.screens.settings.components.LogsDialog
-import org.mr0btain.ticketman.logging.LogSettings
+import org.mr0btain.applogger.LogSettings
 
 /**
  * This device's settings and the logged in account. Saved as soon as they're changed, see [SettingsHandler]

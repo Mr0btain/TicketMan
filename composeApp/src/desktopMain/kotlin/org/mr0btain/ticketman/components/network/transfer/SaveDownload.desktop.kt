@@ -6,7 +6,7 @@ import io.github.vinceglb.filekit.dialogs.openFileSaver
 import io.github.vinceglb.filekit.sink
 import io.ktor.client.*
 import org.mr0btain.ticketman.error.TmResult
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 
 private const val TAG = "SaveDownload"
 

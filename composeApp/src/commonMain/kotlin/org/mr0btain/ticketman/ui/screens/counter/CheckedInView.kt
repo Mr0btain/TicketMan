@@ -8,12 +8,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.components.utils.formatDayInSentence
 import org.mr0btain.ticketman.server.response.CheckInResponse
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
-import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.feedback.TmBadge
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * Shown right after a check in, with the number big enough to read out to the customer

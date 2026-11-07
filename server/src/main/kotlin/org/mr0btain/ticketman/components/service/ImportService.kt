@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.components.database.InventoryDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.response.ImportOutcome
 import org.mr0btain.ticketman.server.response.ImportResult
 import org.mr0btain.ticketman.server.response.ImportRowResult

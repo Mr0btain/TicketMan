@@ -7,11 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import org.mr0btain.ticketman.data.appointment.OnlineBooking
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.selection.TmCheckbox
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * Customers booking a visit from the status page: how long a visit is, how far ahead and how soon, and a note.

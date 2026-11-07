@@ -23,7 +23,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import org.mr0btain.ticketman.data.ticket.SignaturePoint
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * Where the customer signs with a finger, stylus or mouse. Strokes come out scaled to 0..1 so they don't depend on

@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterPrinter
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.data.TmPrintPreview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
@@ -15,14 +15,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.*
 import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.data.shop.PaperSize
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.selection.TmSegmented
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.printer
 import ticketman.composeapp.generated.resources.download

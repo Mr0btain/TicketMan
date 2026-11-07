@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.Alignment
 import org.mr0btain.ticketman.ui.kit.feedback.TmLocationBadge
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -14,7 +14,7 @@ import org.mr0btain.ticketman.components.utils.isBeforeToday
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
-import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.uikit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 

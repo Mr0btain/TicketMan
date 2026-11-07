@@ -10,11 +10,11 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
-import org.mr0btain.ticketman.ui.kit.data.TmColumn
-import org.mr0btain.ticketman.ui.kit.data.TmTableRow
+import org.mr0btain.uikit.data.TmColumn
+import org.mr0btain.uikit.data.TmTableRow
 import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.records.components.NARROW_LIST_WIDTH
 import org.mr0btain.ticketman.ui.screens.records.components.RecordNameCell
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsList
