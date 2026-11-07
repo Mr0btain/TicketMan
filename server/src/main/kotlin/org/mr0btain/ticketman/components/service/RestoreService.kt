@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.server.response.BackupManifest
 import org.mr0btain.ticketman.server.response.PendingRestore

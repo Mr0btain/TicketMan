@@ -7,14 +7,14 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.inputs.TmPasswordField
 import org.mr0btain.ticketman.ui.kit.inputs.TmPinField
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.inputs.TmFieldPair
 
 /**
  * First login setup. Can't be clicked away, only finished or cancelled

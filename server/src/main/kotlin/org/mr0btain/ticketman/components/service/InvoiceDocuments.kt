@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.components.print.PrintTemplates
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.PaperSize
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.io.OutputStream
 import java.io.Writer
 import java.time.Instant

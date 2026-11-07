@@ -24,7 +24,7 @@ import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.AccountRequest

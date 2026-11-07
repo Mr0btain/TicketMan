@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.ui.screens.counter
 
 import ticketman.composeapp.generated.resources.message_square
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
-import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.uikit.containers.TmListRow
 import org.mr0btain.ticketman.data.notify.InboundMessage
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,14 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.containers.TmPaneHeader
-import org.mr0btain.ticketman.ui.kit.feedback.TmDot
-import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
-import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
-import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import org.mr0btain.ticketman.ui.kit.theme.TmTone
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.containers.TmPaneHeader
+import org.mr0btain.uikit.feedback.TmDot
+import org.mr0btain.uikit.feedback.TmLoading
+import org.mr0btain.uikit.foundation.TmDivider
+import org.mr0btain.uikit.foundation.TmSurface
+import org.mr0btain.uikit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTone
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketSummaryRow
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.inbox

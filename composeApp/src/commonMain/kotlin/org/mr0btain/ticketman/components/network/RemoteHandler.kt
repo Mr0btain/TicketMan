@@ -30,7 +30,7 @@ import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
 import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.components.network.user.ServerCheck
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 
 /**

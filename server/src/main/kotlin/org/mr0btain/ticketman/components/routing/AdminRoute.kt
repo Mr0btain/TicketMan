@@ -25,14 +25,14 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
 import java.time.Instant
 import java.time.LocalDate
 import org.mr0btain.ticketman.components.service.ServerLogs
-import org.mr0btain.ticketman.logging.LogBook
-import org.mr0btain.ticketman.logging.LogSettings
+import org.mr0btain.applogger.LogBook
+import org.mr0btain.applogger.LogSettings
 import kotlin.time.Clock
 
 /**

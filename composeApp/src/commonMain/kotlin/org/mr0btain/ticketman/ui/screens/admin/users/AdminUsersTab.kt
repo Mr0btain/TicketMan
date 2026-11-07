@@ -19,17 +19,17 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.server.response.PendingUserResponse
 import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
-import org.mr0btain.ticketman.ui.kit.data.TmColumn
-import org.mr0btain.ticketman.ui.kit.data.TmTableRow
-import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.data.TmKeyValueRow
+import org.mr0btain.uikit.data.TmColumn
+import org.mr0btain.uikit.data.TmTableRow
+import org.mr0btain.uikit.feedback.TmBadge
+import org.mr0btain.uikit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.images.TmImageView
 import org.mr0btain.ticketman.ui.kit.notes.TmEditNoteDialog
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
 import org.mr0btain.ticketman.ui.screens.records.components.DetailSection
 import org.mr0btain.ticketman.ui.screens.records.components.RecordDetail
@@ -43,7 +43,7 @@ import ticketman.composeapp.generated.resources.user
 import ticketman.composeapp.generated.resources.users
 import org.mr0btain.ticketman.ui.kit.images.TmAvatar
 import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
-import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
+import org.mr0btain.uikit.containers.TmConfirmDialog
 import ticketman.composeapp.generated.resources.printer
 import kotlin.uuid.Uuid
 

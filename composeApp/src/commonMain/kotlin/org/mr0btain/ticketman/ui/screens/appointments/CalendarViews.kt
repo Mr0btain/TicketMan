@@ -23,11 +23,11 @@ import org.mr0btain.ticketman.data.appointment.AppointmentStatus
 import org.mr0btain.ticketman.data.schedule.ScheduleEntry
 import org.mr0btain.ticketman.data.schedule.ScheduleRules
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
+import org.mr0btain.uikit.containers.TmSectionLabel
 import org.mr0btain.ticketman.ui.kit.data.TmScheduleBlock
 import org.mr0btain.ticketman.ui.kit.feedback.tone
-import org.mr0btain.ticketman.ui.kit.foundation.tmClickable
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.foundation.tmClickable
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.appointments.components.AppointmentsHandler
 import kotlin.time.Instant
 import kotlin.uuid.Uuid

@@ -16,19 +16,19 @@ import org.mr0btain.ticketman.data.schedule.ScheduleRules
 import org.mr0btain.ticketman.data.schedule.TimeOffRequest
 import org.mr0btain.ticketman.data.schedule.TimeOffRules
 import org.mr0btain.ticketman.data.schedule.TimeOffStatus
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
-import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
-import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.containers.TmSectionLabel
+import org.mr0btain.uikit.data.TmKeyValueRow
+import org.mr0btain.uikit.feedback.TmBadge
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.foundation.TmDivider
+import org.mr0btain.uikit.inputs.TmFieldPair
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.theme.TmTheme
 
 /** "Mon Feb 2" or "Mon Feb 2 to Fri Feb 6", a request's days */
 fun timeOffDays(request: TimeOffRequest): String {

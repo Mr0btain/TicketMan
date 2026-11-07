@@ -7,8 +7,8 @@ import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
-import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.uikit.selection.TmSegmented
+import org.mr0btain.uikit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsLayout
 import kotlin.uuid.Uuid
 

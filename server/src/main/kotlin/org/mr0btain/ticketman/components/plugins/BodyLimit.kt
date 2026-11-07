@@ -8,7 +8,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.utils.io.*
 import org.mr0btain.ticketman.components.routing.TOO_LARGE_MESSAGE
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.AdminPaths
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.ImagePaths

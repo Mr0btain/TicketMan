@@ -6,7 +6,7 @@ import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.shop.Storage
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import kotlin.time.Clock
 
 /**

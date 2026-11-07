@@ -4,7 +4,7 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.ImageFormat
 import io.github.vinceglb.filekit.compressImage
 import org.mr0btain.ticketman.data.image.ImageLimits
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 
 private const val TAG = "ShrinkForUpload"
 

@@ -9,8 +9,8 @@ import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.time.createdAt
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
-import org.mr0btain.ticketman.ui.kit.containers.TmListRow
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.uikit.containers.TmListRow
+import org.mr0btain.uikit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 import org.mr0btain.ticketman.ui.screens.records.components.DetailSection

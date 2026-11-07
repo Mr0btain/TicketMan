@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import io.ktor.server.config.*
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.system.exitProcess

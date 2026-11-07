@@ -4,12 +4,12 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.classic.spi.ThrowableProxyUtil
 import ch.qos.logback.core.AppenderBase
-import org.mr0btain.ticketman.logging.LogBook
-import org.mr0btain.ticketman.logging.LogLevel
+import org.mr0btain.applogger.LogBook
+import org.mr0btain.applogger.LogLevel
 
 /**
  * Hands what the server's libraries log through SLF4J (Ktor, Netty, Exposed) to [LogBook], so it's in the log files
- * and the live view beside what [org.mr0btain.ticketman.logging.AppLogger] logs. Named in logback.xml
+ * and the live view beside what [org.mr0btain.applogger.AppLogger] logs. Named in logback.xml
  */
 class LogBookAppender : AppenderBase<ILoggingEvent>() {
     override fun append(event: ILoggingEvent) {

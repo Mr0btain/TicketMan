@@ -95,6 +95,9 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
 
+            // The UI kit, shared with Tuners Toolkit. TicketMan's own components built on it are in ui/kit
+            implementation(libs.tm.ui.kit)
+
             // For Navigation
             implementation(libs.compose.navigation)
 
@@ -144,6 +147,9 @@ kotlin {
 
         val desktopTest = getByName("desktopTest") {
             dependencies {
+                // UiKitRulesTest's checks
+                implementation(libs.tm.ui.kit.rules)
+
                 // Reads back the QR codes we make
                 implementation(libs.zxing.core)
 

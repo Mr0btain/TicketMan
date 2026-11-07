@@ -20,7 +20,7 @@ import org.mr0btain.ticketman.data.payment.PaymentProvider
 import org.mr0btain.ticketman.data.payment.PaymentSettings
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.StatusLink
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.StatusPaths
 import org.mr0btain.ticketman.server.request.PaymentLinkRequest

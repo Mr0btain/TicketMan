@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.components.network.transfer.saveDownload
 import org.mr0btain.ticketman.components.utils.formatBytes
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.error.TmResult
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.ServerInfoResponse

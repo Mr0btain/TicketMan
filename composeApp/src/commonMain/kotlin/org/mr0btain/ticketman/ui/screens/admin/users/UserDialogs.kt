@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.admin.users
 
 import org.mr0btain.ticketman.data.location.Location
-import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
+import org.mr0btain.uikit.selection.TmDropdown
 import kotlin.uuid.Uuid
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
@@ -11,14 +11,14 @@ import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UsernameRules
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.inputs.TmPasswordField
+import org.mr0btain.uikit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.screens.admin.components.AccessLevelDropDown
-import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
+import org.mr0btain.uikit.inputs.TmFieldPair
 
 /**
  * Add or edit a user. The password field only shows for new users, existing ones use [ResetPasswordDialog]

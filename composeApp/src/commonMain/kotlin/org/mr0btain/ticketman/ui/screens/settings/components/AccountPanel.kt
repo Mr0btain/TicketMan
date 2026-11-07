@@ -1,17 +1,17 @@
 package org.mr0btain.ticketman.ui.screens.settings.components
 
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.components.network.VersionNotice
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmListRow
-import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmListRow
+import org.mr0btain.uikit.containers.TmPanel
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.ui.kit.images.TmAvatar
 import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor

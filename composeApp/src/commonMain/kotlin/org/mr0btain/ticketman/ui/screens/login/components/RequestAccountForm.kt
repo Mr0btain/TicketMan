@@ -6,13 +6,13 @@ import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.server.request.AccountRequest
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.inputs.TmPasswordField
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.theme.TmTheme
+import org.mr0btain.uikit.inputs.TmFieldPair
 
 /**
  * Asks for an account. It waits for an admin to approve it

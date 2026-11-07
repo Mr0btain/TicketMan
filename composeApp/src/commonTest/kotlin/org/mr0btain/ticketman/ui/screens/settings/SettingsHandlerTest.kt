@@ -3,7 +3,7 @@ package org.mr0btain.ticketman.ui.screens.settings
 import kotlinx.coroutines.test.TestScope
 import org.mr0btain.ticketman.components.data.local.InMemoryKeyValueStore
 import org.mr0btain.ticketman.components.data.local.LocalStorage
-import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
+import org.mr0btain.uikit.theme.TmPalettes
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 import kotlin.test.*

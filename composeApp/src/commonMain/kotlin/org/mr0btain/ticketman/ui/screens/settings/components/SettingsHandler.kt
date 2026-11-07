@@ -7,10 +7,10 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.normalizeServerAddress
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.data.local.UpdateInterval
-import org.mr0btain.ticketman.ui.kit.theme.TmFont
-import org.mr0btain.ticketman.ui.kit.theme.TmFonts
-import org.mr0btain.ticketman.ui.kit.theme.TmPalette
-import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
+import org.mr0btain.uikit.theme.TmFont
+import org.mr0btain.uikit.theme.TmFonts
+import org.mr0btain.uikit.theme.TmPalette
+import org.mr0btain.uikit.theme.TmPalettes
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsTab
 

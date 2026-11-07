@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import kotlinx.coroutines.CancellationException
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import io.ktor.server.config.*
 import kotlin.time.Clock
 import kotlin.time.Duration

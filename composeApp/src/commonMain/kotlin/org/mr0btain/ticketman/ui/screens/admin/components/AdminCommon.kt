@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.ui.kit.feedback.TmAccessBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmUserStatusBadge
-import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
+import org.mr0btain.uikit.selection.TmDropdown
 
 // Shared pieces for the admin screen tabs
 

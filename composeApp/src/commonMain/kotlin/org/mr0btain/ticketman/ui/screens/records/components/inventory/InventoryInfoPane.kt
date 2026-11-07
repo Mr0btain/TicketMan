@@ -13,18 +13,18 @@ import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
 import org.mr0btain.ticketman.ui.kit.images.TmImagePager
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.uikit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.counter.stockText
 import org.mr0btain.ticketman.ui.screens.records.components.DetailSection
 import org.mr0btain.ticketman.ui.screens.records.components.RecordDetail
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.package_icon
 import ticketman.composeapp.generated.resources.truck
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.foundation.TmControlSize
 import kotlin.uuid.Uuid
 
 /**

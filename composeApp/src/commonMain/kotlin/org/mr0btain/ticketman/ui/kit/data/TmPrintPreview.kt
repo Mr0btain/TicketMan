@@ -33,7 +33,7 @@ import org.mr0btain.ticketman.components.print.PrintBlock
 import org.mr0btain.ticketman.components.print.PrintDocument
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmSignatureView
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 
 // Paper stays white with black ink in every theme, like what comes out of the printer
 private val PAPER = Color.White

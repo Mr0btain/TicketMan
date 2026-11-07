@@ -2,9 +2,9 @@ package org.mr0btain.ticketman.ui.screens.counter
 
 import org.mr0btain.ticketman.components.data.rememberKept
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,15 +20,15 @@ import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.payment.CardReader
 import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.server.request.PaymentRequest
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
-import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.uikit.feedback.TmBadge
+import org.mr0btain.uikit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketDetail
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.file_text

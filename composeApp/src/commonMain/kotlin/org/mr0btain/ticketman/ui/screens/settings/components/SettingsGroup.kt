@@ -16,13 +16,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.ui.kit.containers.TmTextEditDialog
-import org.mr0btain.ticketman.ui.kit.containers.TmListRow
-import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
-import org.mr0btain.ticketman.ui.kit.selection.TmSwitch
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.containers.TmTextEditDialog
+import org.mr0btain.uikit.containers.TmListRow
+import org.mr0btain.uikit.containers.TmPanel
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.selection.TmDropdown
+import org.mr0btain.uikit.selection.TmSwitch
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_right
 

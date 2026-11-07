@@ -13,17 +13,17 @@ import org.mr0btain.ticketman.data.inventory.LocationStock
 import org.mr0btain.ticketman.data.inventory.StockTransfer
 import org.mr0btain.ticketman.data.inventory.StockTransferRequest
 import org.mr0btain.ticketman.data.location.Location
-import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.containers.TmDialog
-import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
+import org.mr0btain.uikit.buttons.TmButton
+import org.mr0btain.uikit.buttons.TmButtonVariant
+import org.mr0btain.uikit.containers.TmDialog
+import org.mr0btain.uikit.containers.TmSectionLabel
 import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.inputs.TmFieldPair
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.selection.TmDropdown
+import org.mr0btain.uikit.theme.TmTheme
 import kotlin.uuid.Uuid
 
 /**

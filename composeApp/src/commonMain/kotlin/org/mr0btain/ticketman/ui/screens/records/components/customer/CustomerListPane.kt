@@ -7,9 +7,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.style.TextOverflow
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.ui.kit.data.TmColumn
-import org.mr0btain.ticketman.ui.kit.data.TmTableRow
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.data.TmColumn
+import org.mr0btain.uikit.data.TmTableRow
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.records.components.NARROW_LIST_WIDTH
 import org.mr0btain.ticketman.ui.screens.records.components.RecordNameCell
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsList

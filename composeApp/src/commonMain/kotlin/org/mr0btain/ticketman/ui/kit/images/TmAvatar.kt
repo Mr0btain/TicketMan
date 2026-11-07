@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * A person as a round picture: their profile photo, or their initials on the accent color when they have none or

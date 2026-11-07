@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.CustomStatusRules
 import org.mr0btain.ticketman.data.ticket.selectable
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 
 /**
  * Shop profile routes. Everyone can read it for invoices, only admins can change it

@@ -15,9 +15,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.data.user.PinRules
-import org.mr0btain.ticketman.ui.kit.buttons.TM_DISABLED_ALPHA
-import org.mr0btain.ticketman.ui.kit.foundation.tmClickable
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.buttons.TM_DISABLED_ALPHA
+import org.mr0btain.uikit.foundation.tmClickable
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * Big buttons for typing a PIN on a touchscreen, the number keys work too. Sends it once all the digits are in

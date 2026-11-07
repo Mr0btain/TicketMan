@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.error
 
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 
 fun appLogTryCatch(tag: String, function: () -> Boolean) {

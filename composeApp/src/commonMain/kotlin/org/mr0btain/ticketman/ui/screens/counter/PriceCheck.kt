@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
-import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
+import org.mr0btain.uikit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,14 +11,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.ui.kit.containers.TmListRow
-import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.uikit.containers.TmListRow
+import org.mr0btain.uikit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
-import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
-import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
-import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.search.TmSearchField
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.feedback.TmBadge
+import org.mr0btain.uikit.feedback.TmEmptyState
+import org.mr0btain.uikit.foundation.TmControlSize
+import org.mr0btain.uikit.search.TmSearchField
+import org.mr0btain.uikit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.package_icon
 import ticketman.composeapp.generated.resources.tag

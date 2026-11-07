@@ -9,12 +9,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import org.mr0btain.ticketman.data.invoice.AccountingSettings
 import org.mr0btain.ticketman.data.invoice.ExportDateFormat
 import org.mr0btain.ticketman.data.invoice.TaxClass
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
-import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
+import org.mr0btain.uikit.inputs.TmFieldPair
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.selection.TmDropdown
+import org.mr0btain.uikit.theme.TmTheme
 
 /**
  * The names the shop's books use, for the QuickBooks and Xero exports on the Invoices tab: QuickBooks items for each

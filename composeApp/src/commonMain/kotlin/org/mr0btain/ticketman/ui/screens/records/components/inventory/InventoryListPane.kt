@@ -9,9 +9,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
-import org.mr0btain.ticketman.ui.kit.data.TmColumn
-import org.mr0btain.ticketman.ui.kit.data.TmTableRow
-import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.uikit.data.TmColumn
+import org.mr0btain.uikit.data.TmTableRow
+import org.mr0btain.uikit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.records.components.NARROW_LIST_WIDTH
 import org.mr0btain.ticketman.ui.screens.records.components.RecordNameCell
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsList

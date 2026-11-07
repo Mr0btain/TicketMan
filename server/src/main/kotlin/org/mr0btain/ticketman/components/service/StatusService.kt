@@ -17,7 +17,7 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.data.ticket.customerChoice
 import org.mr0btain.ticketman.data.time.timestampMillis
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.io.File
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours

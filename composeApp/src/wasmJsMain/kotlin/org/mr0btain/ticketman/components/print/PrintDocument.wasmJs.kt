@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.components.print
 
 import kotlinx.browser.window
 import org.mr0btain.ticketman.data.shop.PaperSize
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.w3c.dom.HTMLIFrameElement
 

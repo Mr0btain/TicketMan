@@ -15,7 +15,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.sendAppVersion
 import org.mr0btain.ticketman.data.token.Token
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.server.LOCATION_HEADER
 
 fun createRemoteHttpClient(

@@ -14,7 +14,7 @@ import org.mr0btain.ticketman.components.service.InvoiceDocuments
 import org.mr0btain.ticketman.data.invoice.ExportFormat
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.time.LocalDate
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest

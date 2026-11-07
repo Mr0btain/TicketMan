@@ -25,3 +25,6 @@ shared/build/kotlinProjectStructureMetadata/kotlin-project-structure-metadata.js
 /stage/
 /prime/
 *.snap
+
+# Shared libraries cloned by settings.gradle.kts
+.deps/

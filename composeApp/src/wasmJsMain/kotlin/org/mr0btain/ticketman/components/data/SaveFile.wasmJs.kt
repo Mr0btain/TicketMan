@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.components.data
 
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.download
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 
 private const val TAG = "SaveFile"

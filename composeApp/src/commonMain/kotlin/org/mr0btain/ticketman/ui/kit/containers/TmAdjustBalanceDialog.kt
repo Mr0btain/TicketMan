@@ -1,15 +1,16 @@
 package org.mr0btain.ticketman.ui.kit.containers
 
+import org.mr0btain.uikit.containers.TmDialog
 import androidx.compose.runtime.*
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
-import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.uikit.buttons.TmButtonRow
+import org.mr0btain.uikit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
-import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
-import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.uikit.feedback.TmNotice
+import org.mr0btain.uikit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
-import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
+import org.mr0btain.uikit.inputs.TmTextField
+import org.mr0btain.uikit.selection.TmSegmented
 
 /**
  * Adds to or takes off a balance the shop holds, like store credit or a gift card, with a reason

@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.util
 
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.applogger.AppLogger
 import java.io.File
 
 actual class AppDir {
