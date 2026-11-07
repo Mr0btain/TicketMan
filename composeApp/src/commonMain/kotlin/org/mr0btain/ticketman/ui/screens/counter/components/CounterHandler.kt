@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
+import org.mr0btain.ticketman.data.notify.InboundMessage
+import org.mr0btain.ticketman.data.notify.InboxResponse
 import org.mr0btain.ticketman.components.network.isConflict
 import org.mr0btain.ticketman.components.data.FormMemory
 import org.mr0btain.ticketman.data.location.Location
@@ -86,6 +88,10 @@ class CounterHandler(
     private val _ticket = MutableStateFlow<TicketDetail?>(null)
     val ticket = _ticket.asStateFlow()
 
+    private val _inbox = MutableStateFlow(InboxResponse())
+    /** Texts customers sent: how many are unread and the newest. Read with the queue */
+    val inbox = _inbox.asStateFlow()
+
     private val _customer = MutableStateFlow<CustomerDetail?>(null)
     val customer = _customer.asStateFlow()
 
@@ -162,6 +168,7 @@ class CounterHandler(
     fun refreshQueue() {
         scope.launch {
             remoteHandler.counterRepo.queue(RECENT_LIMIT)?.let { _queue.value = it }
+            refreshInbox()
             remoteHandler.adminRepo.getShopProfileHere()?.let { _shop.value = it }
         }
         cards.refreshOptions()
@@ -184,6 +191,7 @@ class CounterHandler(
                 is TmResult.Success -> {
                     _ticket.value = loaded.data
                     showView(CounterView.TICKET)
+                    readTexts(loaded.data)
                 }
 
                 is TmResult.Error -> support.notify(
@@ -224,7 +232,10 @@ class CounterHandler(
         scope.launch {
             when (val loaded = remoteHandler.loadTicketDetail(identifier)) {
                 // Only if it's still the one open
-                is TmResult.Success -> if (_ticket.value?.ticket?.identifier == identifier) _ticket.value = loaded.data
+                is TmResult.Success -> if (_ticket.value?.ticket?.identifier == identifier) {
+                    _ticket.value = loaded.data
+                    readTexts(loaded.data)
+                }
                 is TmResult.Error -> if (!quiet) support.notify("Couldn't reload the ticket: ${loaded.error.message}")
             }
         }
@@ -250,6 +261,59 @@ class CounterHandler(
                     // Someone saved it since, so show what they did. A press of the button can then go through
                     if (result.error.isConflict) reloadTicket()
                 }
+            }
+        }
+    }
+
+    // ------------------------------------------ Texts from customers ------------------------------------------
+
+    private suspend fun refreshInbox() {
+        remoteHandler.notifyRepo.inbox(INBOX_LIMIT).getOrNull()?.let { _inbox.value = it }
+    }
+
+    /**
+     * Marks the shown ticket's unread texts read, since they're on screen. They keep showing as new until it's
+     * reloaded, so whoever opened it sees which they are
+     */
+    private suspend fun readTexts(detail: TicketDetail) {
+        if (detail.received.orEmpty().none { !it.isRead }) return
+        if (remoteHandler.notifyRepo.markTicketRead(detail.ticket.identifier) is TmResult.Success) refreshInbox()
+    }
+
+    /**
+     * Opens what a text is about: its ticket, else its customer. One from nobody known is just marked read, since
+     * there's nothing to open
+     */
+    fun openText(message: InboundMessage) {
+        val ticket = message.ticketIdentifier
+        val customer = message.customerIdentifier
+        when {
+            ticket != null -> openTicket(ticket)
+            else -> scope.launch {
+                remoteHandler.notifyRepo.markRead(message.identifier)
+                refreshInbox()
+                if (customer != null) openCustomer(customer)
+            }
+        }
+    }
+
+    /**
+     * Texts the open ticket's customer what was typed
+     * @param onResult Gets null when it's on its way, otherwise what went wrong
+     */
+    fun replyToTicket(text: String, onResult: (String?) -> Unit) {
+        val detail = _ticket.value ?: return
+        if (!support.canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.notifyRepo.reply(detail.ticket.identifier, text)) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    reloadTicket()
+                    refreshInbox()
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
             }
         }
     }
@@ -443,6 +507,7 @@ class CounterHandler(
         _query.value = ""
         _results.value = CounterSearchResponse()
         _queue.value = null
+        _inbox.value = InboxResponse()
         _ticket.value = null
         _customer.value = null
         _priceResults.value = emptyList()
@@ -458,6 +523,7 @@ class CounterHandler(
         private const val SEARCH_DELAY_MILLIS = 300L
         const val SEARCH_LIMIT = 20
         private const val RECENT_LIMIT = 10
+        private const val INBOX_LIMIT = 30
 
     }
 }

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
+import org.mr0btain.ticketman.data.notify.InboundMessage
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.orNullIfNotFound
@@ -32,6 +33,8 @@ data class TicketDetail(
     val signature: TicketSignature?,
     /** What the customer was sent, newest first. Null when it couldn't be read */
     val messages: List<OutboxMessage>? = emptyList(),
+    /** What the customer texted about it, newest first. Null when it couldn't be read */
+    val received: List<InboundMessage>? = emptyList(),
     /** Newest first. Null when they couldn't be read */
     val estimates: List<Estimate>? = emptyList(),
     /** Purchase orders with parts for it, newest first. Null when they couldn't be read */
@@ -87,6 +90,7 @@ suspend fun RemoteHandler.loadTicketDetail(identifier: Uuid): TmResult<TicketDet
             signature = repo.getSignature(identifier),
             // Only shown, so the card still opens without them
             messages = notifyRepo.forTicket(identifier).getOrNull(),
+            received = notifyRepo.received(identifier).getOrNull(),
             estimates = estimateRepo.forTicket(identifier).getOrNull(),
             purchases = purchaseRepo.forTicket(identifier).getOrNull(),
             // Only shown, and only needed when it was checked in with others or on a known device

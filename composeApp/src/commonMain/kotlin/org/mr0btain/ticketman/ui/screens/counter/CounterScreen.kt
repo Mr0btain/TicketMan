@@ -51,6 +51,7 @@ fun CounterScreen(
     val ticket by counter.ticket.collectAsState()
     val customer by counter.customer.collectAsState()
     val repairMenu by counter.checkIn.menu.collectAsState()
+    val inbox by counter.inbox.collectAsState()
     val priceResults by counter.priceResults.collectAsState()
     val shop by counter.shop.collectAsState()
     val checkInCustomer by counter.checkIn.customer.collectAsState()
@@ -153,6 +154,8 @@ fun CounterScreen(
             },
             canEdit = canEdit,
             queue = queue,
+            texts = inbox.messages.filter { !it.isRead },
+            onTextClick = { counter.openText(it) },
             onCheckIn = { counter.checkIn.start() },
             onNewCustomer = { counter.checkIn.startNewCustomer() },
             onSell = { counter.sale.start() },
@@ -192,6 +195,7 @@ fun CounterScreen(
                             location.identifier != (detail.ticket.locationIdentifier ?: activeLocations.firstOrNull { it.main }?.identifier)
                         } else emptyList(),
                         onMove = { counter.moveTicket(it) },
+                        onReply = if (canEdit) { text, onResult -> counter.replyToTicket(text, onResult) } else null,
                         passcode = if (canEdit) PasscodeActions(
                             onShow = { counter.showPasscode(detail.ticket.identifier) },
                             onSet = { passcode, onResult -> counter.setPasscode(detail.ticket.identifier, passcode, onResult) },

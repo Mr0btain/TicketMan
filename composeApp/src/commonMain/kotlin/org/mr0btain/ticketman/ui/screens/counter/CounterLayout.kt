@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.notify.InboundMessage
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +42,8 @@ fun CounterLayout(
     onPriceCheck: () -> Unit,
     onQueueTicketClick: (Uuid) -> Unit,
     modifier: Modifier = Modifier,
+    texts: List<InboundMessage> = emptyList(),
+    onTextClick: (InboundMessage) -> Unit = {},
     content: @Composable () -> Unit
 ) {
     val spacing = TmTheme.spacing
@@ -57,7 +60,12 @@ fun CounterLayout(
                     showQueue = false
                     onQueueTicketClick(it)
                 },
-                onDismissRequest = { showQueue = false }
+                onDismissRequest = { showQueue = false },
+                texts = texts,
+                onTextClick = {
+                    showQueue = false
+                    onTextClick(it)
+                }
             )
         }
 
@@ -173,7 +181,9 @@ fun CounterLayout(
                             .width(360.dp)
                             .fillMaxHeight(),
                         queue = queue,
-                        onTicketClick = onQueueTicketClick
+                        onTicketClick = onQueueTicketClick,
+                        texts = texts,
+                        onTextClick = onTextClick
                     )
                 }
             }

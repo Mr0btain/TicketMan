@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.components.notify.InboxService
 import org.mr0btain.ticketman.components.service.ServerLogs
 import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.API_VERSION_HEADER
@@ -72,6 +73,14 @@ fun Application.configureRouting(
         images = imageService,
         estimates = estimateService,
         payments = paymentService
+    ),
+    inboxService: InboxService = InboxService(
+        database = localDatabase.inboxDatabase,
+        notify = localDatabase.notifyDatabase,
+        customers = localDatabase.customerDatabase,
+        shop = localDatabase.shopDatabase,
+        auditLog = localDatabase.auditLogDatabase,
+        counter = localDatabase.counterDatabase
     ),
     appointmentService: AppointmentService = AppointmentService(
         appointments = localDatabase.appointmentDatabase,
@@ -153,6 +162,7 @@ fun Application.configureRouting(
                 service = statusService,
                 shopDatabase = localDatabase.shopDatabase,
                 payments = paymentService,
+                inbox = inboxService,
                 booking = BookingService(
                     appointments = localDatabase.appointmentDatabase,
                     appointmentService = appointmentService,
@@ -206,7 +216,8 @@ fun Application.configureRouting(
         route(ApiRoutes.NOTIFY) {
             notifyRoute(
                 service = notificationService,
-                userDatabase = localDatabase.userDatabase
+                userDatabase = localDatabase.userDatabase,
+                inbox = inboxService
             )
         }
 

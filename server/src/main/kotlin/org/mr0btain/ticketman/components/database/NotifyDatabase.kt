@@ -146,6 +146,16 @@ class NotifyDatabase {
                 .map { it.toMessage() }
         }
 
+    /** The newest text sent to [recipient], for telling who a text from that number is and what it's about */
+    fun lastTextTo(recipient: String): OutboxMessage? =
+        dbQuery(LIST_TAG) {
+            OutboxTable.selectAll()
+                .where { (OutboxTable.channel eq NotificationChannel.SMS.name) and (OutboxTable.recipient eq recipient) }
+                .orderBy(OutboxTable.createdAt to SortOrder.DESC, OutboxTable.id to SortOrder.DESC)
+                .limit(1)
+                .firstOrNull()?.toMessage()
+        }
+
     /** A page of every message, newest first */
     fun page(request: PagedRequest): List<OutboxMessage>? =
         dbQuery(LIST_TAG) {

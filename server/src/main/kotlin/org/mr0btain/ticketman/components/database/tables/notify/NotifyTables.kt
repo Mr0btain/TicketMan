@@ -38,3 +38,22 @@ object OutboxTable : UuidTable("outbox") {
         index("outbox_due", false, status, nextAttemptAt)
     }
 }
+
+/**
+ * Texts customers sent the shop's number. [providerId] is the provider's own id for it, so one delivered twice is
+ * kept once. [ticket] and [customer] aren't foreign keys, like the outbox's
+ */
+object InboundTable : UuidTable("inbound_messages") {
+    val providerId = text("provider_id").uniqueIndex()
+    val customer = uuid("customer_id").nullable().index()
+    val customerName = text("customer_name").default("")
+    val ticket = uuid("ticket_id").nullable().index()
+    val ticketLabel = text("ticket_label").default("")
+    val channel = text("channel")
+    val sender = text("sender")
+    val body = text("body")
+    val receivedAt = long("received_at").index()
+    val readAt = long("read_at").nullable()
+    val readBy = text("read_by").default("")
+    val optedOut = bool("opted_out").default(false)
+}

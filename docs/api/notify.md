@@ -114,9 +114,50 @@ What the ticket's customer was sent, newest first, kept after the ticket is dele
 Sends the ticket's customer a message now, to every channel that's on and that they have a contact for, agreed or
 not. The ticket card's **Send status link**.
 
-- **Body:** `TicketMessageRequest { event, channels }`, `STATUS_LINK` and every channel by default.
+- **Body:** `TicketMessageRequest { event, channels, text }`, `STATUS_LINK` and every channel by default. `REPLY`
+  sends what staff typed in `text` through the shop's `REPLY` template (`{message}`), and marks the ticket's texts
+  read.
 - **`201`** the messages queued. **`404`** no such ticket.
-- **`400`** both channels off, no email or phone to send to, `TEST`, `APPOINTMENT_REMINDER` or `PAYMENT_LINK`.
+- **`400`** both channels off, no email or phone to send to, `TEST`, `APPOINTMENT_REMINDER` or `PAYMENT_LINK`, a
+  `REPLY` with no text, or text past `Inbox.MAX_REPLY` (1500) characters.
+
+## Texts from customers
+
+Texts sent to the shop's Twilio number come in through [`POST /status/sms/twilio/webhook`](status.md#post-statussmsproviderwebhook)
+(`InboxService`, kept in `inbound_messages` as `InboundMessage`). Each is matched to the customer and ticket of the
+last text sent to that number, or else to a customer with that phone number (however it was typed) and their one
+ticket not yet picked up, if they have exactly one. A text that's only a stop word (`Inbox.STOP_WORDS`: STOP,
+UNSUBSCRIBE and the like) also turns off the customer's `notifySms`, raising their revision, and is audit logged.
+
+### `GET /api/notify/inbox`
+
+**Auth:** restricted
+
+- **Query:** `limit` (50 by default, up to 200).
+- **`200`** `InboxResponse { unread, messages }`: how many texts are unread anywhere, and the newest, read or not.
+- **`400`** a limit that isn't a number. **`500`** they couldn't be read.
+
+### `POST /api/notify/inbox/{identifier}/read`
+
+**Auth:** restricted
+
+Marks one text read, for one not about a ticket. One already read keeps who read it first.
+
+- **`202`** read. **`404`** no such text.
+
+### `GET /api/notify/ticket/{identifier}/received`
+
+**Auth:** restricted
+
+- **`200`** the texts about the ticket, newest first. **`500`** they couldn't be read.
+
+### `POST /api/notify/ticket/{identifier}/read`
+
+**Auth:** restricted
+
+Marks every unread text about the ticket read, by whoever's logged in. The ticket card does this when it shows them.
+
+- **`202`** done, also when there was nothing to mark.
 
 ## See also
 

@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.notify.Inbox
+import org.mr0btain.ticketman.data.notify.InboundMessage
 import org.mr0btain.ticketman.components.data.rememberKept
 import ticketman.composeapp.generated.resources.map_pin
 import org.mr0btain.ticketman.ui.kit.selection.TmMenuItem
@@ -82,6 +84,8 @@ private val PANEL_WIDTH = 400.dp
  * @param extraActions Room for buttons added by later screens, like pickup
  * @param moveTo The other locations it can be sent to, empty with one location
  * @param onMove Sends it to one of [moveTo]
+ * @param onReply Texts the customer what was typed, calling back with what went wrong or null. Null hides the reply
+ * box (view only, or in previews)
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -102,7 +106,8 @@ fun TicketCard(
     printAction: @Composable () -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {},
     moveTo: List<Location> = emptyList(),
-    onMove: (Location) -> Unit = {}
+    onMove: (Location) -> Unit = {},
+    onReply: ((String, (String?) -> Unit) -> Unit)? = null
 ) {
     val ticket = detail.ticket
     var note by rememberKept("ticket-note", ticket.identifier) { mutableStateOf("") }
@@ -278,11 +283,24 @@ fun TicketCard(
                         TmPanel(
                             modifier = Modifier.width(panelWidth),
                             title = "Messages",
-                            subtitle = detail.messages?.let { if (it.isEmpty()) "None sent" else if (it.size == 1) "1 message" else "${it.size} messages" } ?: "Couldn't load",
+                            subtitle = messagesSummary(detail),
                             icon = Res.drawable.send
                         ) {
+                            // Sent and received together, newest first
+                            val timeline = (detail.messages.orEmpty().map { it.createdAt to it } + detail.received.orEmpty().map { it.receivedAt to it })
+                                .sortedByDescending { it.first }
+                                .take(MESSAGES_SHOWN)
                             Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                                detail.messages.orEmpty().take(MESSAGES_SHOWN).forEach { message -> MessageRow(message) }
+                                timeline.forEach { (_, message) ->
+                                    when (message) {
+                                        is OutboxMessage -> MessageRow(message)
+                                        is InboundMessage -> ReceivedRow(message)
+                                    }
+                                }
+                            }
+
+                            if (onReply != null && canEdit && !detail.customer?.phone.isNullOrBlank()) {
+                                ReplyBox(ticketIdentifier = ticket.identifier, onReply = onReply)
                             }
 
                             if (onSendStatusLink != null && changeable) {
@@ -530,7 +548,75 @@ class EstimateActions(
 )
 
 /** Messages shown on the card, the rest are on the admin screen */
-private const val MESSAGES_SHOWN = 5
+private const val MESSAGES_SHOWN = 8
+
+// Like "3 sent, 2 received", or that they couldn't be read
+private fun messagesSummary(detail: TicketDetail): String {
+    val sent = detail.messages ?: return "Couldn't load"
+    val received = detail.received.orEmpty()
+    return when {
+        sent.isEmpty() && received.isEmpty() -> "None sent"
+        received.isEmpty() -> if (sent.size == 1) "1 sent" else "${sent.size} sent"
+        else -> "${sent.size} sent, ${received.size} received"
+    }
+}
+
+/** A text the customer sent, marked new until someone's seen it */
+@Composable
+private fun ReceivedRow(message: InboundMessage) {
+    val colors = TmTheme.colors
+
+    Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                modifier = Modifier.weight(1f),
+                text = "From the customer, ${formatDateTime(message.receivedAt)}",
+                style = TmTheme.typography.caption,
+                color = colors.textMuted
+            )
+            when {
+                message.optedOut -> TmBadge(text = "Texts stopped", tone = colors.warning, dot = false)
+                !message.isRead -> TmBadge(text = "New", tone = colors.accent, dot = false)
+            }
+        }
+        Text(text = message.body, style = TmTheme.typography.body, color = colors.text)
+    }
+}
+
+/** Typing a text back to the customer */
+@Composable
+private fun ReplyBox(ticketIdentifier: Uuid, onReply: (String, (String?) -> Unit) -> Unit) {
+    var text by rememberKept("ticket-reply", ticketIdentifier) { mutableStateOf("") }
+    var sending by remember(ticketIdentifier) { mutableStateOf(false) }
+    var problem by remember(ticketIdentifier) { mutableStateOf<String?>(null) }
+
+    TmTextField(
+        modifier = Modifier.fillMaxWidth(),
+        value = text,
+        onValueChange = { text = it.take(Inbox.MAX_REPLY) },
+        label = "Text the customer",
+        placeholder = "Sent from the shop's number, signed with its name",
+        singleLine = false,
+        minLines = 2,
+        error = problem
+    )
+    TmButton(
+        text = "Send text",
+        leadingIcon = Res.drawable.send,
+        size = TmControlSize.SMALL,
+        enabled = text.isNotBlank(),
+        loading = sending,
+        onClick = {
+            sending = true
+            problem = null
+            onReply(text.trim()) { failed ->
+                sending = false
+                problem = failed
+                if (failed == null) text = ""
+            }
+        }
+    )
+}
 
 @Composable
 private fun MessageRow(message: OutboxMessage) {

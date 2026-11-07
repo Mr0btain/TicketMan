@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.like
+import org.mr0btain.ticketman.data.notify.PhoneNumbers
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.jdbc.update
@@ -56,6 +58,19 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
 
     override fun count(): Long =
         dbQuery(COUNT_TAG) { CustomerEntity.count() } ?: 0L
+
+    /**
+     * Customers whose phone is [international] (like +15551234567), however it was typed, taking numbers saved
+     * without a country code as [countryCode]'s. Only ones holding its last four digits are read
+     */
+    fun withPhone(international: String, countryCode: String): List<Customer> {
+        val lastFour = international.filter { it.isDigit() }.takeLast(4)
+        if (lastFour.length < 4) return emptyList()
+
+        return dbQuery(CONTACTS_TAG) {
+            CustomerEntity.find { CustomerTable.phone like "%$lastFour%" }.map { it.toCustomer() }
+        }.orEmpty().filter { PhoneNumbers.toInternational(it.phone, countryCode) == international }
+    }
 
     override fun remove(identifier: Uuid): Boolean =
         dbWrite(REMOVE_TAG) {
@@ -151,6 +166,16 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
     }
 
     override fun update(data: Customer): Boolean = save(data) == RecordSave.DONE
+
+    /**
+     * Turns off texts to a customer who asked for no more. Raises the revision, since an update sends the setting too.
+     * False when they aren't there
+     */
+    fun stopTexts(identifier: Uuid): Boolean =
+        dbWrite(UPDATE_TAG) {
+            if (!CustomerTable.nextRevision(identifier, CustomerTable.revision)) return@dbWrite false
+            CustomerTable.update(where = { CustomerTable.id eq identifier }) { row -> row[CustomerTable.notifySms] = false } > 0
+        }
 
     /** Saves [data], unless it has a revision and someone saved the customer since. Null when it failed */
     fun save(data: Customer): RecordSave? =

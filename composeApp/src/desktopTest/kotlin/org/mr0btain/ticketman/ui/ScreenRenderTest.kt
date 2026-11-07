@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.data.notify.InboundMessage
 import org.mr0btain.ticketman.ui.kit.data.TmPrintPreview
 import org.mr0btain.ticketman.components.print.PrintTemplates
 import androidx.compose.runtime.remember
@@ -317,6 +318,10 @@ class ScreenRenderTest {
                 lastError = "Connection refused", createdAt = now - 600_000
             )
         ),
+        received = listOf(
+            InboundMessage(sender = "+15550142", body = "Thanks! Will it be done before Friday? I need it for work.", receivedAt = now - 300_000),
+            InboundMessage(sender = "+15550142", body = "Got it, go ahead with the screen.", receivedAt = now - 3_400_000, readAt = now - 3_300_000, readBy = "priya")
+        ),
         estimates = listOf(
             Estimate(
                 ticketIdentifier = iphone.identifier,
@@ -465,7 +470,8 @@ class ScreenRenderTest {
                 statusLink = "https://repairs.example.com/status/0123456789abcdef0123456789abcdef",
                 estimates = estimateActions,
                 onSendStatusLink = {},
-                extraActions = { TmButton(text = "Pick up  (F5)", onClick = {}, size = TmControlSize.LARGE) }
+                extraActions = { TmButton(text = "Pick up  (F5)", onClick = {}, size = TmControlSize.LARGE) },
+                onReply = { _, _ -> }
             )
         }
     }
@@ -1316,6 +1322,10 @@ class ScreenRenderTest {
             searchField = { modifier -> TmSearchField(modifier = modifier, query = "dana", onQueryChange = {}, placeholder = "Search tickets and customers", size = TmControlSize.LARGE) },
             canEdit = true,
             queue = queue,
+            texts = listOf(
+                InboundMessage(customerName = "Dana Whitfield", ticketLabel = "26-00000041", sender = "+15550142", body = "Will it be done before Friday?", receivedAt = now - 300_000),
+                InboundMessage(sender = "+15559998888", body = "Do you fix game consoles?", receivedAt = now - 2_000_000)
+            ),
             onCheckIn = {},
             onNewCustomer = {},
             onSell = {},

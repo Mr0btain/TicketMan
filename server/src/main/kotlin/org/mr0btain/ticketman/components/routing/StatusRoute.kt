@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.components.notify.InboxService
 import io.ktor.http.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
@@ -27,7 +28,8 @@ fun Route.statusRoute(
     service: StatusService,
     shopDatabase: ShopDatabase,
     payments: PaymentService? = null,
-    booking: BookingService? = null
+    booking: BookingService? = null,
+    inbox: InboxService? = null
 ) {
     fun canBook() = booking != null && shopDatabase.get().booking.enabled
 
@@ -191,6 +193,20 @@ fun Route.statusRoute(
             PaymentService.Webhook.Done -> call.respond(HttpStatusCode.OK)
             PaymentService.Webhook.NotFound -> call.respond(HttpStatusCode.NotFound)
             PaymentService.Webhook.Refused -> call.respond(HttpStatusCode.BadRequest)
+        }
+    }
+
+    // A text a customer sent, from the text provider. Checked against its signature before anything is kept
+    post(StatusPaths.SMS_WEBHOOK) {
+        if (inbox == null || call.parameters["provider"] != "twilio") return@post call.respond(HttpStatusCode.NotFound)
+        val form = call.receiveParameters()
+        val params = form.names().associateWith { form[it].orEmpty() }
+
+        when (inbox.twilio(call.request.headers["X-Twilio-Signature"], params)) {
+            // An empty answer, so Twilio sends nothing back to the customer
+            InboxService.Webhook.DONE -> call.respondText("<Response/>", ContentType.Text.Xml, HttpStatusCode.OK)
+            InboxService.Webhook.NOT_SET_UP -> call.respond(HttpStatusCode.NotFound)
+            InboxService.Webhook.REFUSED -> call.respond(HttpStatusCode.Forbidden)
         }
     }
 

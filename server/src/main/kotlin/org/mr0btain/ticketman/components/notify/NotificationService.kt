@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.notify
 
+import org.mr0btain.ticketman.data.notify.Inbox
 import org.mr0btain.ticketman.components.database.AppointmentDatabase
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabase
@@ -155,13 +156,16 @@ class NotificationService(
         if (request.event == NotificationEvent.TEST) return AccountResult.Invalid("Test messages are sent from the settings")
         if (request.event == NotificationEvent.APPOINTMENT_REMINDER) return AccountResult.Invalid("Appointment reminders are sent before an appointment")
         if (request.event == NotificationEvent.PAYMENT_LINK) return AccountResult.Invalid("Payment links are sent from the link itself")
+        val text = request.text.trim()
+        if (request.event == NotificationEvent.REPLY && text.isEmpty()) return AccountResult.Invalid("Type the message")
+        if (text.length > Inbox.MAX_REPLY) return AccountResult.Invalid("A message can be up to ${Inbox.MAX_REPLY} characters")
         val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
         val settings = database.settings()
 
         val wanted = request.channels.ifEmpty { NotificationChannel.entries.toSet() }
         if (wanted.none { settings.channelReady(it) }) return AccountResult.Invalid("Turn on email or text messages in Admin, Notifications first")
 
-        val queued = queue(ticket, request.event, wanted, settings, staffName, requireAgreement = false)
+        val queued = queue(ticket, request.event, wanted, settings, staffName, requireAgreement = false, extra = mapOf("message" to text))
         if (queued.isEmpty()) return AccountResult.Invalid("The customer has no email or phone number to send to")
 
         auditLog.log(actor, AuditAction.CREATE, "ticket", ticket.identifier.toString(), "Sent ${request.event.label.lowercase()} to the customer of ${ticket.label}")
@@ -209,10 +213,11 @@ class NotificationService(
         channels: Set<NotificationChannel> = NotificationChannel.entries.toSet(),
         settings: NotificationSettings = database.settings(),
         createdBy: String = "",
-        requireAgreement: Boolean = true
+        requireAgreement: Boolean = true,
+        extra: Map<String, String> = emptyMap()
     ): List<OutboxMessage> {
         val customer = tickets.getCustomer(ticket.identifier)?.let { customers.getById(it.identifier) } ?: return emptyList()
-        return queueTo(customer, event, fields(ticket, customer), ticket.identifier, ticket.label, channels, settings, createdBy, requireAgreement)
+        return queueTo(customer, event, fields(ticket, customer) + extra, ticket.identifier, ticket.label, channels, settings, createdBy, requireAgreement)
     }
 
     /**

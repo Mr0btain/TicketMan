@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
+import org.mr0btain.ticketman.components.database.tables.notify.InboundTable
 import org.jetbrains.exposed.v1.jdbc.Database as ExposedDatabase
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.core.eq
@@ -122,6 +123,7 @@ class LocalDatabase (
     val timeClockDatabase = TimeClockDatabase()
     val locationDatabase = LocationDatabase()
     val catalogDatabase = CatalogDatabase()
+    val inboxDatabase = InboxDatabase()
     val scheduleDatabase = ScheduleDatabase()
     val timeOffDatabase = TimeOffDatabase()
     val paymentDatabase = PaymentDatabase()
@@ -181,6 +183,7 @@ class LocalDatabase (
         TimeOffAllowanceTable,
         TimeOffRequestTable,
         CatalogTable,
+        InboundTable,
         DataFixTable
     )
 

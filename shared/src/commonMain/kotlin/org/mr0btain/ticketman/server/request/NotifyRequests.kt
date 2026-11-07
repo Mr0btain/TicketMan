@@ -20,9 +20,11 @@ data class TestMessageRequest(
  * Sends a message about a ticket to its customer now, by hand
  * @param event Which template, [NotificationEvent.STATUS_LINK] unless staff pick another
  * @param channels Empty for every channel the customer has a contact for and the shop has on
+ * @param text What staff typed, for [NotificationEvent.REPLY]
  */
 @Serializable
 data class TicketMessageRequest(
     val event: NotificationEvent = NotificationEvent.STATUS_LINK,
-    val channels: Set<NotificationChannel> = emptySet()
+    val channels: Set<NotificationChannel> = emptySet(),
+    val text: String = ""
 )

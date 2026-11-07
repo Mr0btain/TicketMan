@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.ApiQuery
+import org.mr0btain.ticketman.data.notify.NotificationEvent
+import org.mr0btain.ticketman.components.notify.InboxService
+import org.mr0btain.ticketman.components.service.AccountResult
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -18,7 +22,8 @@ import org.mr0btain.ticketman.server.request.TicketMessageRequest
  */
 fun Route.notifyRoute(
     service: NotificationService,
-    userDatabase: UserDatabase
+    userDatabase: UserDatabase,
+    inbox: InboxService
 ) {
     authenticate("admin") {
         // Without the mail password and text token, which never leave the server
@@ -55,16 +60,38 @@ fun Route.notifyRoute(
             val identifier = call.uuidParameter("identifier") ?: return@get call.respond(HttpStatusCode.NotFound)
             service.forTicket(identifier)?.let { call.respond(HttpStatusCode.OK, it) } ?: call.respond(HttpStatusCode.InternalServerError)
         }
+
+        get(NotifyPaths.TICKET_RECEIVED) {
+            val identifier = call.uuidParameter("identifier") ?: return@get call.respond(HttpStatusCode.NotFound)
+            inbox.forTicket(identifier)?.let { call.respond(HttpStatusCode.OK, it) } ?: call.respond(HttpStatusCode.InternalServerError)
+        }
+
+        get(NotifyPaths.INBOX) {
+            val limit = call.queryParameters[ApiQuery.LIMIT]?.let { it.toIntOrNull() ?: return@get call.respondBadQuery() } ?: InboxService.DEFAULT_LIMIT
+            inbox.inbox(limit)?.let { call.respond(HttpStatusCode.OK, it) } ?: call.respond(HttpStatusCode.InternalServerError)
+        }
+
+        // Reading a text is something anyone who can see it does
+        post(NotifyPaths.TICKET_READ) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+            if (inbox.markTicketRead(identifier, call.username(userDatabase))) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.InternalServerError)
+        }
+
+        post(NotifyPaths.INBOX_READ) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+            if (inbox.markRead(identifier, call.username(userDatabase))) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.NotFound)
+        }
     }
 
     authenticate {
         // Answers with the messages queued, one per channel
         post(NotifyPaths.TICKET_SEND) {
             val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
-            call.respondAccount(
-                service.sendForTicket(identifier, call.receive<TicketMessageRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
-                HttpStatusCode.Created
-            )
+            val request = call.receive<TicketMessageRequest>()
+            val sent = service.sendForTicket(identifier, request, call.username(userDatabase), call.getIdentifierFromToken())
+            // Answering their texts reads them
+            if (request.event == NotificationEvent.REPLY && sent is AccountResult.Done) inbox.markTicketRead(identifier, call.username(userDatabase))
+            call.respondAccount(sent, HttpStatusCode.Created)
         }
     }
 }

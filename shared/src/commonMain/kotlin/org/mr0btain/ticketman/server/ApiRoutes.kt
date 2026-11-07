@@ -298,6 +298,18 @@ object NotifyPaths {
 
     /** Body `TicketMessageRequest`: sends one to the ticket's customer now */
     const val TICKET_SEND = "/ticket/{identifier}/send"
+
+    /** The texts customers sent about a ticket, newest first */
+    const val TICKET_RECEIVED = "/ticket/{identifier}/received"
+
+    /** Marks every text about a ticket read */
+    const val TICKET_READ = "/ticket/{identifier}/read"
+
+    /** An `InboxResponse`: how many texts are unread and the newest, `?limit=` */
+    const val INBOX = "/inbox"
+
+    /** Marks one text read, for one not about a ticket */
+    const val INBOX_READ = "/inbox/{identifier}/read"
 }
 
 /** Under [ApiRoutes.APPOINTMENT] */
@@ -454,6 +466,9 @@ object StatusPaths {
 
     /** The card processor telling the server a payment changed, `stripe` or `square`. Here so it's reachable from outside */
     const val PAYMENT_WEBHOOK = "/payments/{provider}/webhook"
+
+    /** The text provider handing over a text a customer sent, `twilio`. Here so it's reachable from outside */
+    const val SMS_WEBHOOK = "/sms/{provider}/webhook"
 }
 
 /** The repair menu itself is a GET of [ApiRoutes.CATALOG], for anyone logged in */

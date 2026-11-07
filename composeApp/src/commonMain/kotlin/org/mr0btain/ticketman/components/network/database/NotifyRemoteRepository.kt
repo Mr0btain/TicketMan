@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.components.network.database
 
+import org.mr0btain.ticketman.data.notify.NotificationChannel
+import org.mr0btain.ticketman.data.notify.NotificationEvent
+import org.mr0btain.ticketman.data.notify.InboundMessage
+import org.mr0btain.ticketman.data.notify.InboxResponse
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -33,6 +37,7 @@ class NotifyRemoteRepository(
     private val SETTINGS_TAG = "$TAG:Settings"
     private val OUTBOX_TAG = "$TAG:Outbox"
     private val SEND_TAG = "$TAG:Send"
+    private val INBOX_TAG = "$TAG:Inbox"
 
     private var baseUrl = ""
 
@@ -100,6 +105,30 @@ class NotifyRemoteRepository(
                 setBody(request)
             }
         }
+
+    /** How many texts from customers are unread, and the newest */
+    suspend fun inbox(limit: Int): TmResult<InboxResponse, ServerError> =
+        data(INBOX_TAG) { client.get { url("$baseUrl${NotifyPaths.INBOX}?${ApiQuery.LIMIT}=$limit") } }
+
+    /** The texts the ticket's customer sent about it, newest first */
+    suspend fun received(ticketIdentifier: Uuid): TmResult<List<InboundMessage>, ServerError> =
+        data(INBOX_TAG) { client.get { url("$baseUrl${NotifyPaths.TICKET_RECEIVED.fill(ticketIdentifier)}") } }
+
+    /** Marks every text about the ticket read */
+    suspend fun markTicketRead(ticketIdentifier: Uuid): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServer()
+        return handleActionHttpResponse(INBOX_TAG, networkRequest(INBOX_TAG) { client.post { url("$baseUrl${NotifyPaths.TICKET_READ.fill(ticketIdentifier)}") } })
+    }
+
+    /** Marks one text read */
+    suspend fun markRead(identifier: Uuid): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServer()
+        return handleActionHttpResponse(INBOX_TAG, networkRequest(INBOX_TAG) { client.post { url("$baseUrl${NotifyPaths.INBOX_READ.fill(identifier)}") } })
+    }
+
+    /** Texts [text] to the ticket's customer in the shop's reply template, which also reads their texts */
+    suspend fun reply(ticketIdentifier: Uuid, text: String): TmResult<List<OutboxMessage>, ServerError> =
+        sendForTicket(ticketIdentifier, TicketMessageRequest(NotificationEvent.REPLY, setOf(NotificationChannel.SMS), text))
 
     private suspend inline fun <reified T> data(tag: String, crossinline request: suspend () -> HttpResponse): TmResult<T, ServerError> {
         if (baseUrl.isBlank()) return noServer()

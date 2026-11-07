@@ -41,9 +41,11 @@ Order: C1 → A1 → A2 → B1 → A3 → A5, A4 → A6, A7, then the rest.
   repairs, edited on the admin Repair menu tab and ticked on check-in's Repair step onto the invoice. Next: a CSV
   import of the menu (a supplier's price list), warning at check-in when a repair's part is out of stock at the
   location, offering the menu when adding lines to an open ticket's invoice, and per-location prices if a shop asks.
-- **A2. Two-way texts.** Options: inbound Twilio texts through a webhook under `/status/`, kept per customer and
-  ticket, with a conversation panel and unread badge on the ticket card; email replies from an IMAP mailbox later; or
-  only a Reply-To header to the shop's address.
+- **A2. Two-way texts.** Done for Twilio ([Texts from customers](api/notify.md#texts-from-customers)): texts come
+  in through a signed webhook under `/status/`, matched to the customer and ticket, shown in the counter's queue and
+  on the ticket card with a reply box; STOP turns their texts off. Next: email replies from an IMAP mailbox, a
+  Reply-To header meanwhile, linking a text with no ticket to one by hand, MMS photos, an unread count on the rail's
+  Counter button, and Square or other text providers if asked.
 - **A3. Ticket board.** Options: a column per status (custom ones included) with drag to change status; a read-only
   wall screen served like the status page, refreshing itself; both.
 - **A4. Check-out checklist and before/after photos.** Options: a second checklist per `DeviceKind` needed before

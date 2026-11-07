@@ -131,6 +131,19 @@ processor about the waiting charges it names. Bodies past 512 KB are cut off.
 - **`200`** checked. **`400`** a bad or missing signature, or no key saved. **`404`** not `stripe` or `square`, or
   that processor isn't set up.
 
+### `POST /status/sms/{provider}/webhook`
+
+**Auth:** none
+
+A text a customer sent the shop's number, from `twilio` (the number's "A message comes in" webhook, set to
+`Inbox.webhookUrl(publicUrl)`, which the admin Messages tab shows). The form's `X-Twilio-Signature` is checked against
+the saved auth token over the shop's public address of this path and every form field (`TwilioSignature`), so it
+needs `publicUrl`. A good one is kept, once per `MessageSid`, and matched to its customer and ticket, see
+[Texts from customers](notify.md#texts-from-customers).
+
+- **`200`** an empty TwiML `<Response/>`, so nothing is texted back. **`403`** a bad or missing signature.
+- **`404`** not `twilio`, texts aren't set up with a token, or the shop has no public address.
+
 ## See also
 
 - [Payments API](payment.md)

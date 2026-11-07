@@ -448,7 +448,8 @@ private fun AdminContent(
                 onTest = { settings, channel, recipient -> admin.messages.test(settings, channel, recipient) },
                 onRetry = { admin.messages.retry(it) },
                 onCancel = { admin.messages.cancel(it) },
-                onLoadMore = { admin.messages.loadMore() }
+                onLoadMore = { admin.messages.loadMore() },
+                publicUrl = shopProfile?.publicUrl.orEmpty()
             )
 
             AdminTab.PAYMENTS -> AdminPaymentsTab(

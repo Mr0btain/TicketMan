@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.admin.messages
 
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.data.notify.Inbox
 import org.mr0btain.ticketman.components.data.rememberKept
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -63,7 +65,8 @@ fun AdminMessagesTab(
     onTest: (NotificationSettings, NotificationChannel, String) -> Unit,
     onRetry: (OutboxMessage) -> Unit,
     onCancel: (OutboxMessage) -> Unit,
-    onLoadMore: () -> Unit
+    onLoadMore: () -> Unit,
+    publicUrl: String = ""
 ) {
     val spacing = TmTheme.spacing
 
@@ -74,7 +77,7 @@ fun AdminMessagesTab(
         if (settings == null) {
             TmNotice(text = "Couldn't load the message settings. Check the connection, then refresh.", kind = TmNoticeKind.ERROR)
         } else {
-            SettingsPanels(settings, statuses, isBusy, onSave, onTest)
+            SettingsPanels(settings, statuses, isBusy, onSave, onTest, publicUrl)
         }
 
         OutboxPanel(outbox, outboxEnd, onRetry, onCancel, onLoadMore)
@@ -88,7 +91,8 @@ private fun SettingsPanels(
     statuses: List<CustomStatus>,
     isBusy: Boolean,
     onSave: (NotificationSettings) -> Unit,
-    onTest: (NotificationSettings, NotificationChannel, String) -> Unit
+    onTest: (NotificationSettings, NotificationChannel, String) -> Unit,
+    publicUrl: String = ""
 ) {
     var draft by rememberKept("messages", loaded) { mutableStateOf(loaded) }
     val problem = draft.problem()
@@ -107,7 +111,7 @@ private fun SettingsPanels(
 
     FlowRow(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalArrangement = Arrangement.spacedBy(spacing.md)) {
         EmailPanel(draft) { draft = it }
-        SmsPanel(draft) { draft = it }
+        SmsPanel(draft, publicUrl) { draft = it }
         WhenPanel(draft, statuses) { draft = it }
         WordingPanel(draft) { draft = it }
         TestPanel(draft, isBusy, onTest)
@@ -162,7 +166,7 @@ private fun EmailPanel(draft: NotificationSettings, onChange: (NotificationSetti
 }
 
 @Composable
-private fun SmsPanel(draft: NotificationSettings, onChange: (NotificationSettings) -> Unit) {
+private fun SmsPanel(draft: NotificationSettings, publicUrl: String, onChange: (NotificationSettings) -> Unit) {
     val sms = draft.sms
     fun change(new: SmsSettings) = onChange(draft.copy(sms = new))
 
@@ -200,6 +204,16 @@ private fun SmsPanel(draft: NotificationSettings, onChange: (NotificationSetting
                 )
             }
         )
+
+        // Where Twilio hands over texts customers send back, which the counter then shows
+        val webhook = Inbox.webhookUrl(publicUrl)
+        if (webhook == null) {
+            TmNotice(text = "To get customers' replies, set the public address in the shop profile first.", kind = TmNoticeKind.INFO)
+        } else {
+            TmKeyValueRow(label = "For replies, set the number's \"A message comes in\" webhook to") {
+                Text(text = webhook, style = TmTheme.typography.caption, color = TmTheme.colors.text)
+            }
+        }
     }
 }
 
