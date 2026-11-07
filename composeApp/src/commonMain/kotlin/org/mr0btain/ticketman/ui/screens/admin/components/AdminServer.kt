@@ -72,6 +72,11 @@ class AdminServer(
         _shopProfile.value = admin.getShopProfile()
     }
 
+    /** A profile saved somewhere else, like the first run setup */
+    fun shopProfileChanged(profile: ShopProfile) {
+        _shopProfile.value = profile
+    }
+
     /** Saves the shop profile, used on invoices, slips and at check-in */
     fun saveShopProfile(profile: ShopProfile) {
         scope.launch {

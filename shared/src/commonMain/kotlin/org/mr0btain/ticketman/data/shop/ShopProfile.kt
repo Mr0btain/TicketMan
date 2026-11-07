@@ -29,6 +29,7 @@ import org.mr0btain.ticketman.data.ticket.StatusChoice
  * @param accounting The names the shop's books use, for the QuickBooks and Xero exports
  * @param checklists The shop's own intake checklists, by kind of device. Kinds without one use
  * [org.mr0btain.ticketman.data.ticket.IntakeChecklists.defaults]
+ * @param setupDone An admin finished or skipped the first run setup, see [needsSetup]
  */
 @Serializable
 data class ShopProfile(
@@ -65,8 +66,16 @@ data class ShopProfile(
     val storage: StorageTerms = StorageTerms(),
     val accounting: AccountingSettings = AccountingSettings(),
     /** Customers booking a visit from the status page */
-    val booking: OnlineBooking = OnlineBooking()
+    val booking: OnlineBooking = OnlineBooking(),
+    val setupDone: Boolean = false
 ) {
+    /**
+     * Whether an admin should be walked through setting the shop up: a new server, with no name and setup not
+     * finished or skipped. A shop already named never is, so servers from before setup existed aren't
+     */
+    val needsSetup: Boolean
+        get() = !setupDone && name.isBlank()
+
     /** [taxRate] in basis points, 0 when it's blank or not a number */
     val taxBasisPoints: Int
         get() = Money.percentToBasisPoints(taxRate) ?: 0

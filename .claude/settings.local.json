@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(unzip:*)",
+      "Bash(/home/nick/Android/aapt2-arm64/*)"
+    ]
+  }
+}

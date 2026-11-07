@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.ui.screens.setup.SetupWizard
 import androidx.compose.runtime.getValue
 import org.mr0btain.ticketman.ui.screens.navigation.ShellLocations
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
@@ -171,6 +172,18 @@ fun App() {
                 onDismiss = { mainViewModel.session.logout() },
                 onSave = { current, new, onResult -> mainViewModel.session.changePassword(current, new, onResult) }
             )
+
+            // A new server's first admin sets the shop up before anything else, once their own account is ready
+            val setupProfile = mainViewModel.setup.profile.collectAsState().value
+            if (setupProfile != null && setupProfile.needsSetup && isAdmin.value && !mustChangePassword.value && accountSetup.value == null) {
+                SetupWizard(
+                    start = setupProfile,
+                    onFinish = { profile, onResult -> mainViewModel.setup.finish(profile, onResult) },
+                    onSkip = { onResult -> mainViewModel.setup.skip(onResult) },
+                    onInvite = { request, onResult -> mainViewModel.setup.invite(request, onResult) }
+                )
+                return@TmTheme
+            }
 
             if (shouldShowLogin.value) {
                 LoginPopup(

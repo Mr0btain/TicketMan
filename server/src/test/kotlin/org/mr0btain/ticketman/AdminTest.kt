@@ -490,6 +490,23 @@ class AdminTest {
     }
 
     @Test
+    fun aNewShopNeedsSettingUpUntilItsDoneAndThenStaysDone() = testApplication {
+        setup()
+        val adminToken = token(admin)
+        assertTrue(json.decodeFromString<ShopProfile>(get("/api/shop", adminToken).bodyAsText()).needsSetup)
+
+        val finished = ShopProfile(name = "Fix It Shop", setupDone = true)
+        assertEquals(HttpStatusCode.Accepted, post("/api/shop/update", json.encodeToString(finished), adminToken).status)
+        assertFalse(json.decodeFromString<ShopProfile>(get("/api/shop", adminToken).bodyAsText()).needsSetup)
+
+        // A client that doesn't know about setup sends it as not done, and it stays done, even without a name
+        assertEquals(HttpStatusCode.Accepted, post("/api/shop/update", json.encodeToString(ShopProfile()), adminToken).status)
+        val saved = json.decodeFromString<ShopProfile>(get("/api/shop", adminToken).bodyAsText())
+        assertTrue(saved.setupDone)
+        assertFalse(saved.needsSetup)
+    }
+
+    @Test
     fun auditLogRecordsActionsNewestFirst() = testApplication {
         setup()
         val adminToken = token(admin)

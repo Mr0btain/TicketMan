@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.server.response.InviteResponse
+import org.mr0btain.ticketman.ui.screens.setup.SetupStep
+import org.mr0btain.ticketman.ui.screens.setup.SetupForm
+import org.mr0btain.ticketman.ui.screens.setup.SetupWizard
 import org.mr0btain.ticketman.data.notify.InboundMessage
 import org.mr0btain.ticketman.ui.kit.data.TmPrintPreview
 import org.mr0btain.ticketman.components.print.PrintTemplates
@@ -626,6 +630,32 @@ class ScreenRenderTest {
         CatalogModel(kind = DeviceKind.PHONE, manufacturer = "Apple", model = "iPhone 14", repairs = listOf(RepairOffer(name = "Screen replacement", priceCents = 14_900))),
         CatalogModel(kind = DeviceKind.LAPTOP, manufacturer = "Lenovo", model = "ThinkPad T14"),
     )
+
+    /** The first run setup: the shop step, filled in */
+    @Test
+    fun setupShop() = bothModes("setup-shop") {
+        SetupWizard(
+            form = remember { SetupForm(ShopProfile(name = "Bench Repair", phone = "555-0142", email = "front@benchrepair.example", street = "120 Main St", city = "Springfield", state = "PA", zip = "16101")) },
+            onFinish = { _, _ -> }, onSkip = {}, onInvite = { _, _ -> }
+        )
+    }
+
+    @Test
+    fun setupShopNarrow() = bothModes("setup-shop-narrow", width = NARROW_WIDTH, height = 1400) {
+        SetupWizard(form = remember { SetupForm(ShopProfile(name = "Bench Repair")) }, onFinish = { _, _ -> }, onSkip = {}, onInvite = { _, _ -> })
+    }
+
+    /** Staff invited during setup, their codes shown once */
+    @Test
+    fun setupStaff() = bothModes("setup-staff") {
+        val form = remember {
+            SetupForm(ShopProfile(name = "Bench Repair")).apply {
+                invited += InviteResponse(User(username = "priya", name = "Priya Raman", accessLevel = AccessLevel.NORMAL), "K7Q2-M9XD", now + 7 * 86_400_000L)
+                invited += InviteResponse(User(username = "marcus", name = "Marcus Oyelaran", accessLevel = AccessLevel.RESTRICTED), "3HPA-W8RT", now + 7 * 86_400_000L)
+            }
+        }
+        SetupWizard(form = form, onFinish = { _, _ -> }, onSkip = {}, onInvite = { _, _ -> }, startAt = SetupStep.STAFF)
+    }
 
     /** The repair menu with a few models, one with no repairs yet */
     @Test

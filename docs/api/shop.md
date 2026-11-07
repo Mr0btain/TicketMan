@@ -31,7 +31,9 @@ Replaces the profile. A new tax rate applies to invoices made after it, and to o
 lines are saved. Paid and void invoices keep the rate they had.
 
 - **Body:** `ShopProfile`. `currencySymbol` is saved trimmed. `laborRateCents` is per hour, the price time logged on
-  a ticket's work log starts at. `publicUrl` is saved trimmed, without a trailing `/`.
+  a ticket's work log starts at. `publicUrl` is saved trimmed, without a trailing `/`. `setupDone` is set by the
+  first run setup (finished or skipped) and stays set once it is, even when a profile without it is sent;
+  `needsSetup` (no name and not set up) is what makes the client show the setup to an admin.
 - **`statuses`** are the shop's own ticket statuses (`CustomStatus { identifier, name, actsAs, tone, showCustomer,
   retired }`). Each counts as a built-in status (`actsAs`), which decides where its tickets show; customers see its
   name only when `showCustomer` is on. A status left out of the list is kept with `retired` set, since tickets and

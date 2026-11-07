@@ -89,7 +89,8 @@ fun Route.shopRoute(
             }
 
             // Statuses left out are kept as retired, since tickets may still be in them
-            val previous = database.get().statuses
+            val stored = database.get()
+            val previous = stored.statuses
             val statuses = CustomStatusRules.keepingRemoved(previous, profile.statuses)
             (CustomStatusRules.changeProblem(previous, profile.statuses) ?: CustomStatusRules.problem(statuses))?.let { problem ->
                 call.respond(HttpStatusCode.BadRequest, problem)
@@ -112,6 +113,8 @@ fun Route.shopRoute(
                 }
 
             val saved = profile.copy(
+                // Once set up stays set up, so a client that doesn't know about setup can't bring it back
+                setupDone = profile.setupDone || stored.setupDone,
                 currencySymbol = symbol,
                 publicUrl = profile.publicUrl.trim().trimEnd('/'),
                 statuses = statuses,

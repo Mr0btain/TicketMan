@@ -154,15 +154,12 @@ private fun LocationDialog(
         }
 
         TmTextField(value = draft.street, onValueChange = { draft = draft.copy(street = it) }, label = "Street")
-        TmFieldPair(
-            { TmTextField(modifier = it, value = draft.city, onValueChange = { v -> draft = draft.copy(city = v) }, label = "City") },
-            {
-                TmFieldPair(
-                    { m -> TmTextField(modifier = m, value = draft.state, onValueChange = { v -> draft = draft.copy(state = v) }, label = "State") },
-                    { m -> TmTextField(modifier = m, value = draft.zip, onValueChange = { v -> draft = draft.copy(zip = v) }, label = "Zip") }
-                )
-            }
-        )
+        // One row like the shop profile's: a pair nested in a pair loses its share of the width and overlaps
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+            TmTextField(modifier = Modifier.weight(2f), value = draft.city, onValueChange = { v -> draft = draft.copy(city = v) }, label = "City")
+            TmTextField(modifier = Modifier.weight(1f), value = draft.state, onValueChange = { v -> draft = draft.copy(state = v) }, label = "State")
+            TmTextField(modifier = Modifier.weight(1f), value = draft.zip, onValueChange = { v -> draft = draft.copy(zip = v) }, label = "Zip")
+        }
         TmFieldPair(
             { TmTextField(modifier = it, value = draft.phone, onValueChange = { v -> draft = draft.copy(phone = v) }, label = "Phone", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)) },
             { TmTextField(modifier = it, value = draft.email, onValueChange = { v -> draft = draft.copy(email = v.trim()) }, label = "Email", keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)) }

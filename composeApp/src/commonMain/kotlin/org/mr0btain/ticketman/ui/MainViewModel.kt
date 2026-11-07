@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.ui.screens.setup.components.SetupHandler
 import org.mr0btain.ticketman.ui.screens.settings.components.LogsHandler
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.locations.components.LocationsHandler
@@ -155,12 +156,14 @@ class MainViewModel(
         onLoggedIn = {
             // First, so everything loaded next is for where this device works
             locations.start(session.currentUser.value, session.station.value)
+            setup.check()
             refreshPagers()
             counter.refreshShop()
             purchasing.refresh()
             timeClock.refresh()
         },
         onLoggedOut = {
+            setup.clear()
             locations.clear()
             admin.clear()
             counter.clear()
@@ -271,6 +274,19 @@ class MainViewModel(
     fun changeAdminScreenTab(selectedAdminTab: AdminTab) {
         _selectedAdminTab.value = selectedAdminTab
     }
+
+    /** ----------------------------------------------SETUP------------------------------------------------------------------- */
+
+    /** The first run setup an admin on a new server sees */
+    val setup: SetupHandler = SetupHandler(
+        remoteHandler = remoteHandler,
+        scope = viewModelScope,
+        isAdmin = { session.isAdminNow() },
+        onShopChanged = { profile ->
+            counter.shopChanged(profile)
+            admin.server.shopProfileChanged(profile)
+        }
+    )
 
     /** ----------------------------------------------KIOSK------------------------------------------------------------------- */
 

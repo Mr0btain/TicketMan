@@ -70,8 +70,9 @@ Order: C1 → A1 → A2 → B1 → A3 → A5, A4 → A6, A7, then the rest.
 
 ### Change
 
-- **B1. Getting started.** Options: a first run wizard (shop profile, tax, users, checklists, sample data); a one shop
-  mode where the desktop app runs the server itself; an installer setting up the server and Caddy as services.
+- **B1. Getting started.** The first run wizard is done: an admin on a new server sets the shop's details, money and
+  tax, repair terms and invites staff before anything else (`SetupWizard`). Still to pick from: a one shop mode where
+  the desktop app runs the server itself, and an installer setting up the server and Caddy as services.
 - **B2. Module switches** in the shop profile hiding screens and admin tabs a shop doesn't use (purchasing, calendar,
   time clock, time off, payments, booking).
 - **B3. Languages.** Options: translate what customers see first (status page, messages, prints); or move every
