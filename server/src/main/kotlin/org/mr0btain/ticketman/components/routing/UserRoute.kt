@@ -389,9 +389,8 @@ fun Route.userRoute(
                 }
 
                 else -> {
-                    // Pending users stay pending until approved. No home location sent (an older client) keeps theirs
-                    val saved = (if (existing.status == UserStatus.PENDING) user.copy(status = UserStatus.PENDING) else user)
-                        .let { it.copy(homeLocation = it.homeLocation ?: existing.homeLocation) }
+                    // Pending users stay pending until approved. No home location means the main one
+                    val saved = if (existing.status == UserStatus.PENDING) user.copy(status = UserStatus.PENDING) else user
 
                     if (!database.update(saved.withoutPassword())) {
                         call.respond(HttpStatusCode.InternalServerError, "The user couldn't be saved")

@@ -239,8 +239,7 @@ class AdminRemoteRepository(
 
         var job = when (val result = handleDataHttpResponse<BackupJob>(BACKUP_TAG, started)) {
             is TmResult.Success -> result.data
-            // A server from before BACKUP_START builds it in one request
-            is TmResult.Error -> return if (result.error.isNotFound) prepareBackupInOneRequest(includeImages) else result
+            is TmResult.Error -> return result
         }
 
         // A dropped answer or two while it's building isn't worth giving up over
@@ -260,20 +259,6 @@ class AdminRemoteRepository(
 
         return job.ticket?.let { TmResult.Success(it) }
             ?: TmResult.Error(ServerError(NetworkError.SERVER_ERROR, job.error))
-    }
-
-    // Older servers: one request that answers once the archive is built
-    private suspend fun prepareBackupInOneRequest(includeImages: Boolean): TmResult<BackupTicket, ServerError> {
-        val response = networkRequest(BACKUP_TAG) {
-            client.post {
-                url("$adminUrl${AdminPaths.BACKUP}")
-                contentType(ContentType.Application.Json)
-                setBody(BackupRequest(includeImages))
-                transferTimeout()
-            }
-        }
-
-        return handleDataHttpResponse(BACKUP_TAG, response)
     }
 
     /**

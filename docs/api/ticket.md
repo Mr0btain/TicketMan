@@ -135,7 +135,7 @@ that count as the same built-in one, is added to the history.
 
 - **Body:** `Ticket`. A `status.custom` (one of the shop profile's `statuses`) sets `status.status` to the built-in
   status it counts as, whatever was sent.
-- **`202`** saved. **`404`** no such ticket. **`409`** someone saved it since `revision` was read (see [Revisions](README.md#revisions)).
+- **`202`** saved. **`400`** no `revision`. **`404`** no such ticket. **`409`** someone saved it since `revision` was read (see [Revisions](README.md#revisions)).
 - **`400`** a `status.custom` that isn't one of the shop's, or is retired, unless the ticket is already in it.
 - **`409`** setting `PICKED_UP` (`Pick tickets up at the counter, so the invoice gets paid`), or changing a picked
   up ticket's status. Other changes to a picked up ticket are fine.
@@ -189,7 +189,7 @@ invoice goes with it while it's open, so the parts come out of the new location'
 
 - **Body:** `MoveTicketRequest { locationIdentifier }`.
 - **`200`** the `Ticket` at its new location (unchanged when it's there already). **`400`** not an active location.
-  **`404`** no such ticket. **`409`** it was picked up.
+  **`400`** no `revision`. **`404`** no such ticket. **`409`** it was picked up.
 
 ## Work log
 
@@ -215,7 +215,7 @@ Logs work and adds its line to the ticket's invoice, making the invoice if there
   name. Labor lines aren't taxed and parts are; that can be changed on the invoice.
 - **`201`** the saved `WorkEntry`, with who logged it and when. **`400`** a part without an item, an item that
   doesn't exist, a blank labor description, a quantity of zero or less or with more than two decimals, or a negative
-  price. **`404`** no such ticket. **`409`** the ticket is picked up, or its invoice is paid or void.
+  price. **`400`** no `revision`. **`404`** no such ticket. **`409`** the ticket is picked up, or its invoice is paid or void.
 
 ### `POST /api/data/ticket/add/work/all/{identifier}`
 
@@ -226,7 +226,7 @@ saved in one transaction, or none.
 
 - **Body:** a list of `WorkRequest`, as for [`add/work`](#post-apidataticketaddworkidentifier).
 - **`201`** the saved `WorkEntry`s, in the order sent. **`400`** an empty list, or any entry `add/work` would refuse.
-  **`404`** no such ticket. **`409`** the ticket is picked up, or its invoice is paid or void.
+  **`400`** no `revision`. **`404`** no such ticket. **`409`** the ticket is picked up, or its invoice is paid or void.
 
 ### `DELETE /api/data/ticket/remove/work/{identifier}`
 
@@ -259,7 +259,7 @@ Shows it. Every look is audit logged (`Passcode for 26-... viewed`), so Restrict
 Sets it, in place of any it had. Audited, without the passcode.
 
 - **Body:** `PasscodeBody { passcode }`, up to 64 characters, trimmed.
-- **`202`** saved. **`400`** blank or too long. **`404`** no such ticket. **`409`** the ticket was picked up.
+- **`202`** saved. **`400`** blank or too long. **`400`** no `revision`. **`404`** no such ticket. **`409`** the ticket was picked up.
 
 ### `DELETE /api/data/ticket/passcode/{identifier}`
 

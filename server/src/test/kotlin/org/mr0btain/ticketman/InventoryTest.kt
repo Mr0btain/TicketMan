@@ -81,7 +81,7 @@ class InventoryTest {
         assertEquals(listOf(5), read.stockAt.map { it.stock })
 
         val repriced = screen.copy(priceCents = 11_500)
-        assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(repriced), token).status)
+        assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(repriced.copy(revision = read.revision)), token).status)
         assertEquals(repriced, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()).copy(stockAt = emptyList(), revision = null))
     }
 
@@ -92,7 +92,7 @@ class InventoryTest {
         add(screen, token)
 
         // A plain update leaves the count alone, an older copy can't put back what a pickup took
-        assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(screen.copy(stock = 40)), token).status)
+        assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(screen.copy(stock = 40, revision = 0)), token).status)
         assertEquals(5, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()).stock)
 
         assertEquals(HttpStatusCode.Accepted, setStock(screen.identifier, 5, 12, token).status)
@@ -141,7 +141,7 @@ class InventoryTest {
         val token = token(tech)
 
         assertEquals(HttpStatusCode.NotFound, get(Uuid.random(), token).status)
-        assertEquals(HttpStatusCode.NotFound, post("/api/data/inventory/update", json.encodeToString(screen), token).status)
+        assertEquals(HttpStatusCode.NotFound, post("/api/data/inventory/update", json.encodeToString(screen.copy(revision = 0)), token).status)
         assertEquals(HttpStatusCode.NotFound, client.delete("/api/data/inventory/remove/${Uuid.random()}") { bearerAuth(token) }.status)
     }
 
@@ -217,11 +217,11 @@ class InventoryTest {
         val customer = Customer(name = "Jane Doe", phone = "5550100")
         assertEquals(HttpStatusCode.Created, post("/api/data/customer/add", json.encodeToString(customer), token).status)
 
-        val moved = customer.copy(phone = "5550199", email = "jane@example.com")
+        val moved = customer.copy(phone = "5550199", email = "jane@example.com", revision = 0)
         assertEquals(HttpStatusCode.Accepted, post("/api/data/customer/update", json.encodeToString(moved), token).status)
         // Names are kept lowercase and capitalised for display
         assertEquals(moved.copy(name = "Jane Doe", revision = 1), json.decodeFromString<Customer>(client.get("/api/data/customer/get/${customer.identifier}") { bearerAuth(token) }.bodyAsText()))
 
-        assertEquals(HttpStatusCode.NotFound, post("/api/data/customer/update", json.encodeToString(Customer(name = "Nobody")), token).status)
+        assertEquals(HttpStatusCode.NotFound, post("/api/data/customer/update", json.encodeToString(Customer(name = "Nobody", revision = 0)), token).status)
     }
 }

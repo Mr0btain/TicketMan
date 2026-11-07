@@ -95,7 +95,7 @@ Adds a user who can log in straight away (`ACTIVE`).
 
 Changes everything but the password. Making someone anything other than `ACTIVE` ends all their sessions.
 
-- **Body:** `User`. Its `password` is ignored; a null `homeLocation` (an older client) keeps theirs.
+- **Body:** `User`. Its `password` is ignored; a null `homeLocation` means the main location.
 - **`202`** saved.
 - **`400`** no username, a new username `UsernameRules` refuses (an unchanged one is left alone, even if it's from
   before the rules), `accessLevel` `NONE` (deactivate with `status` instead), or setting someone back to `PENDING`.

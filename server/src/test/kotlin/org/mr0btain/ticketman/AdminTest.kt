@@ -391,9 +391,7 @@ class AdminTest {
         setup()
         val adminToken = token(admin)
 
-        val response = post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = false)), adminToken)
-        assertEquals(HttpStatusCode.Created, response.status)
-        val ticket = json.decodeFromString<BackupTicket>(response.bodyAsText())
+        val ticket = buildBackup(adminToken)
         assertFalse(ticket.includesImages)
         assertTrue(ticket.fileName.endsWith("-database.zip"))
 
@@ -448,12 +446,7 @@ class AdminTest {
     fun backupLinksNeedTheRightTokenAndAnAdmin() = testApplication {
         setup()
 
-        val employeeAttempt = post("/api/admin/backup", json.encodeToString(BackupRequest()), token(employee))
-        assertEquals(HttpStatusCode.Forbidden.value / 100, employeeAttempt.status.value / 100)
-
-        val ticket = json.decodeFromString<BackupTicket>(
-            post("/api/admin/backup", json.encodeToString(BackupRequest()), token(admin)).bodyAsText()
-        )
+        val ticket = buildBackup(token(admin))
         val withoutToken = ticket.downloadPath.substringBefore('?')
 
         assertEquals(HttpStatusCode.NotFound, client.get(withoutToken).status)

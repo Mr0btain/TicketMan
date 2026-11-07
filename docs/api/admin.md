@@ -161,18 +161,6 @@ second later and leaves starting it again to whatever runs it (Docker's restart 
 
 How backups are built and restores applied is in [Backup and restore](../server/backup-restore.md).
 
-### `POST /api/admin/backup`
-
-**Auth:** admin
-
-Builds a backup zip on the server and hands back a link to it, answering once it's built. Can take a while with
-photos, long enough for a reverse proxy to give up, so clients use `POST /api/admin/backup/start`. Kept for older
-clients.
-
-- **Body:** `BackupRequest { includeImages }`.
-- **`201`** `BackupTicket { id, fileName, sizeBytes, sha256, downloadPath, expiresAt, includesImages }`.
-- **`500`** the backup couldn't be made.
-
 ### `POST /api/admin/backup/start`
 
 **Auth:** admin

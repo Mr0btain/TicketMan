@@ -337,10 +337,10 @@ class LocationTest {
         val users = json.decodeFromString<List<User>>(get("/api/user/fetch", adminToken, downtown.identifier.toString()).bodyAsText())
         assertEquals(listOf("nina"), users.map { it.username })
 
-        // An older client's update, without a home, keeps hers
+        // An update without a home takes hers away, so she starts at the main one
         val saved = UserDatabase().getByUsername("nina")!!
         assertEquals(HttpStatusCode.Accepted, postJson("/api/user/update", json.encodeToString(saved.withoutPassword().copy(homeLocation = null, name = "Nina T")), adminToken).status)
-        assertEquals(downtown.identifier, UserDatabase().getByUsername("nina")!!.homeLocation)
+        assertNull(UserDatabase().getByUsername("nina")!!.homeLocation)
     }
 
     /** A database from before locations: its counts move to the main location, its tickets and invoices belong there */

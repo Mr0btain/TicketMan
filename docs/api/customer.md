@@ -103,7 +103,7 @@ Gives store credit, or takes it off, by hand. Written to the credit history and 
 Keeps a device on file for the customer in the path, whatever `customerIdentifier` the body says.
 
 - **Body:** `CustomerDevice`, with an id the client made. **`201`** the `CustomerDevice`. **`400`** no make or
-  model. **`404`** no such customer. **`409`** that id is taken.
+  model. **`400`** no `revision`. **`404`** no such customer. **`409`** that id is taken.
 
 ### `POST /api/data/customer/device/update`
 
@@ -134,7 +134,7 @@ Deletes the device. Its tickets stay, with their copy of its details.
 
 Replaces the customer's details.
 
-- **Body:** `Customer`. **`202`** saved. **`404`** no such customer. **`409`** someone saved it since `revision` was read (see [Revisions](README.md#revisions)).
+- **Body:** `Customer`. **`202`** saved. **`400`** no `revision`. **`404`** no such customer. **`409`** someone saved it since `revision` was read (see [Revisions](README.md#revisions)).
 
 ### `DELETE /api/data/customer/remove/{identifier}`
 

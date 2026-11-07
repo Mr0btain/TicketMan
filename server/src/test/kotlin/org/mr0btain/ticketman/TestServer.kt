@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman
 
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -10,7 +13,14 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.exists
 import kotlin.io.path.invariantSeparatorsPathString
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.server.request.BackupRequest
+import org.mr0btain.ticketman.server.response.BackupJob
+import org.mr0btain.ticketman.server.response.BackupJobState
+import org.mr0btain.ticketman.server.response.BackupTicket
 
 /**
  * Temp directory for a test's database, keeping it out of the real data directory
@@ -62,4 +72,26 @@ fun cleanupTestDataDir(dataDir: Path) {
 
     dataDir.deleteRecursively()
     assertFalse(dataDir.exists(), "Temp data directory was not removed: $dataDir")
+}
+
+/**
+ * Builds a backup the way clients do, starting it and asking after it until it's built
+ * @return The finished backup's ticket
+ */
+suspend fun ApplicationTestBuilder.buildBackup(token: String, includeImages: Boolean = false): BackupTicket {
+    val json = Json { ignoreUnknownKeys = true }
+    val started = client.post("/api/admin/backup/start") {
+        bearerAuth(token)
+        contentType(ContentType.Application.Json)
+        setBody(json.encodeToString(BackupRequest(includeImages)))
+    }
+    assertEquals(HttpStatusCode.Accepted, started.status, started.bodyAsText())
+
+    var job = json.decodeFromString<BackupJob>(started.bodyAsText())
+    repeat(400) {
+        if (job.state != BackupJobState.RUNNING) return@repeat
+        Thread.sleep(25)
+        job = json.decodeFromString(client.get("/api/admin/backup/status/${job.id}") { bearerAuth(token) }.bodyAsText())
+    }
+    return assertNotNull(job.ticket, "The backup wasn't built: ${job.error}")
 }

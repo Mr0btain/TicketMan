@@ -49,7 +49,7 @@ data class Ticket(
     val abandonedAt: Long? = null,
     /** The [org.mr0btain.ticketman.data.location.Location] it's at, set when it's added and only changed by moving it. The server's to set */
     val locationIdentifier: Uuid? = null,
-    /** Goes up each time the server saves it. Sent back with an update, which is refused if someone saved since. Null skips that, for older clients */
+    /** Goes up each time the server saves it. Sent back with an update, which is refused if someone saved since. Required on an update, null only on a new one */
     val revision: Long? = null
 ): MainItem(), SubItem {
     /** Number if it has one, otherwise the start of the identifier */

@@ -96,7 +96,7 @@ The item's own photos (not its notes' photos).
 Replaces everything but the stock count, which is kept as it is on the server whatever is sent. The reorder point
 is the one where the request works.
 
-- **Body:** `Inventory`. **`202`** saved. **`400`** and **`409`** as for `/add`. **`404`** no such item. **`409`** someone saved it since `revision` was read (see [Revisions](README.md#revisions)). Stock changing doesn't count.
+- **Body:** `Inventory`. **`202`** saved. **`400`** and **`409`** as for `/add`, and `400` without a `revision`. **`404`** no such item. **`409`** someone saved it since `revision` was read (see [Revisions](README.md#revisions)). Stock changing doesn't count.
 
 ### `POST /api/data/inventory/set/stock/{identifier}`
 

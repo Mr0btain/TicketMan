@@ -191,6 +191,7 @@ fun Route.customerRoute(
 
         post(RecordPaths.UPDATE) {
             val received = call.receive<Customer>()
+            if (call.refuseWithoutRevision(received.revision, "customer")) return@post
 
             if (database.getById(received.identifier) == null) {
                 call.respond(HttpStatusCode.NotFound)

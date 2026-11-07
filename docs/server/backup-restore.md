@@ -28,8 +28,7 @@ proxy's now, so its certificate (Caddy's `caddy-data` volume) is backed up separ
 which answers straight away with a `RUNNING` `BackupJob` and builds it on the service's own scope through
 `prepare`. The client asks `GET /api/admin/backup/status/{id}` every two seconds until it's `DONE` (with the
 ticket) or `FAILED`; a reverse proxy would give up on one request that stays quiet while a big backup is built.
-Jobs are kept in memory for an hour. The older `POST /api/admin/backup` calls `prepare` and answers when it's done,
-and the client falls back to it when a server doesn't know `/backup/start`.
+Jobs are kept in memory for an hour.
 
 1. Only one backup is built at a time (a `Mutex`), on the IO dispatcher.
 2. **The database first.** `LocalDatabase.backupTo()` runs H2's `BACKUP TO`, which copies a consistent snapshot

@@ -35,7 +35,7 @@ data class Inventory(
     val reorderPoint: Int? = null,
     val supplierIdentifier: Uuid? = null,
     val stockAt: List<LocationStock> = emptyList(),
-    /** Goes up each time the server saves it. Sent back with an update, which is refused if someone saved since. Null skips that, for older clients */
+    /** Goes up each time the server saves it. Sent back with an update, which is refused if someone saved since. Required on an update, null only on a new one */
     val revision: Long? = null
 ): MainItem() {
     /** Whether pickups and sales count it down */

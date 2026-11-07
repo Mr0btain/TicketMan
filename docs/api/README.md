@@ -87,8 +87,7 @@ it, and new work belongs to it; without it the server uses the caller's home loc
 
 Tickets, customers and inventory items come with a `revision`, which goes up each time the server saves one. Send it
 back with `/update`: if someone saved the record since, the answer is `409` and nothing changes, so a save from an old
-copy can't undo what they did. Read it again and redo the change. Leaving it out (null) skips the check, which is what
-older clients do.
+copy can't undo what they did. Read it again and redo the change. An `/update` without one is refused with `400`.
 
 ## Status codes
 

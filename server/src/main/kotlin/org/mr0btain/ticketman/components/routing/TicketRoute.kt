@@ -253,6 +253,7 @@ fun Route.ticketRoute(
 
         post(RecordPaths.UPDATE) {
             val sent = call.receive<Ticket>()
+            if (call.refuseWithoutRevision(sent.revision, "ticket")) return@post
             val existing = database.getById(sent.identifier)
 
             if (existing == null) {

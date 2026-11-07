@@ -59,8 +59,6 @@ class AdminRemoteRepositoryTest {
     private var hasPendingRestore = false
     private var canRestart = true
 
-    // False for a server from before backups were built in the background
-    private var backgroundBackups = true
     private var backupStatusAsks = 0
     private var backupFails = false
     private val runningBackup = BackupJob(id = "j1", state = BackupJobState.RUNNING, startedAt = 1)
@@ -75,9 +73,7 @@ class AdminRemoteRepositoryTest {
 
         when (request.url.encodedPath) {
             "/api/admin/stats" -> respond(Json.encodeToString(AdminStatsResponse(openTickets = 3, totalTickets = 5)), HttpStatusCode.OK, json)
-            "/api/admin/backup" -> respond(Json.encodeToString(backupTicket), HttpStatusCode.Created, json)
-            "/api/admin/backup/start" -> if (backgroundBackups) respond(Json.encodeToString(runningBackup), HttpStatusCode.Accepted, json)
-                else respond("", HttpStatusCode.NotFound)
+            "/api/admin/backup/start" -> respond(Json.encodeToString(runningBackup), HttpStatusCode.Accepted, json)
             // Still building the first time it's asked
             "/api/admin/backup/status/j1" -> respond(
                 Json.encodeToString(
@@ -185,15 +181,6 @@ class AdminRemoteRepositoryTest {
 
         assertIs<TmResult.Error<ServerError>>(prepared)
         assertEquals("The backup couldn't be made, check the server log", prepared.error.message)
-    }
-
-    @Test
-    fun anOlderServerBuildsTheBackupInOneRequest() = runTest {
-        backgroundBackups = false
-        val prepared = admin.prepareBackup(includeImages = false)
-
-        assertEquals(TmResult.Success(backupTicket), prepared)
-        assertEquals(listOf("POST /api/admin/backup/start", "POST /api/admin/backup"), requests)
     }
 
     @Test

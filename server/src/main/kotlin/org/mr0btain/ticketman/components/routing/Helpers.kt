@@ -94,6 +94,18 @@ suspend fun RoutingCall.answerIfNotSaved(save: RecordSave?, record: String): Boo
 }
 
 /**
+ * Refuses an `/update` that doesn't say which revision it was opened at, since saving it would overwrite whatever
+ * was saved meanwhile without anyone knowing
+ * @param record What it is, for the message
+ * @return Whether it was refused, having answered `400`
+ */
+suspend fun RoutingCall.refuseWithoutRevision(revision: Long?, record: String): Boolean {
+    if (revision != null) return false
+    respondText("Send the revision of the $record you opened, from when you read it", status = HttpStatusCode.BadRequest)
+    return true
+}
+
+/**
  * The `?query=&limit=` of a search. A missing limit gets the default, and it's kept to [MAX_PAGE_SIZE]
  * @return Null when the limit isn't a number, or is below zero
  */

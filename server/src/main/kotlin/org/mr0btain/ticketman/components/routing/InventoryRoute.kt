@@ -160,6 +160,7 @@ fun Route.inventoryRoute(
     authenticate {
         post(RecordPaths.UPDATE) {
             val received = call.receive<Inventory>()
+            if (call.refuseWithoutRevision(received.revision, "item")) return@post
 
             detailsProblem(received)?.let { problem ->
                 call.respond(HttpStatusCode.BadRequest, problem)

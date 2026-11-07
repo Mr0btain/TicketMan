@@ -224,7 +224,8 @@ class TicketTest {
             client.post("/api/data/ticket/update") {
                 contentType(ContentType.Application.Json)
                 bearerAuth(token)
-                setBody(json.encodeToString(ticket.copy(status = TicketStatus(status), revision = null)))
+                val current = json.decodeFromString<Ticket>(client.get("/api/data/ticket/get/${ticket.identifier}") { bearerAuth(token) }.bodyAsText())
+                setBody(json.encodeToString(current.copy(status = TicketStatus(status))))
             }
         }
 

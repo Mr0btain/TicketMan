@@ -125,9 +125,7 @@ class RestoreTest {
             photo = json.decodeFromString(uploaded.bodyAsText())
             post("/api/data/customer/add/note/${customer.identifier}", json.encodeToString(Note(message = "Photo", images = listOf(photo))), token)
 
-            val ticket = json.decodeFromString<BackupTicket>(
-                post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = true)), token).bodyAsText()
-            )
+            val ticket = buildBackup(token, includeImages = true)
             backup = client.get(ticket.downloadPath).readRawBytes()
 
             post("/api/data/customer/add", json.encodeToString(Customer(name = "After Backup")), token)
@@ -189,9 +187,7 @@ class RestoreTest {
             UserDatabase().add(admin)
             val token = token()
 
-            val ticket = json.decodeFromString<BackupTicket>(
-                post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = false)), token).bodyAsText()
-            )
+            val ticket = buildBackup(token)
             val backup = client.get(ticket.downloadPath).readRawBytes()
 
             // New backups never carry one
@@ -300,9 +296,7 @@ class RestoreTest {
         UserDatabase().add(admin)
         val token = token()
 
-        val ticket = json.decodeFromString<BackupTicket>(
-            post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = false)), token).bodyAsText()
-        )
+        val ticket = buildBackup(token)
         val archive = client.get(ticket.downloadPath).readRawBytes()
 
         val same = restore(archive, token)
@@ -340,9 +334,7 @@ class RestoreTest {
         UserDatabase().add(admin)
         val token = token()
 
-        val ticket = json.decodeFromString<BackupTicket>(
-            post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = false)), token).bodyAsText()
-        )
+        val ticket = buildBackup(token)
         assertEquals(HttpStatusCode.Accepted, restore(client.get(ticket.downloadPath).readRawBytes(), token).status)
 
         client.delete("/api/admin/restore") { bearerAuth(token) }

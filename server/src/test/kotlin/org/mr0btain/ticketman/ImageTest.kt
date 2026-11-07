@@ -384,9 +384,7 @@ class ImageTest {
         post("/api/data/customer/add/note/$customer", json.encodeToString(note), token)
         post("/api/data/customer/update/note/${note.identifier}", json.encodeToString(note.copy(images = listOf(kept))), token)
 
-        val ticket = json.decodeFromString<BackupTicket>(
-            post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = true)), token(owner)).bodyAsText()
-        )
+        val ticket = buildBackup(token(owner), includeImages = true)
         val names = ZipInputStream(ByteArrayInputStream(client.get(ticket.downloadPath).readRawBytes())).use { zip ->
             generateSequence { zip.nextEntry }.map { it.name }.toList()
         }

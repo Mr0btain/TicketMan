@@ -10,6 +10,70 @@ What's planned to add or fix.
   into counter, logout into everything), and the kiosk uses the counter outside the nav host, so those would still need
   something above the screens to connect them.
 
+## From comparing other repair shop apps
+
+Compared in November 2026 against RepairShopr, RepairDesk, RO App (Orderry), CellSmart, RepairQ and mHelpDesk. The
+core (status page, estimates, warranty, storage, locations, card payments, stored value, purchasing, booking,
+calendar, time clock, reports) is on par or ahead. The gaps are messaging, a repair price menu, integrations and how
+quickly a shop can start. Each item lists its options, the picked one first when there's a pick.
+
+Order: C1 → A1 → A2 → B1 → A3 → A5, A4 → A6, A7, then the rest.
+
+### Remove or trim
+
+- **C1. Shims for older clients, before 1.0 ships.** `versionNoticeOf` treats 0.x to 1.0 as a major version apart, so
+  0.9 clients get `426` from a 1.0 server. Done: the one request `POST /backup` and the client's fallback to it, a
+  null `revision` on an update skipping the check (now `400`), and the user update keeping the home location when
+  none is sent. Left: log downloads are audited as `BACKUP` so older clients can read the log; give them their own
+  action once `ticketman.version` is 1.0.0, and decode an unknown `AuditAction` leniently so later minor versions
+  can add some. A server too old to report its release is only warned about (`versionNoticeOf`); blocking it would
+  need the client tests' ping mocks to send a version. Data migrations and the warnings for retired HTTPS settings
+  stay: those are about old databases and old config, not old clients.
+- **C2. Time off balances** (allowances, carry over, floating holidays) are payroll territory; other apps stop at the
+  schedule and the clock. Options: put it behind a module switch (B2), keep requests and approval but drop balances,
+  or keep it.
+- **C3. Release targets.** Keep iOS compiling in CI but don't ship it until it's tested; pick one container registry
+  and one Linux package besides the DEB.
+
+### Add
+
+- **A1. Repair price menu** (brand → model → repair → price, part and warranty days). Options: a catalog table of
+  model × repair cells that check-in picks from, filling the estimate and reserving the parts; a `service` flag and
+  model tags on inventory items; later a supplier CSV price list to fill it.
+- **A2. Two-way texts.** Options: inbound Twilio texts through a webhook under `/status/`, kept per customer and
+  ticket, with a conversation panel and unread badge on the ticket card; email replies from an IMAP mailbox later; or
+  only a Reply-To header to the shop's address.
+- **A3. Ticket board.** Options: a column per status (custom ones included) with drag to change status; a read-only
+  wall screen served like the status page, refreshing itself; both.
+- **A4. Check-out checklist and before/after photos.** Options: a second checklist per `DeviceKind` needed before
+  ready for pickup, required or not per shop; or optional and printed on the slip and invoice.
+- **A5. Review request after pickup.** Options: a `REVIEW_REQUEST` message N days after pickup with the shop's review
+  link; a 1 to 5 rating on the status page for our own reports (it must not decide who gets the review link, Google
+  forbids gating).
+- **A6. Moving in from another app.** Options: CSV imports of tickets and invoices as history, with a column mapping
+  step; RepairShopr's API.
+- **A7. Public API and webhooks.** Options: admin-made API keys as a session kind with an access level, audit logged;
+  outbound webhooks from audit events, HMAC signed, retried through the outbox loop.
+- **A8. Custom fields.** Options: per `DeviceKind` in the shop profile like checklists, JSON on the ticket; or typed
+  and searchable on tickets, customers and inventory.
+- **A9. Business customers** (only if aiming at IT shops): several contacts, invoices on account with terms and
+  statements, then recurring invoices.
+- **A10. Customer account page**: a link listing all of a customer's tickets, invoices and warranties, built on
+  `StatusPage` and `RequestLimiter`.
+- **A11. Smaller:** a work timer filling a work entry's minutes; serial or IMEI per stock unit; buying devices in
+  (cash or store credit, becoming serialized stock); a customer facing display for the cart and signature.
+- **Skipped:** an AI receptionist, marketing campaigns (an export to a mailing service covers it), loyalty points
+  (store credit covers most of it), parts supplier APIs (closed; a CSV price list does the job).
+
+### Change
+
+- **B1. Getting started.** Options: a first run wizard (shop profile, tax, users, checklists, sample data); a one shop
+  mode where the desktop app runs the server itself; an installer setting up the server and Caddy as services.
+- **B2. Module switches** in the shop profile hiding screens and admin tabs a shop doesn't use (purchasing, calendar,
+  time clock, time off, payments, booking).
+- **B3. Languages.** Options: translate what customers see first (status page, messages, prints); or move every
+  string into Compose resources.
+
 ## iOS app
 
 The code is written; testing it needs a Mac. See

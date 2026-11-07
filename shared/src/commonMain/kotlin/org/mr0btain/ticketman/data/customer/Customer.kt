@@ -19,6 +19,6 @@ data class Customer(
     val notifySms: Boolean = false,
     /** Store credit they can spend, the server's to change (refunds and admin adjustments), never a save's */
     val creditCents: Long = 0,
-    /** Goes up each time the server saves it. Sent back with an update, which is refused if someone saved since. Null skips that, for older clients */
+    /** Goes up each time the server saves it. Sent back with an update, which is refused if someone saved since. Required on an update, null only on a new one */
     val revision: Long? = null
 ): MainItem()

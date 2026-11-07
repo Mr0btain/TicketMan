@@ -214,7 +214,6 @@ object AdminPaths {
     const val STATION_LOCATION = "/stations/{identifier}/location"
     const val STATION = "/stations/{identifier}"
     const val SERVER = "/server"
-    const val BACKUP = "/backup"
     const val BACKUP_DOWNLOAD = "/backup/download/{id}"
     const val BACKUP_START = "/backup/start"
     const val BACKUP_STATUS = "/backup/status/{id}"

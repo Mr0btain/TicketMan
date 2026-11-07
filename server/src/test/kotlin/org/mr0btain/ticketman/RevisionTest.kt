@@ -97,13 +97,12 @@ class RevisionTest {
     }
 
     @Test
-    fun anOlderClientWithoutARevisionStillSaves() = testApplication {
+    fun anUpdateWithoutARevisionIsRefused() = testApplication {
         setup()
         val opened = checkedIn()
-        post("/api/data/ticket/update", json.encodeToString(opened.copy(problem = "From A")))
 
-        assertEquals(HttpStatusCode.Accepted, post("/api/data/ticket/update", json.encodeToString(opened.copy(problem = "Old client", revision = null))).status)
-        assertEquals("Old client", read<Ticket>("/api/data/ticket/get/${opened.identifier}").problem)
+        assertEquals(HttpStatusCode.BadRequest, post("/api/data/ticket/update", json.encodeToString(opened.copy(problem = "No revision", revision = null))).status)
+        assertEquals(opened.problem, read<Ticket>("/api/data/ticket/get/${opened.identifier}").problem)
     }
 
     @Test
